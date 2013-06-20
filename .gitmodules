@@ -1,0 +1,3 @@
+[submodule "crimild"]
+	path = crimild
+	url = https://github.com/hhsaez/crimild.git
