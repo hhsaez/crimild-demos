@@ -29,4 +29,5 @@ examples/Triangle/Triangle
 examples/Lighting/Lighting
 examples/Blending/Blending
 examples/IronMan/IronMan
+examples/Drone/Drone
 examples/PostProcessing/PostProcessing
