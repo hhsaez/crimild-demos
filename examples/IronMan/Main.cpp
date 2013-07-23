@@ -34,6 +34,86 @@
 
 using namespace crimild;
 
+class DebugRenderPass : public RenderPass {
+public:
+	DebugRenderPass( RenderPassPtr actualRenderPass )
+		: _actualRenderPass( actualRenderPass ),
+		  _debugMaterial( new Material() )
+	{
+
+	}
+
+	virtual ~DebugRenderPass( void )
+	{
+
+	}
+
+	virtual void render( Renderer *renderer, VisibilitySet *vs, Camera *camera ) 
+	{
+		if ( _actualRenderPass != nullptr ) {
+			_actualRenderPass->render( renderer, vs, camera );
+		}
+
+		vs->foreachGeometry( [&]( Geometry *geometry ) {
+			updateDebugPrimitive( geometry );
+			if ( _debugPrimitive != nullptr ) { 
+				RenderPass::render( renderer, geometry, _debugPrimitive.get(), _debugMaterial.get(), camera );
+			}
+		});
+	}
+
+private:
+	void updateDebugPrimitive( Geometry *geometry )
+	{
+		std::vector< float > vertices;
+
+		geometry->foreachPrimitive( [&]( PrimitivePtr primitive ) {
+			VertexBufferObject *vbo = primitive->getVertexBuffer();
+			const VertexFormat &vf = vbo->getVertexFormat();
+
+			for ( int i = 0; i < vbo->getVertexCount(); i++ ) {
+				Vector3f pos = vbo->getPositionAt( i );
+
+				// render normals
+				Vector3f normal = vbo->getNormalAt( i );
+				vertices.push_back( pos[ 0 ] ); vertices.push_back( pos[ 1 ] ); vertices.push_back( pos[ 2 ] );
+				vertices.push_back( 1.0f ); vertices.push_back( 1.0f ); vertices.push_back( 1.0f ); vertices.push_back( 1.0f );
+				vertices.push_back( pos[ 0 ] + 0.05 * normal[ 0 ] ); vertices.push_back( pos[ 1 ] + 0.05 * normal[ 1 ] ); vertices.push_back( pos[ 2 ] + 0.05 * normal[ 2 ] );
+				vertices.push_back( 0.0f ); vertices.push_back( 1.0f ); vertices.push_back( 0.0f ); vertices.push_back( 1.0f );
+
+				if ( vf.hasTangents() ) {
+					Vector3f tangent = vbo->getTangentAt( i );
+					vertices.push_back( pos[ 0 ] ); vertices.push_back( pos[ 1 ] ); vertices.push_back( pos[ 2 ] );
+					vertices.push_back( 1.0f ); vertices.push_back( 1.0f ); vertices.push_back( 1.0f ); vertices.push_back( 1.0f );
+					vertices.push_back( pos[ 0 ] + 0.05 * tangent[ 0 ] ); vertices.push_back( pos[ 1 ] + 0.05 * tangent[ 1 ] ); vertices.push_back( pos[ 2 ] + 0.05 * tangent[ 2 ] );
+					vertices.push_back( 1.0f ); vertices.push_back( 0.0f ); vertices.push_back( 1.0f ); vertices.push_back( 1.0f );
+				}
+			}
+		});
+
+		VertexFormat format = VertexFormat::VF_P3_C4;
+
+		int vertexCount = vertices.size() / format.getVertexSize();
+		std::vector< unsigned short > indices( vertexCount );
+		for ( int i = 0; i < vertexCount; i++ ) {
+			indices.push_back( i );
+		}
+
+		VertexBufferObjectPtr vbo( new VertexBufferObject( format, vertexCount, &vertices[ 0 ] ) );
+		IndexBufferObjectPtr ibo( new IndexBufferObject( indices.size(), &indices[ 0 ] ) );
+		_debugPrimitive = PrimitivePtr( new Primitive( Primitive::Type::LINES ) );
+		_debugPrimitive->setVertexBuffer( vbo );
+		_debugPrimitive->setIndexBuffer( ibo );
+	}
+
+private:
+	RenderPassPtr _actualRenderPass;
+	PrimitivePtr _debugPrimitive;
+	MaterialPtr _debugMaterial;
+};
+
+typedef std::shared_ptr< DebugRenderPass > DebugRenderPassPtr;
+
 int main( int argc, char **argv )
 {
 	SimulationPtr sim( new GLSimulation( "IronMan", argc, argv ) );
@@ -43,18 +123,28 @@ int main( int argc, char **argv )
 	OBJLoader loader( FileSystem::getInstance().pathForResource( "ironman/Iron_Man.obj" ) );
 	NodePtr ironman = loader.load();
 	if ( ironman != nullptr ) {
-		RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.1 ) );
+		RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.01 ) );
 		ironman->attachComponent( rotationComponent );
 		scene->attachNode( ironman );
 	}
 
 	LightPtr light( new Light() );
-	light->local().setTranslate( 0.0f, 0.0f, 5.0f );
+	light->local().setTranslate( 1.0f, 2.0f, 5.0f );
 	scene->attachNode( light );
 
 	CameraPtr camera( new Camera() );
-	camera->local().setTranslate( 0.0f, 1.5f, 10.0f );
+	camera->local().setTranslate( 0.0f, 3.25f, 1.5f );
 	scene->attachNode( camera );
+
+	OffscreenRenderPassPtr renderPass( new OffscreenRenderPass() );
+	// RenderPassPtr renderPass( new RenderPass() );
+	// DebugRenderPassPtr debugRenderPass( new DebugRenderPass( renderPass ) );
+	// camera->setRenderPass( debugRenderPass );
+	camera->setRenderPass( renderPass );
+	ImageEffectPtr glowEffect( new ImageEffect() );
+	ShaderProgramPtr glowProgram( new gl3::GlowShaderProgram() );
+	glowEffect->setProgram( glowProgram );
+	renderPass->attachImageEffect( glowEffect );
 
 	sim->attachScene( scene );
 	return sim->run();
