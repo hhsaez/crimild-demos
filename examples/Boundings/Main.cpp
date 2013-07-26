@@ -28,40 +28,57 @@
 #include <Crimild.hpp>
 #include <Crimild_GLFW.hpp>
 
-#include <fstream>
-#include <string>
-#include <vector>
-
 using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "IronMan", argc, argv ) );
+	SimulationPtr sim( new GLSimulation( "Default shapes", argc, argv ) );
 
 	GroupPtr scene( new Group() );
 
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "ironman/Iron_Man.obj" ) );
-	NodePtr ironman = loader.load();
-	if ( ironman != nullptr ) {
-		RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.01 ) );
-		ironman->attachComponent( rotationComponent );
-		scene->attachNode( ironman );
-	}
+	GroupPtr shapes( new Group() );
+	scene->attachNode( shapes );
+
+	GeometryPtr kleinBottle( new Geometry() );
+	PrimitivePtr kleinBottlePrimitive( new KleinBottlePrimitive( Primitive::Type::TRIANGLES, 0.1 ) );
+	kleinBottle->attachPrimitive( kleinBottlePrimitive );
+	kleinBottle->local().setTranslate( 0.0f, 0.0f, 3.0f );
+	shapes->attachNode( kleinBottle );
+
+	GeometryPtr mobiusStrip( new Geometry() );
+	PrimitivePtr mobiusStripPrimitive( new MobiusStripPrimitive( Primitive::Type::TRIANGLES, 0.5f ) );
+	mobiusStrip->attachPrimitive( mobiusStripPrimitive );
+	mobiusStrip->local().setTranslate( 0.0f, 0.0f, -3.0f );
+	shapes->attachNode( mobiusStrip );
+
+	GeometryPtr torus( new Geometry() );
+	PrimitivePtr torusPrimitive( new TorusPrimitive( Primitive::Type::TRIANGLES, 1.0f, 0.25f ) );
+	torus->attachPrimitive( torusPrimitive );
+	torus->local().setTranslate( 3.0f, 0.0f, 0.0f );
+	shapes->attachNode( torus );
+
+	GeometryPtr trefoilKnot( new Geometry() );
+	PrimitivePtr trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::TRIANGLES, 1.0 ) );
+	trefoilKnot->attachPrimitive( trefoilKnotPrimitive );
+	trefoilKnot->local().setTranslate( -3.0f, 0.0f, 0.0f );
+	shapes->attachNode( trefoilKnot );
+
+	NodeComponentPtr rotate( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.1f ) );
+	shapes->attachComponent( rotate );
 
 	LightPtr light( new Light() );
-	light->local().setTranslate( 1.0f, 2.0f, 5.0f );
+	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
 	scene->attachNode( light );
 
 	CameraPtr camera( new Camera() );
-	camera->local().setTranslate( 0.0f, 2.88f, 3.5f );
+	camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
 	scene->attachNode( camera );
 
-	OffscreenRenderPassPtr renderPass( new OffscreenRenderPass() );
-	camera->setRenderPass( renderPass );
-	ImageEffectPtr glowEffect( new ImageEffect() );
-	ShaderProgramPtr glowProgram( new gl3::GlowShaderProgram() );
-	glowEffect->setProgram( glowProgram );
-	renderPass->attachImageEffect( glowEffect );
+	RenderPassPtr renderPass( new RenderPass() );
+	DebugRenderPassPtr debugRenderPass( new DebugRenderPass( renderPass ) );
+	debugRenderPass->setRenderBoundings( true );
+	debugRenderPass->setRenderNormals( true );
+	camera->setRenderPass( debugRenderPass );
 
 	sim->attachScene( scene );
 	return sim->run();

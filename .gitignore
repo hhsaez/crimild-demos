@@ -27,7 +27,11 @@ examples/Shapes/Shapes
 examples/Textures/Textures
 examples/Triangle/Triangle
 examples/Lighting/Lighting
+examples/Lightcycle/Lightcycle
 examples/Blending/Blending
+examples/Boundings/Boundings
 examples/IronMan/IronMan
+examples/Specular/Specular
 examples/Drone/Drone
 examples/PostProcessing/PostProcessing
+examples/NormalMapping/NormalMapping

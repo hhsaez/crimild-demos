@@ -54,9 +54,12 @@ public:
 				SelectNodes selectNodes( [&]( Node *node ) {
 					MaterialComponent *materials = node->getComponent< MaterialComponent >();
 					if ( materials ) {
-						if ( Intersection::test( Sphere3f( node->getWorld().getTranslate(), 1.0f ), ray ) ) {
+						if ( node->getWorldBound()->intersects( ray ) ) {
 							materials->foreachMaterial( []( MaterialPtr &material ) {
-								material->setDiffuse( RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ) );
+								float r = rand() % 255 / 255.0f;
+								float g = rand() % 255 / 255.0f;
+								float b = rand() % 255 / 255.0f;
+								material->setDiffuse( RGBAColorf( r, g, b, 1.0f ) );
 							});
 						}
 					}
@@ -95,11 +98,15 @@ int main( int argc, char **argv )
 
 	GroupPtr scene( new Group() );
 
+	GroupPtr spheres( new Group() );
 	for ( float x = -5.0f; x <= 5.0f; x++ ) {
 		for ( float y = -3.0f; y <= 3.0f; y++ ) {
-			scene->attachNode( makeSphere( x * 3.0f, y * 3.0f, 0.0f ) );
+			spheres->attachNode( makeSphere( x * 3.0f, y * 3.0f, 0.0f ) );
 		}
 	}
+	RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.01f ) );
+	spheres->attachComponent( rotationComponent );
+	scene->attachNode( spheres );
 
 	CameraPtr camera( new Camera() );
 	NodeComponentPtr pickingComponent( new PickingComponent() );
