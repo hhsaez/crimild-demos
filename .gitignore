@@ -35,3 +35,4 @@ examples/Specular/Specular
 examples/Drone/Drone
 examples/PostProcessing/PostProcessing
 examples/NormalMapping/NormalMapping
+examples/GPUParticles/GPUParticles
