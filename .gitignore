@@ -37,3 +37,4 @@ examples/PostProcessing/PostProcessing
 examples/NormalMapping/NormalMapping
 examples/GPUParticles/GPUParticles
 examples/Interpolations/Interpolations
+examples/Text/Text
