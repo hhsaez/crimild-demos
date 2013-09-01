@@ -30,17 +30,87 @@
 
 using namespace crimild;
 
-NodePtr generateText( std::string fontName, std::string str, const Vector3f &position, const RGBAColorf &color, bool useSDF = false ) 
+const char *outline_vs = { CRIMILD_TO_STRING(
+	in vec3 aPosition;
+	in vec2 aTextureCoord;
+
+	uniform mat4 uPMatrix; 
+	uniform mat4 uVMatrix; 
+	uniform mat4 uMMatrix;
+
+	out vec2 vTextureCoord;
+
+	void main()
+	{
+		vTextureCoord = aTextureCoord;
+		gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aPosition, 1.0); 
+	}
+)};
+
+const char *outline_fs = { CRIMILD_TO_STRING( 
+	struct Material {
+	    vec4 ambient;
+	    vec4 diffuse;
+	    vec4 specular;
+	    float shininess;
+	};
+
+	in vec2 vTextureCoord;
+
+	uniform sampler2D uColorMap;
+	uniform Material uMaterial; 
+
+	out vec4 vFragColor;
+
+	const float smoothing = 1.0 / 64.0;
+
+	void main( void ) 
+	{ 
+		vec4 color = uMaterial.diffuse;
+		float distance = texture( uColorMap, vTextureCoord ).r;
+		if ( distance > 0.6 ) {
+			distance = 0.0f;
+		}
+    	float alpha = smoothstep( 0.5 - smoothing, 0.5 + smoothing, distance );
+    	vFragColor = vec4( color.rgb, alpha );		
+	}
+)};
+
+class OutlineShaderProgram : public ShaderProgram {
+public:
+	OutlineShaderProgram( void )
+		: ShaderProgram( gl3::Utils::getVertexShaderInstance( outline_vs ), gl3::Utils::getFragmentShaderInstance( outline_fs ) )
+	{ 
+		registerStandardLocation( ShaderLocation::Type::ATTRIBUTE, ShaderProgram::StandardLocation::POSITION_ATTRIBUTE, "aPosition" );
+		registerStandardLocation( ShaderLocation::Type::ATTRIBUTE, ShaderProgram::StandardLocation::TEXTURE_COORD_ATTRIBUTE, "aTextureCoord" );
+
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::PROJECTION_MATRIX_UNIFORM, "uPMatrix" );
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::VIEW_MATRIX_UNIFORM, "uVMatrix" );
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::MODEL_MATRIX_UNIFORM, "uMMatrix" );
+
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::MATERIAL_COLOR_MAP_UNIFORM, "uColorMap" );
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::MATERIAL_AMBIENT_UNIFORM, "uMaterial.ambient" );
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::MATERIAL_DIFFUSE_UNIFORM, "uMaterial.diffuse" );
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::MATERIAL_SPECULAR_UNIFORM, "uMaterial.specular" );
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::MATERIAL_SHININESS_UNIFORM, "uMaterial.shininess" );
+	}
+
+	virtual ~OutlineShaderProgram( void )
+	{
+
+	}
+};
+
+NodePtr generateText( std::string fontName, std::string str, const Vector3f &position, const RGBAColorf &color, ShaderProgramPtr program ) 
 {
-	FontPtr font( new Font( FileSystem::getInstance().pathForResource( fontName + ( useSDF ? "_sdf" : "" ) + ".tga" ), FileSystem::getInstance().pathForResource( fontName + ".txt" ) ) );
+	FontPtr font( new Font( FileSystem::getInstance().pathForResource( fontName + ( program != nullptr ? "_sdf" : "" ) + ".tga" ), FileSystem::getInstance().pathForResource( fontName + ".txt" ) ) );
 	
 	TextPtr text( new Text() );
 	text->setFont( font );
 	text->setSize( 1.0f );
 	text->setText( str );
 
-	if ( useSDF ) {
-		gl3::SignedDistanceFieldShaderProgramPtr program( new gl3::SignedDistanceFieldShaderProgram() );
+	if ( program != nullptr ) {
 		text->getMaterial()->setProgram( program );
 	}
 	
@@ -57,11 +127,16 @@ int main( int argc, char **argv )
 
 	GroupPtr scene( new Group() );
 
+	ShaderProgramPtr sdfProgram( new gl3::SignedDistanceFieldShaderProgram() );
+	ShaderProgramPtr outlineProgram( new OutlineShaderProgram() );
+
 	GroupPtr texts( new Group() );
-	NodePtr text1 = generateText( "LucidaGrande", "Normal text", Vector3f( 0.0f, 0.5f, 0.0f ), RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ), false );
+	NodePtr text1 = generateText( "LucidaGrande", "Normal text", Vector3f( 0.0f, 0.5f, 0.0f ), RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ), nullptr );
 	texts->attachNode( text1 );
-	NodePtr text2 = generateText( "LucidaGrande", "Text with SDF", Vector3f( 0.0f, -0.5f, 0.0f ), RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ), true );
+	NodePtr text2 = generateText( "LucidaGrande", "Text with SDF", Vector3f( 0.0f, -0.5f, 0.0f ), RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ), sdfProgram );
 	texts->attachNode( text2 );
+	NodePtr text3 = generateText( "LucidaGrande", "Outlined Text", Vector3f( 0.0f, -1.5f, 0.0f ), RGBAColorf( 1.0f, 1.0f, 0.0f, 1.0f ), outlineProgram );
+	texts->attachNode( text3 );
 
 	scene->attachNode( texts );
 	NodeComponentPtr translate( new LambdaComponent( [&]( Node *node, const Time & ) {
