@@ -54,7 +54,7 @@ public:
 				SelectNodes selectNodes( [&]( Node *node ) {
 					MaterialComponent *materials = node->getComponent< MaterialComponent >();
 					if ( materials ) {
-						if ( node->getWorldBound()->intersects( ray ) ) {
+						if ( node->getWorldBound()->testIntersection( ray ) ) {
 							materials->foreachMaterial( []( MaterialPtr &material ) {
 								float r = rand() % 255 / 255.0f;
 								float g = rand() % 255 / 255.0f;
