@@ -48,32 +48,45 @@ int main( int argc, char **argv )
 	GroupPtr importedScene( new Group() );
 	importedScene->attachNode( model );
 
-	LambdaComponentPtr controls( new LambdaComponent( [&]( crimild::Node *node, const Time &t ) {
-		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
-			node->local().translate() += Vector3f( 0.0f, 0.0f, t.getDeltaTime() );
-		}
-		if ( InputState::getCurrentState().isKeyStillDown( 'S' ) ) {
-			node->local().translate() += Vector3f( 0.0f, 0.0f, -t.getDeltaTime() );
-		}
-		if ( InputState::getCurrentState().isKeyStillDown( 'A' ) ) {
-			node->local().rotate() *= Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0f ), t.getDeltaTime() );
-		}
-		if ( InputState::getCurrentState().isKeyStillDown( 'D' ) ) {
-			node->local().rotate() *= Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0f ), -t.getDeltaTime() );
-		}
-	}));
-	importedScene->attachComponent( controls );
-
 	GroupPtr scene( new Group() );
 	scene->attachNode( importedScene );
 
 	CameraPtr camera( new Camera() );
 	camera->local().setTranslate( model->getWorldBound()->getCenter() + Vector3f( 0.0f, 0.0f, model->getWorldBound()->getRadius() ) );
+	RenderPassPtr defaultRP( new RenderPass() );
+	HierarchyRenderPassPtr debugRP( new HierarchyRenderPass( defaultRP ) );
+	debugRP->setTargetScene( model );
+	debugRP->setRenderBoundings( true );
+	camera->setRenderPass( debugRP );
 	scene->attachNode( camera );
 
 	LightPtr light( new Light() );
 	light->setLocal( camera->getLocal() );
 	scene->attachNode( light );
+
+	LambdaComponentPtr controls( new LambdaComponent( [=]( crimild::Node *, const Time &t ) {
+		if ( InputState::getCurrentState().isKeyStillDown( '1' ) ) {
+			camera->setRenderPass( defaultRP );
+		}
+
+		if ( InputState::getCurrentState().isKeyStillDown( '2' ) ) {
+			camera->setRenderPass( debugRP );
+		}
+
+		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
+			importedScene->local().translate() += Vector3f( 0.0f, 0.0f, t.getDeltaTime() );
+		}
+		if ( InputState::getCurrentState().isKeyStillDown( 'S' ) ) {
+			importedScene->local().translate() += Vector3f( 0.0f, 0.0f, -t.getDeltaTime() );
+		}
+		if ( InputState::getCurrentState().isKeyStillDown( 'A' ) ) {
+			importedScene->local().rotate() *= Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0f ), t.getDeltaTime() );
+		}
+		if ( InputState::getCurrentState().isKeyStillDown( 'D' ) ) {
+			importedScene->local().rotate() *= Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0f ), -t.getDeltaTime() );
+		}
+	}));
+	scene->attachComponent( controls );
 
 	sim->attachScene( scene );
 	return sim->run();
