@@ -40,7 +40,7 @@ int main( int argc, char **argv )
 
 	GroupPtr scene( new Group() );
 
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "ironman/Iron_Man.obj" ) );
+	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/Iron_Man.obj" ) );
 	NodePtr ironman = loader.load();
 	if ( ironman != nullptr ) {
 		RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.01 ) );
