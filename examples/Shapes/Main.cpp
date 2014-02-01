@@ -32,45 +32,45 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Default shapes", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Default shapes", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 
-	GroupPtr shapes( new Group() );
+	Pointer< Group > shapes( new Group() );
 	scene->attachNode( shapes );
 
-	GeometryPtr kleinBottle( new Geometry() );
-	PrimitivePtr kleinBottlePrimitive( new KleinBottlePrimitive( Primitive::Type::LINES, 0.1 ) );
+	Pointer< Geometry > kleinBottle( new Geometry() );
+	Pointer< Primitive > kleinBottlePrimitive( new KleinBottlePrimitive( Primitive::Type::LINES, 0.1 ) );
 	kleinBottle->attachPrimitive( kleinBottlePrimitive );
 	kleinBottle->local().setTranslate( 0.0f, 0.0f, 3.0f );
 	shapes->attachNode( kleinBottle );
 
-	GeometryPtr mobiusStrip( new Geometry() );
-	PrimitivePtr mobiusStripPrimitive( new MobiusStripPrimitive( Primitive::Type::LINES, 0.5f ) );
+	Pointer< Geometry > mobiusStrip( new Geometry() );
+	Pointer< Primitive > mobiusStripPrimitive( new MobiusStripPrimitive( Primitive::Type::LINES, 0.5f ) );
 	mobiusStrip->attachPrimitive( mobiusStripPrimitive );
 	mobiusStrip->local().setTranslate( 0.0f, 0.0f, -3.0f );
 	shapes->attachNode( mobiusStrip );
 
-	GeometryPtr torus( new Geometry() );
-	PrimitivePtr torusPrimitive( new TorusPrimitive( Primitive::Type::LINES, 1.0f, 0.25f ) );
+	Pointer< Geometry > torus( new Geometry() );
+	Pointer< Primitive > torusPrimitive( new TorusPrimitive( Primitive::Type::LINES, 1.0f, 0.25f ) );
 	torus->attachPrimitive( torusPrimitive );
 	torus->local().setTranslate( 3.0f, 0.0f, 0.0f );
 	shapes->attachNode( torus );
 
-	GeometryPtr trefoilKnot( new Geometry() );
-	PrimitivePtr trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::LINES, 1.0 ) );
+	Pointer< Geometry > trefoilKnot( new Geometry() );
+	Pointer< Primitive > trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::LINES, 1.0 ) );
 	trefoilKnot->attachPrimitive( trefoilKnotPrimitive );
 	trefoilKnot->local().setTranslate( -3.0f, 0.0f, 0.0f );
 	shapes->attachNode( trefoilKnot );
 
-	NodeComponentPtr rotate( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.1f ) );
+	Pointer< NodeComponent > rotate( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.1f ) );
 	shapes->attachComponent( rotate );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
 	scene->attachNode( camera );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

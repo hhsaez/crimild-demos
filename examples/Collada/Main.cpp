@@ -33,7 +33,7 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Loading scenes from COLLADA files", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Loading scenes from COLLADA files", argc, argv ) );
 
 	std::string filePath = "astroBoy_walk_Max.dae";
 	if ( argc >= 2 ) {
@@ -41,30 +41,30 @@ int main( int argc, char **argv )
 	}
 
 	collada::COLLADALoader loader( FileSystem::getInstance().pathForResource( filePath ) );
-	NodePtr model = loader.load();
+	Pointer< Node > model = loader.load();
 	model->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
 	model->perform( UpdateWorldState() );
 
-	GroupPtr importedScene( new Group() );
+	Pointer< Group > importedScene( new Group() );
 	importedScene->attachNode( model );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 	scene->attachNode( importedScene );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( model->getWorldBound()->getCenter() + Vector3f( 0.0f, 0.0f, model->getWorldBound()->getRadius() ) );
-	RenderPassPtr defaultRP( new RenderPass() );
-	HierarchyRenderPassPtr debugRP( new HierarchyRenderPass( defaultRP ) );
+	Pointer< RenderPass > defaultRP( new RenderPass() );
+	Pointer< HierarchyRenderPass > debugRP( new HierarchyRenderPass( defaultRP ) );
 	debugRP->setTargetScene( model );
 	debugRP->setRenderBoundings( true );
 	camera->setRenderPass( debugRP );
 	scene->attachNode( camera );
 
-	LightPtr light( new Light() );
+	Pointer< Light > light( new Light() );
 	light->setLocal( camera->getLocal() );
 	scene->attachNode( light );
 
-	LambdaComponentPtr controls( new LambdaComponent( [=]( crimild::Node *, const Time &t ) {
+	Pointer< LambdaComponent > controls( new LambdaComponent( [&]( crimild::Node *, const Time &t ) {
 		if ( InputState::getCurrentState().isKeyStillDown( '1' ) ) {
 			camera->setRenderPass( defaultRP );
 		}
@@ -88,7 +88,7 @@ int main( int argc, char **argv )
 	}));
 	scene->attachComponent( controls );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

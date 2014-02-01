@@ -32,35 +32,35 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Image effects", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Image effects", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 
-	GeometryPtr geometry( new Geometry() );
-	PrimitivePtr primitive( new NewellTeapotPrimitive() );
+	Pointer< Geometry > geometry( new Geometry() );
+	Pointer< Primitive > primitive( new NewellTeapotPrimitive() );
 	geometry->attachPrimitive( primitive );
-	RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f ) );
+	Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f ) );
 	geometry->attachComponent( rotationComponent );
 	scene->attachNode( geometry );
 
-	LightPtr light( new Light() );
+	Pointer< Light > light( new Light() );
 	light->local().setTranslate( -10.0f, 20.0f, 30.0f );
 	scene->attachNode( light );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 15.0f, 80.0f );
 	scene->attachNode( camera );
 	
-	OffscreenRenderPassPtr renderPass( new OffscreenRenderPass() );
+	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
 	camera->setRenderPass( renderPass );
 
-	ImageEffectPtr sepiaEffect( new ImageEffect() );
-	ShaderProgramPtr sepiaProgram( new gl3::SepiaToneShaderProgram() );
+	Pointer< ImageEffect > sepiaEffect( new ImageEffect() );
+	Pointer< ShaderProgram > sepiaProgram( new gl3::SepiaToneShaderProgram() );
 	sepiaEffect->setProgram( sepiaProgram );
 	//sepiaEffect->setAlphaState( new AlphaState( true ) );
 	renderPass->attachImageEffect( sepiaEffect );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

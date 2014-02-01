@@ -32,19 +32,19 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "GPU Particle System", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "GPU Particle System", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 
-	PrimitivePtr ballPrimitive( new SpherePrimitive( 2.0f ) );
-	GeometryPtr sphere( new Geometry() );
+	Pointer< Primitive > ballPrimitive( new SpherePrimitive( 2.0f ) );
+	Pointer< Geometry > sphere( new Geometry() );
 	sphere->attachPrimitive( ballPrimitive );
-	MaterialPtr material( new Material() );
+	Pointer< Material > material( new Material() );
 	material->setDiffuse( RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ) );
 	sphere->getComponent< MaterialComponent >()->attachMaterial( material );
 	scene->attachNode( sphere );
 
-	gl3::ParticleSystemPtr particleSystem( new gl3::ParticleSystem() );
+	Pointer< gl3::ParticleSystem > particleSystem( new gl3::ParticleSystem() );
 	ParticleSystemComponent *particleSystemComponent = particleSystem->getComponent< ParticleSystemComponent >();
 	particleSystemComponent->setParticleCount( 500 );
 	particleSystemComponent->setParticleSize( 40.0f );
@@ -54,22 +54,22 @@ int main( int argc, char **argv )
 	particleSystemComponent->setVelocity( Vector3f( 10.0f, 0.0f, 0.0f ) );
 	particleSystemComponent->setLooping( true );
 	particleSystemComponent->generateParticles();
-	ImagePtr image( new ImageTGA( FileSystem::getInstance().pathForResource( "particle.tga" ) ) );
-	TexturePtr texture( new Texture( image ) );
+	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "particle.tga" ) ) );
+	Pointer< Texture > texture( new Texture( image ) );
 	particleSystemComponent->getParticleMaterial()->getDepthState()->setEnabled( false );
 	particleSystemComponent->getParticleMaterial()->setColorMap( texture );
 	particleSystemComponent->setShape( sphere->worldBound() );
 	scene->attachNode( particleSystem );
 
-	LightPtr light( new Light() );
+	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
 	scene->attachNode( light );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 5.0f, -5.0f, 25.0f );
 	scene->attachNode( camera );
 
-	NodeComponentPtr controls( new LambdaComponent( [&]( Node *node, const Time &t ) {
+	Pointer< NodeComponent > controls( new LambdaComponent( [&]( Node *node, const Time &t ) {
 		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
 			sphere->local().translate() += Vector3f( 0.0f, 4.0f * t.getDeltaTime(), 0.0f );
 		}
@@ -92,7 +92,7 @@ int main( int argc, char **argv )
 	}));
 	scene->attachComponent( controls );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

@@ -65,21 +65,21 @@ public:
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Drone", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Drone", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 
 	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/MQ-27.obj" ) );
-	NodePtr droneModel = loader.load();
+	Pointer< Node > droneModel = loader.load();
 	if ( droneModel != nullptr ) {
-		GroupPtr drone( new Group( "drone" ) );
+		Pointer< Group > drone( new Group( "drone" ) );
 		drone->attachNode( droneModel );
 
-		NodeComponentPtr droneComponent( new DroneComponent() );
+		Pointer< NodeComponent > droneComponent( new DroneComponent() );
 		drone->attachComponent( droneComponent );
 
-		AudioClipPtr audioClip( new WavAudioClip( FileSystem::getInstance().pathForResource( "drone_mono.wav" ) ) );
-		AudioComponentPtr audioComponent( new AudioComponent( audioClip ) );
+		Pointer< AudioClip > audioClip( new WavAudioClip( FileSystem::getInstance().pathForResource( "drone_mono.wav" ) ) );
+		Pointer< AudioComponent > audioComponent( new AudioComponent( audioClip ) );
 		drone->attachComponent( audioComponent );
 		audioComponent->play( true );
 
@@ -88,15 +88,15 @@ int main( int argc, char **argv )
 
 	AudioManager::getInstance().setGeneralGain( 800.0f );
 
-	LightPtr light( new Light() );
+	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 0.0f, 300.0f, 50.0f );
 	scene->attachNode( light );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 1.5f, 50.0f );
 	scene->attachNode( camera );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

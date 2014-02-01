@@ -30,32 +30,32 @@
 
 using namespace crimild;
 
-NodePtr makeBall( float x, float y, float z, float fx = 0.0f, float fy = 0.0f, float fz = 0.0f )
+Pointer< Node > makeBall( float x, float y, float z, float fx = 0.0f, float fy = 0.0f, float fz = 0.0f )
 {
-	PrimitivePtr sphere( new SpherePrimitive( 1.0 ) );
-	GeometryPtr geometry( new Geometry() );
+	Pointer< Primitive > sphere( new SpherePrimitive( 1.0 ) );
+	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( sphere );
 	geometry->local().setTranslate( x, y, z );
 
-	RigidBodyComponentPtr rigidBody( new RigidBodyComponent() );
+	Pointer< RigidBodyComponent > rigidBody( new RigidBodyComponent() );
 	rigidBody->setForce( Vector3f( fx, fy, fz ) );
 	geometry->attachComponent( rigidBody );
 
-	ColliderComponentPtr collider( new ColliderComponent() );
+	Pointer< ColliderComponent > collider( new ColliderComponent() );
 	geometry->attachComponent( collider );
 
 	return geometry;
 }
 
-NodePtr makeGround( void )
+Pointer< Node > makeGround( void )
 {
-	PrimitivePtr primitive( new QuadPrimitive( 10.0f, 10.0f ) );
-	GeometryPtr geometry( new Geometry() );
+	Pointer< Primitive > primitive( new QuadPrimitive( 10.0f, 10.0f ) );
+	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive );
 	geometry->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
 	
-	PlaneBoundingVolumePtr planeBoundingVolume( new PlaneBoundingVolume( Plane3f( Vector3f( 0.0f, 1.0f, 0.0f ), 0.0f ) ) );
-	ColliderComponentPtr collider( new ColliderComponent( planeBoundingVolume ) );
+	Pointer< PlaneBoundingVolume > planeBoundingVolume( new PlaneBoundingVolume( Plane3f( Vector3f( 0.0f, 1.0f, 0.0f ), 0.0f ) ) );
+	Pointer< ColliderComponent > collider( new ColliderComponent( planeBoundingVolume ) );
 	geometry->attachComponent( collider );
 
 	return geometry;
@@ -63,23 +63,23 @@ NodePtr makeGround( void )
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Physics", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Physics", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 	scene->attachNode( makeGround() );
 	scene->attachNode( makeBall( -2.0f, 1.0f, 0.0f, 5.0f, 2.0f ) );
 	scene->attachNode( makeBall( 2.0f, 5.0f, 0.0f ) );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 3.0f, 10.0f );
 	camera->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
 	scene->attachNode( camera );
 
-	LightPtr light( new Light() );
+	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 0.0f, 5.0f, 5.0f );
 	scene->attachNode( light );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 
 	return sim->run();
 }

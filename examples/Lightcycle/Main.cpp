@@ -36,40 +36,40 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Lightcycle", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Lightcycle", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 
 	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/HQ_Movie cycle.obj" ) );
-	NodePtr model = loader.load();
+	Pointer< Node > model = loader.load();
 	if ( model != nullptr ) {
-		GroupPtr group( new Group() );
+		Pointer< Group > group( new Group() );
 		Quaternion4f q0, q1;
 		q0.fromAxisAngle( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
 		q1.fromAxisAngle( Vector3f( 0.0f, 0.0f, 1.0f ), -Numericf::HALF_PI );
 		model->local().setRotate( q0 * q1 );
 		group->attachNode( model );
-		RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), -0.01 ) );
+		Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), -0.01 ) );
 		group->attachComponent( rotationComponent );
 		scene->attachNode( group );
 	}
 
-	LightPtr light( new Light() );
+	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
 	scene->attachNode( light );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( -0.5f, 0.75f, 3.0f );
 	scene->attachNode( camera );
 
-	OffscreenRenderPassPtr renderPass( new OffscreenRenderPass() );
+	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
 	camera->setRenderPass( renderPass );
-	ImageEffectPtr glowEffect( new ImageEffect() );
-	ShaderProgramPtr glowProgram( new gl3::GlowShaderProgram() );
+	Pointer< ImageEffect > glowEffect( new ImageEffect() );
+	Pointer< ShaderProgram > glowProgram( new gl3::GlowShaderProgram() );
 	glowEffect->setProgram( glowProgram );
 	renderPass->attachImageEffect( glowEffect );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

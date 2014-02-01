@@ -37,7 +37,7 @@ int main( int argc, char **argv )
 		  	  << "\nPress 2 to toggle specular map"
 		  	  << "\nPress 3 to toggle normal map" << std::endl;
 
-	SimulationPtr sim( new GLSimulation( "A simple example", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "A simple example", argc, argv ) );
 
 	float vertices[] = {
 		-2.0f, +2.0f, 0.0f, 	0.0f, 0.0f, 1.0f,	0.0f, -1.0f, 0.0f,	0.0f, 0.0f,
@@ -50,47 +50,47 @@ int main( int argc, char **argv )
 		0, 1, 2, 0, 2, 3
 	};
 
-	VertexBufferObjectPtr vbo( new VertexBufferObject( VertexFormat::VF_P3_N3_TG3_UV2, 4, vertices ) );
-	IndexBufferObjectPtr ibo( new IndexBufferObject( 6, indices ) );
+	Pointer< VertexBufferObject > vbo( new VertexBufferObject( VertexFormat::VF_P3_N3_TG3_UV2, 4, vertices ) );
+	Pointer< IndexBufferObject > ibo( new IndexBufferObject( 6, indices ) );
 	
-	PrimitivePtr primitive( new Primitive( Primitive::Type::TRIANGLES ) );
+	Pointer< Primitive > primitive( new Primitive( Primitive::Type::TRIANGLES ) );
 	primitive->setVertexBuffer( vbo );
 	primitive->setIndexBuffer( ibo );
 
-	GeometryPtr geometry( new Geometry() );
+	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive );
 
-	MaterialPtr material( new Material() );
-		ImagePtr colorImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-color.tga" ) ) );
-		TexturePtr colorMap( new Texture( colorImage ) );
+	Pointer< Material > material( new Material() );
+		Pointer< Image > colorImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-color.tga" ) ) );
+		Pointer< Texture > colorMap( new Texture( colorImage ) );
 		material->setColorMap( colorMap );
-		ImagePtr specularImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-specular.tga" ) ) );
-		TexturePtr specularMap( new Texture( specularImage ) );
+		Pointer< Image > specularImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-specular.tga" ) ) );
+		Pointer< Texture > specularMap( new Texture( specularImage ) );
 		material->setSpecularMap( specularMap );
-		ImagePtr normalImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-normal.tga" ) ) );
-		TexturePtr normalMap( new Texture( normalImage ) );
+		Pointer< Image > normalImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-normal.tga" ) ) );
+		Pointer< Texture > normalMap( new Texture( normalImage ) );
 		material->setNormalMap( normalMap );
 	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 	
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 	scene->attachNode( geometry );
 
-	GroupPtr interactiveLight( new Group() );
-		SpherePrimitivePtr lightPrimitive( new SpherePrimitive( 0.025f, VertexFormat::VF_P3 ) );
-		GeometryPtr lightGeometry( new Geometry() );
+	Pointer< Group > interactiveLight( new Group() );
+		Pointer< SpherePrimitive > lightPrimitive( new SpherePrimitive( 0.025f, VertexFormat::VF_P3 ) );
+		Pointer< Geometry > lightGeometry( new Geometry() );
 		lightGeometry->attachPrimitive( lightPrimitive );
 		interactiveLight->attachNode( lightGeometry );
-		LightPtr light( new Light() );
+		Pointer< Light > light( new Light() );
 		light->local().setRotate( Vector3f( 0.0f, 1.0f, 0.0f ), -Numericf::HALF_PI );
 		interactiveLight->attachNode( light );
 		interactiveLight->local().setTranslate( 1.0f, 1.0f, 1.0f );
 	scene->attachNode( interactiveLight );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 6.0f );
 	scene->attachNode( camera );
 
-	LambdaComponentPtr controls( new LambdaComponent( [&]( Node *, const Time &t ) {
+	Pointer< LambdaComponent > controls( new LambdaComponent( [&]( Node *, const Time &t ) {
 		if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
 			material->setColorMap( material->getColorMap() != nullptr ? nullptr : colorMap );
 		}
@@ -118,7 +118,7 @@ int main( int argc, char **argv )
 	}));
 	scene->attachComponent( controls );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

@@ -30,18 +30,18 @@
 
 using namespace crimild;
 
-NodePtr buildBackground( float x, float y, float z ) 
+Pointer< Node > buildBackground( float x, float y, float z ) 
 {
-	PrimitivePtr primitive( new QuadPrimitive( 9.0f, 9.0f, VertexFormat::VF_P3_N3_UV2 ) );
-	GeometryPtr geometry( new Geometry() );
+	Pointer< Primitive > primitive( new QuadPrimitive( 9.0f, 9.0f, VertexFormat::VF_P3_N3_UV2 ) );
+	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive );
 
-	MaterialPtr material( new Material() );
-	ImagePtr image( new ImageTGA( FileSystem::getInstance().pathForResource( "stars.tga" ) ) );
-	TexturePtr texture( new Texture( image ) );
+	Pointer< Material > material( new Material() );
+	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "stars.tga" ) ) );
+	Pointer< Texture > texture( new Texture( image ) );
 	material->setColorMap( texture );
 	
-	MaterialComponentPtr materials( new MaterialComponent() );
+	Pointer< MaterialComponent > materials( new MaterialComponent() );
 	materials->attachMaterial( material );
 	geometry->attachComponent( materials );
 
@@ -50,25 +50,25 @@ NodePtr buildBackground( float x, float y, float z )
 	return geometry;	
 }
 
-NodePtr buildEarth( float x, float y, float z )
+Pointer< Node > buildEarth( float x, float y, float z )
 {
-	PrimitivePtr primitive( new SpherePrimitive( 1.0f, VertexFormat::VF_P3_N3_UV2 ) );
-	GeometryPtr geometry( new Geometry() );
+	Pointer< Primitive > primitive( new SpherePrimitive( 1.0f, VertexFormat::VF_P3_N3_UV2 ) );
+	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive );
 
-	MaterialPtr material( new Material() );
-	ImagePtr image( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-color.tga" ) ) );
-	TexturePtr texture( new Texture( image ) );
+	Pointer< Material > material( new Material() );
+	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-color.tga" ) ) );
+	Pointer< Texture > texture( new Texture( image ) );
 	material->setColorMap( texture );
-	ImagePtr specularImage( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-specular.tga" ) ) );
-	TexturePtr specularMap( new Texture( specularImage ) );
+	Pointer< Image > specularImage( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-specular.tga" ) ) );
+	Pointer< Texture > specularMap( new Texture( specularImage ) );
 	material->setSpecularMap( specularMap );
 	
-	MaterialComponentPtr materials( new MaterialComponent() );
+	Pointer< MaterialComponent > materials( new MaterialComponent() );
 	materials->attachMaterial( material );
 	geometry->attachComponent( materials );
 
-	NodeComponentPtr rotation( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.01 ) );
+	Pointer< NodeComponent > rotation( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.01 ) );
 	geometry->attachComponent( rotation );
 
 	geometry->local().setTranslate( x, y, z );
@@ -76,15 +76,15 @@ NodePtr buildEarth( float x, float y, float z )
 	return geometry;
 }
 
-NodePtr buildAtmosphere( float x, float y, float z )
+Pointer< Node > buildAtmosphere( float x, float y, float z )
 {
-	PrimitivePtr primitive( new SpherePrimitive( 1.02f, VertexFormat::VF_P3_N3_UV2 ) );
-	GeometryPtr geometry( new Geometry() );
+	Pointer< Primitive > primitive( new SpherePrimitive( 1.02f, VertexFormat::VF_P3_N3_UV2 ) );
+	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive );
 
-	MaterialPtr material( new Material() );
-	ImagePtr image( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-atmosphere.tga" ) ) );
-	TexturePtr texture( new Texture( image ) );
+	Pointer< Material > material( new Material() );
+	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-atmosphere.tga" ) ) );
+	Pointer< Texture > texture( new Texture( image ) );
 	material->setColorMap( texture );
 	material->getDepthState()->setEnabled( false );
 	material->getAlphaState()->setEnabled( true );
@@ -92,7 +92,7 @@ NodePtr buildAtmosphere( float x, float y, float z )
 	material->getAlphaState()->setDstBlendFunc( AlphaState::DstBlendFunc::ONE_MINUS_SRC_COLOR );
 	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
-	NodeComponentPtr rotation( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.015 ) );
+	Pointer< NodeComponent > rotation( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.015 ) );
 	geometry->attachComponent( rotation );
 
 	geometry->local().setTranslate( x, y, z );
@@ -102,22 +102,22 @@ NodePtr buildAtmosphere( float x, float y, float z )
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Textures", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Textures", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 	scene->attachNode( buildBackground( 0, 0, -5 ) );
 	scene->attachNode( buildEarth( 0.5, 0, 0 ) );
 	//scene->attachNode( buildAtmosphere( 0.5, 0, 0 ) );
 
-	LightPtr light( new Light() );
+	Pointer< Light > light( new Light() );
 	light->local().setTranslate( -2.0f, 1.0f, 4.0f );
 	scene->attachNode( light );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 4.0f );
 	scene->attachNode( camera );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

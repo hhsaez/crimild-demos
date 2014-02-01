@@ -32,26 +32,26 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "The Infamus Teapot", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "The Infamus Teapot", argc, argv ) );
 	
-	GeometryPtr geometry( new Geometry() );
-	PrimitivePtr primitive( new NewellTeapotPrimitive() );
+	Pointer< Geometry > geometry( new Geometry() );
+	Pointer< Primitive > primitive( new NewellTeapotPrimitive() );
 	geometry->attachPrimitive( primitive );
-	RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.25 ) );
+	Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.25 ) );
 	geometry->attachComponent( rotationComponent );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 	scene->attachNode( geometry );
 
-	LightPtr light( new Light() );
+	Pointer< Light > light( new Light() );
 	light->local().setTranslate( -10.0f, 20.0f, 30.0f );
 	scene->attachNode( light );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 15.0f, 80.0f );
 	scene->attachNode( camera );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

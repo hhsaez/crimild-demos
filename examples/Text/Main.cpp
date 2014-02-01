@@ -101,11 +101,11 @@ public:
 	}
 };
 
-NodePtr generateText( std::string fontName, std::string str, const Vector3f &position, const RGBAColorf &color, ShaderProgramPtr program ) 
+Pointer< Node > generateText( std::string fontName, std::string str, const Vector3f &position, const RGBAColorf &color, ShaderProgram *program ) 
 {
-	FontPtr font( new Font( FileSystem::getInstance().pathForResource( fontName + ( program != nullptr ? "_sdf" : "" ) + ".tga" ), FileSystem::getInstance().pathForResource( fontName + ".txt" ) ) );
+	Pointer< Font > font( new Font( FileSystem::getInstance().pathForResource( fontName + ( program != nullptr ? "_sdf" : "" ) + ".tga" ), FileSystem::getInstance().pathForResource( fontName + ".txt" ) ) );
 	
-	TextPtr text( new Text() );
+	Pointer< Text > text( new Text() );
 	text->setFont( font );
 	text->setSize( 1.0f );
 	text->setText( str );
@@ -123,23 +123,23 @@ NodePtr generateText( std::string fontName, std::string str, const Vector3f &pos
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Rendering text", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Rendering text", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 
-	ShaderProgramPtr sdfProgram( new gl3::SignedDistanceFieldShaderProgram() );
-	ShaderProgramPtr outlineProgram( new OutlineShaderProgram() );
+	Pointer< ShaderProgram > sdfProgram( new gl3::SignedDistanceFieldShaderProgram() );
+	Pointer< ShaderProgram > outlineProgram( new OutlineShaderProgram() );
 
-	GroupPtr texts( new Group() );
-	NodePtr text1 = generateText( "LucidaGrande", "Normal text", Vector3f( 0.0f, 0.5f, 0.0f ), RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ), nullptr );
+	Pointer< Group > texts( new Group() );
+	Pointer< Node > text1 = generateText( "LucidaGrande", "Normal text", Vector3f( 0.0f, 0.5f, 0.0f ), RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ), nullptr );
 	texts->attachNode( text1 );
-	NodePtr text2 = generateText( "LucidaGrande", "Text with SDF", Vector3f( 0.0f, -0.5f, 0.0f ), RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ), sdfProgram );
+	Pointer< Node > text2 = generateText( "LucidaGrande", "Text with SDF", Vector3f( 0.0f, -0.5f, 0.0f ), RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ), sdfProgram );
 	texts->attachNode( text2 );
-	NodePtr text3 = generateText( "LucidaGrande", "Outlined Text", Vector3f( 0.0f, -1.5f, 0.0f ), RGBAColorf( 1.0f, 1.0f, 0.0f, 1.0f ), outlineProgram );
+	Pointer< Node > text3 = generateText( "LucidaGrande", "Outlined Text", Vector3f( 0.0f, -1.5f, 0.0f ), RGBAColorf( 1.0f, 1.0f, 0.0f, 1.0f ), outlineProgram );
 	texts->attachNode( text3 );
 
 	scene->attachNode( texts );
-	NodeComponentPtr translate( new LambdaComponent( [&]( Node *node, const Time & ) {
+	Pointer< NodeComponent > translate( new LambdaComponent( [&]( Node *node, const Time & ) {
 		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
 			node->local().translate() += Vector3f( 0.0f, 0.0f, 1.0f );
 		}
@@ -151,11 +151,11 @@ int main( int argc, char **argv )
 
 	scene->perform( UpdateWorldState() );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( scene->getWorldBound()->getCenter() + Vector3f( 0.0f, 0.0f, 2.0f ) );
 	scene->attachNode( camera );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

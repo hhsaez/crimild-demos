@@ -37,10 +37,10 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Interpolations", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Interpolations", argc, argv ) );
 
-	GeometryPtr trefoilKnot( new Geometry() );
-	PrimitivePtr trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 ) );
+	Pointer< Geometry > trefoilKnot( new Geometry() );
+	Pointer< Primitive > trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 ) );
 	trefoilKnot->attachPrimitive( trefoilKnotPrimitive );
 
 	Vector3f from( -3.0f, -1.0f, 0.0f );
@@ -69,7 +69,7 @@ int main( int argc, char **argv )
 	easingFunctions[ "elasticOutSmall" ] = Interpolation::elasticOutSmall< float, float >;
 	easingFunctions[ "elasticOutBig" ] = Interpolation::elasticOutBig< float, float >;
 	auto funcIt = easingFunctions.begin();
-	NodeComponentPtr updateCmp( new LambdaComponent( [&]( Node *node, const Time &appTime ) {
+	Pointer< NodeComponent > updateCmp( new LambdaComponent( [&]( Node *node, const Time &appTime ) {
 		float x, y;
 
 		float t = Numericf::min( Numericf::max( functTime, 0.0 ), 1.0 );
@@ -93,18 +93,18 @@ int main( int argc, char **argv )
 	}));
 	trefoilKnot->attachComponent( updateCmp );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 	scene->attachNode( trefoilKnot );
 
-	LightPtr light( new Light() );
+	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
 	scene->attachNode( light );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
 	scene->attachNode( camera );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

@@ -36,34 +36,34 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "IronMan", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "IronMan", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 
 	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/Iron_Man.obj" ) );
-	NodePtr ironman = loader.load();
+	Pointer< Node > ironman = loader.load();
 	if ( ironman != nullptr ) {
-		RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.01 ) );
+		Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.01 ) );
 		ironman->attachComponent( rotationComponent );
 		scene->attachNode( ironman );
 	}
 
-	LightPtr light( new Light() );
+	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 1.0f, 2.0f, 5.0f );
 	scene->attachNode( light );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 2.88f, 3.5f );
 	scene->attachNode( camera );
 
-	OffscreenRenderPassPtr renderPass( new OffscreenRenderPass() );
+	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
 	camera->setRenderPass( renderPass );
-	ImageEffectPtr glowEffect( new ImageEffect() );
-	ShaderProgramPtr glowProgram( new gl3::GlowShaderProgram() );
+	Pointer< ImageEffect > glowEffect( new ImageEffect() );
+	Pointer< ShaderProgram > glowProgram( new gl3::GlowShaderProgram() );
 	glowEffect->setProgram( glowProgram );
 	renderPass->attachImageEffect( glowEffect );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

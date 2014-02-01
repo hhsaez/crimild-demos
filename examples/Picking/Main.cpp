@@ -31,9 +31,10 @@
 using namespace crimild;
 
 class PickingComponent : public NodeComponent {
+	CRIMILD_NODE_COMPONENT_NAME( "picking" )
+
 public:
 	PickingComponent( void )
-		: NodeComponent( "picking" )
 	{
 
 	}
@@ -55,7 +56,7 @@ public:
 					MaterialComponent *materials = node->getComponent< MaterialComponent >();
 					if ( materials ) {
 						if ( node->getWorldBound()->testIntersection( ray ) ) {
-							materials->foreachMaterial( []( MaterialPtr &material ) {
+							materials->foreachMaterial( []( Material *material ) {
 								float r = rand() % 255 / 255.0f;
 								float g = rand() % 255 / 255.0f;
 								float b = rand() % 255 / 255.0f;
@@ -73,15 +74,15 @@ public:
 	}
 };
 
-NodePtr makeSphere( float x, float y, float z )
+Pointer< Node > makeSphere( float x, float y, float z )
 {
-	PrimitivePtr primitive( new ParametricSpherePrimitive( Primitive::Type::TRIANGLES, 1.0f ) );
-	GeometryPtr geometry( new Geometry() );
+	Pointer< Primitive > primitive( new ParametricSpherePrimitive( Primitive::Type::TRIANGLES, 1.0f ) );
+	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive );
 
-	MaterialPtr material( new Material() );
+	Pointer< Material > material( new Material() );
 	material->setDiffuse( RGBAColorf( 0.75f, 0.75f, 0.75f, 1.0f ) );
-	MaterialComponentPtr materials( new MaterialComponent() );
+	Pointer< MaterialComponent > materials( new MaterialComponent() );
 	materials->attachMaterial( material );
 	geometry->attachComponent( materials );
 
@@ -94,28 +95,28 @@ NodePtr makeSphere( float x, float y, float z )
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Selecting objects with the mouse", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Selecting objects with the mouse", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 
-	GroupPtr spheres( new Group() );
+	Pointer< Group > spheres( new Group() );
 	for ( float x = -5.0f; x <= 5.0f; x++ ) {
 		for ( float y = -3.0f; y <= 3.0f; y++ ) {
 			spheres->attachNode( makeSphere( x * 3.0f, y * 3.0f, 0.0f ) );
 		}
 	}
-	RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.01f ) );
+	Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.01f ) );
 	spheres->attachComponent( rotationComponent );
 	scene->attachNode( spheres );
 
-	CameraPtr camera( new Camera() );
-	NodeComponentPtr pickingComponent( new PickingComponent() );
+	Pointer< Camera > camera( new Camera() );
+	Pointer< NodeComponent > pickingComponent( new PickingComponent() );
 	camera->attachComponent( pickingComponent );
 	camera->local().setTranslate( 10.0f, 15.0f, 50.0f );
 	camera->local().setRotate( Vector3f( -1.0f, 0.5f, 0.0f ).getNormalized(), 0.1 * Numericf::PI );
 	scene->attachNode( camera );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

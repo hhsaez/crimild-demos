@@ -32,7 +32,7 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "A simple example", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "A simple example", argc, argv ) );
 
 	float vertices[] = {
 		-1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
@@ -44,27 +44,27 @@ int main( int argc, char **argv )
 		0, 1, 2
 	};
 
-	VertexBufferObjectPtr vbo( new VertexBufferObject( VertexFormat::VF_P3_C4, 3, vertices ) );
-	IndexBufferObjectPtr ibo( new IndexBufferObject( 3, indices ) );
+	Pointer< VertexBufferObject > vbo( new VertexBufferObject( VertexFormat::VF_P3_C4, 3, vertices ) );
+	Pointer< IndexBufferObject > ibo( new IndexBufferObject( 3, indices ) );
 	
-	PrimitivePtr primitive( new Primitive( Primitive::Type::TRIANGLES ) );
+	Pointer< Primitive > primitive( new Primitive( Primitive::Type::TRIANGLES ) );
 	primitive->setVertexBuffer( vbo );
 	primitive->setIndexBuffer( ibo );
 
-	GeometryPtr geometry( new Geometry() );
+	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive );
 
-	RotationComponentPtr rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.5 ) );
+	Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.5 ) );
 	geometry->attachComponent( rotationComponent );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 	scene->attachNode( geometry );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
 	scene->attachNode( camera );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 

@@ -30,7 +30,7 @@
 
 using namespace crimild;
 
-GeometryPtr buildSkin( void )
+Pointer< Geometry > buildSkin( void )
 {
 	int vertexCount = 12;
 	float vertices[] = {
@@ -72,27 +72,27 @@ GeometryPtr buildSkin( void )
 		5, 6, 2, 5, 2, 1
 	};
 
-	VertexBufferObjectPtr vbo( new VertexBufferObject( VertexFormat::VF_P3_UV2, vertexCount, vertices ) );
-	IndexBufferObjectPtr ibo( new IndexBufferObject( indexCount, indices ) );
+	Pointer< VertexBufferObject > vbo( new VertexBufferObject( VertexFormat::VF_P3_UV2, vertexCount, vertices ) );
+	Pointer< IndexBufferObject > ibo( new IndexBufferObject( indexCount, indices ) );
 	
-	PrimitivePtr primitive( new Primitive( Primitive::Type::TRIANGLES ) );
+	Pointer< Primitive > primitive( new Primitive( Primitive::Type::TRIANGLES ) );
 	primitive->setVertexBuffer( vbo );
 	primitive->setIndexBuffer( ibo );
 
-	GeometryPtr geometry( new Geometry() );
+	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive );
 
 	return geometry;
 }
 
-GroupPtr buildJoint( std::string name, unsigned int index, char rotKey, char invRotKey ) 
+Pointer< Group > buildJoint( std::string name, unsigned int index, char rotKey, char invRotKey ) 
 {
-	GroupPtr joint( new Group( name ) );
+	Pointer< Group > joint( new Group( name ) );
 
-	NodeComponentPtr jointComponent( new JointComponent() );
+	Pointer< NodeComponent > jointComponent( new JointComponent() );
 	joint->attachComponent( jointComponent );
 
-	LambdaComponentPtr jointControls( new LambdaComponent( [=]( crimild::Node *node, const Time &t ) {
+	Pointer< LambdaComponent > jointControls( new LambdaComponent( [=]( crimild::Node *node, const Time &t ) {
 		if ( InputState::getCurrentState().isKeyStillDown( rotKey ) ) {
 			node->local().rotate() *= Quaternion4f::createFromAxisAngle( Vector3f( 1.0f, 0.0f, 0.0f ), t.getDeltaTime() );
 		}
@@ -105,18 +105,18 @@ GroupPtr buildJoint( std::string name, unsigned int index, char rotKey, char inv
 	return joint;
 }
 
-NodePtr buildArm( void )
+Pointer< Node > buildArm( void )
 {
-	GroupPtr arm( new Group() );
+	Pointer< Group > arm( new Group() );
 
-	GroupPtr shoulderJoint = buildJoint( "shoulder", 0, '1', '2' );
+	Pointer< Group > shoulderJoint = buildJoint( "shoulder", 0, '1', '2' );
 	arm->attachNode( shoulderJoint );
 
-	GroupPtr elbowJoint = buildJoint( "elbow", 1, '3', '4' );
+	Pointer< Group > elbowJoint = buildJoint( "elbow", 1, '3', '4' );
 	elbowJoint->local().setTranslate( 0.0f, 0.0f, 2.0f );
 	shoulderJoint->attachNode( elbowJoint );
 
-	GroupPtr wristJoint = buildJoint( "wrist", 2, '5', '6' );
+	Pointer< Group > wristJoint = buildJoint( "wrist", 2, '5', '6' );
 	wristJoint->local().setTranslate( 0.0f, 0.0f, 2.0f );
 	elbowJoint->attachNode( wristJoint );
 
@@ -124,17 +124,17 @@ NodePtr buildArm( void )
 	elbowJoint->getComponent< JointComponent >()->computeInverseBindMatrix();
 	wristJoint->getComponent< JointComponent >()->computeInverseBindMatrix();
 
-	GeometryPtr skin = buildSkin();
+	Pointer< Geometry > skin = buildSkin();
 	arm->attachNode( skin );
 
-	SkinComponentPtr skinning( new SkinComponent() );
+	Pointer< SkinComponent > skinning( new SkinComponent() );
 	skinning->attachJoint( shoulderJoint.get() );
 	skinning->attachJoint( elbowJoint.get() );
 	skinning->attachJoint( wristJoint.get() );
 	skin->attachComponent( skinning );
 
-	MaterialPtr material( new Material() );
-	ShaderProgramPtr program( new gl3::SkinningShaderProgram() );
+	Pointer< Material > material( new Material() );
+	Pointer< ShaderProgram > program( new gl3::SkinningShaderProgram() );
 	material->setProgram( program );
 	skin->getComponent< MaterialComponent >()->attachMaterial( material );
 
@@ -143,13 +143,13 @@ NodePtr buildArm( void )
 
 int main( int argc, char **argv )
 {
-	SimulationPtr sim( new GLSimulation( "Skeletal Animation", argc, argv ) );
+	Pointer< Simulation > sim( new GLSimulation( "Skeletal Animation", argc, argv ) );
 
-	GroupPtr scene( new Group() );
+	Pointer< Group > scene( new Group() );
 
-	NodePtr arm = buildArm();
+	Pointer< Node > arm = buildArm();
 	arm->local().setTranslate( 0.0f, 0.0f, -2.0f );
-	LambdaComponentPtr controls( new LambdaComponent( [=]( crimild::Node *node, const Time &t ) {
+	Pointer< LambdaComponent > controls( new LambdaComponent( [=]( crimild::Node *node, const Time &t ) {
 		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
 			node->local().translate() += Vector3f( 0.0f, 0.0f, t.getDeltaTime() );
 		}
@@ -166,17 +166,17 @@ int main( int argc, char **argv )
 	arm->attachComponent( controls );
 	scene->attachNode( arm );
 
-	CameraPtr camera( new Camera() );
+	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 15.0f );
 
-	HierarchyRenderPassPtr renderPass( new HierarchyRenderPass() );
+	Pointer< HierarchyRenderPass > renderPass( new HierarchyRenderPass() );
 	renderPass->setTargetScene( scene );
 	renderPass->setRenderBoundings( true );
 	camera->setRenderPass( renderPass );
 
 	scene->attachNode( camera );
 
-	sim->attachScene( scene );
+	sim->setScene( scene );
 	return sim->run();
 }
 
