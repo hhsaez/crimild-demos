@@ -48,23 +48,23 @@ int main( int argc, char **argv )
 	Pointer< IndexBufferObject > ibo( new IndexBufferObject( 3, indices ) );
 	
 	Pointer< Primitive > primitive( new Primitive( Primitive::Type::TRIANGLES ) );
-	primitive->setVertexBuffer( vbo );
-	primitive->setIndexBuffer( ibo );
+	primitive->setVertexBuffer( vbo.get() );
+	primitive->setIndexBuffer( ibo.get() );
 
 	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 
 	Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.5 ) );
-	geometry->attachComponent( rotationComponent );
+	geometry->attachComponent( rotationComponent.get() );
 
 	Pointer< Group > scene( new Group() );
-	scene->attachNode( geometry );
+	scene->attachNode( geometry.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

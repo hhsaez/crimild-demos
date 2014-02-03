@@ -48,28 +48,28 @@ int main( int argc, char **argv )
 		q0.fromAxisAngle( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
 		q1.fromAxisAngle( Vector3f( 0.0f, 0.0f, 1.0f ), -Numericf::HALF_PI );
 		model->local().setRotate( q0 * q1 );
-		group->attachNode( model );
+		group->attachNode( model.get() );
 		Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), -0.01 ) );
-		group->attachComponent( rotationComponent );
-		scene->attachNode( group );
+		group->attachComponent( rotationComponent.get() );
+		scene->attachNode( group.get() );
 	}
 
 	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
-	scene->attachNode( light );
+	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( -0.5f, 0.75f, 3.0f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
 	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
-	camera->setRenderPass( renderPass );
+	camera->setRenderPass( renderPass.get() );
 	Pointer< ImageEffect > glowEffect( new ImageEffect() );
 	Pointer< ShaderProgram > glowProgram( new gl3::GlowShaderProgram() );
-	glowEffect->setProgram( glowProgram );
-	renderPass->attachImageEffect( glowEffect );
+	glowEffect->setProgram( glowProgram.get() );
+	renderPass->attachImageEffect( glowEffect.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

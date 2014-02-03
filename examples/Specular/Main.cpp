@@ -34,16 +34,16 @@ Pointer< Node > buildBackground( float x, float y, float z )
 {
 	Pointer< Primitive > primitive( new QuadPrimitive( 9.0f, 9.0f, VertexFormat::VF_P3_N3_UV2 ) );
 	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 
 	Pointer< Material > material( new Material() );
 	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "stars.tga" ) ) );
-	Pointer< Texture > texture( new Texture( image ) );
-	material->setColorMap( texture );
+	Pointer< Texture > texture( new Texture( image.get() ) );
+	material->setColorMap( texture.get() );
 	
 	Pointer< MaterialComponent > materials( new MaterialComponent() );
-	materials->attachMaterial( material );
-	geometry->attachComponent( materials );
+	materials->attachMaterial( material.get() );
+	geometry->attachComponent( materials.get() );
 
 	geometry->local().setTranslate( x, y, z );
 
@@ -54,22 +54,22 @@ Pointer< Node > buildEarth( float x, float y, float z )
 {
 	Pointer< Primitive > primitive( new SpherePrimitive( 1.0f, VertexFormat::VF_P3_N3_UV2 ) );
 	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 
 	Pointer< Material > material( new Material() );
 	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-color.tga" ) ) );
-	Pointer< Texture > texture( new Texture( image ) );
-	material->setColorMap( texture );
+	Pointer< Texture > texture( new Texture( image.get() ) );
+	material->setColorMap( texture.get() );
 	Pointer< Image > specularImage( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-specular.tga" ) ) );
-	Pointer< Texture > specularMap( new Texture( specularImage ) );
-	material->setSpecularMap( specularMap );
+	Pointer< Texture > specularMap( new Texture( specularImage.get() ) );
+	material->setSpecularMap( specularMap.get() );
 	
 	Pointer< MaterialComponent > materials( new MaterialComponent() );
-	materials->attachMaterial( material );
-	geometry->attachComponent( materials );
+	materials->attachMaterial( material.get() );
+	geometry->attachComponent( materials.get() );
 
 	Pointer< NodeComponent > rotation( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.01 ) );
-	geometry->attachComponent( rotation );
+	geometry->attachComponent( rotation.get() );
 
 	geometry->local().setTranslate( x, y, z );
 
@@ -78,22 +78,21 @@ Pointer< Node > buildEarth( float x, float y, float z )
 
 Pointer< Node > buildAtmosphere( float x, float y, float z )
 {
-	Pointer< Primitive > primitive( new SpherePrimitive( 1.02f, VertexFormat::VF_P3_N3_UV2 ) );
+	Pointer< Primitive > primitive( new SpherePrimitive( 1.02f, VertexFormat::VF_P3_UV2 ) );
 	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 
 	Pointer< Material > material( new Material() );
 	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-atmosphere.tga" ) ) );
-	Pointer< Texture > texture( new Texture( image ) );
-	material->setColorMap( texture );
-	material->getDepthState()->setEnabled( false );
+	Pointer< Texture > texture( new Texture( image.get() ) );
+	material->setColorMap( texture.get() );
 	material->getAlphaState()->setEnabled( true );
 	material->getAlphaState()->setSrcBlendFunc( AlphaState::SrcBlendFunc::SRC_COLOR );
 	material->getAlphaState()->setDstBlendFunc( AlphaState::DstBlendFunc::ONE_MINUS_SRC_COLOR );
-	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+	geometry->getComponent< MaterialComponent >()->attachMaterial( material.get() );
 
 	Pointer< NodeComponent > rotation( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.015 ) );
-	geometry->attachComponent( rotation );
+	geometry->attachComponent( rotation.get() );
 
 	geometry->local().setTranslate( x, y, z );
 
@@ -105,19 +104,19 @@ int main( int argc, char **argv )
 	Pointer< Simulation > sim( new GLSimulation( "Textures", argc, argv ) );
 
 	Pointer< Group > scene( new Group() );
-	scene->attachNode( buildBackground( 0, 0, -5 ) );
-	scene->attachNode( buildEarth( 0.5, 0, 0 ) );
-	//scene->attachNode( buildAtmosphere( 0.5, 0, 0 ) );
+	scene->attachNode( buildBackground( 0, 0, -5 ).get() );
+	scene->attachNode( buildEarth( 0.5, 0, 0 ).get() );
+	scene->attachNode( buildAtmosphere( 0.5, 0, 0 ).get() );
 
 	Pointer< Light > light( new Light() );
-	light->local().setTranslate( -2.0f, 1.0f, 4.0f );
-	scene->attachNode( light );
+	light->local().setTranslate( -2.0f, 3.0f, 5.0f );
+	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
-	camera->local().setTranslate( 0.0f, 0.0f, 4.0f );
-	scene->attachNode( camera );
+	camera->local().setTranslate( -0.25f, 0.5f, 1.5f );
+	scene->attachNode( camera.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

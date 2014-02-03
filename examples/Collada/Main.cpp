@@ -46,31 +46,31 @@ int main( int argc, char **argv )
 	model->perform( UpdateWorldState() );
 
 	Pointer< Group > importedScene( new Group() );
-	importedScene->attachNode( model );
+	importedScene->attachNode( model.get() );
 
 	Pointer< Group > scene( new Group() );
-	scene->attachNode( importedScene );
+	scene->attachNode( importedScene.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( model->getWorldBound()->getCenter() + Vector3f( 0.0f, 0.0f, model->getWorldBound()->getRadius() ) );
 	Pointer< RenderPass > defaultRP( new RenderPass() );
-	Pointer< HierarchyRenderPass > debugRP( new HierarchyRenderPass( defaultRP ) );
-	debugRP->setTargetScene( model );
+	Pointer< HierarchyRenderPass > debugRP( new HierarchyRenderPass( defaultRP.get() ) );
+	debugRP->setTargetScene( model.get() );
 	debugRP->setRenderBoundings( true );
-	camera->setRenderPass( debugRP );
-	scene->attachNode( camera );
+	camera->setRenderPass( debugRP.get() );
+	scene->attachNode( camera.get() );
 
 	Pointer< Light > light( new Light() );
 	light->setLocal( camera->getLocal() );
-	scene->attachNode( light );
+	scene->attachNode( light.get() );
 
 	Pointer< LambdaComponent > controls( new LambdaComponent( [&]( crimild::Node *, const Time &t ) {
 		if ( InputState::getCurrentState().isKeyStillDown( '1' ) ) {
-			camera->setRenderPass( defaultRP );
+			camera->setRenderPass( defaultRP.get() );
 		}
 
 		if ( InputState::getCurrentState().isKeyStillDown( '2' ) ) {
-			camera->setRenderPass( debugRP );
+			camera->setRenderPass( debugRP.get() );
 		}
 
 		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
@@ -86,9 +86,9 @@ int main( int argc, char **argv )
 			importedScene->local().rotate() *= Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0f ), -t.getDeltaTime() );
 		}
 	}));
-	scene->attachComponent( controls );
+	scene->attachComponent( controls.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

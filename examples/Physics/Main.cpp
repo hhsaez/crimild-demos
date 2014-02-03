@@ -34,15 +34,15 @@ Pointer< Node > makeBall( float x, float y, float z, float fx = 0.0f, float fy =
 {
 	Pointer< Primitive > sphere( new SpherePrimitive( 1.0 ) );
 	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( sphere );
+	geometry->attachPrimitive( sphere.get() );
 	geometry->local().setTranslate( x, y, z );
 
 	Pointer< RigidBodyComponent > rigidBody( new RigidBodyComponent() );
 	rigidBody->setForce( Vector3f( fx, fy, fz ) );
-	geometry->attachComponent( rigidBody );
+	geometry->attachComponent( rigidBody.get() );
 
 	Pointer< ColliderComponent > collider( new ColliderComponent() );
-	geometry->attachComponent( collider );
+	geometry->attachComponent( collider.get() );
 
 	return geometry;
 }
@@ -51,12 +51,12 @@ Pointer< Node > makeGround( void )
 {
 	Pointer< Primitive > primitive( new QuadPrimitive( 10.0f, 10.0f ) );
 	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 	geometry->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
 	
 	Pointer< PlaneBoundingVolume > planeBoundingVolume( new PlaneBoundingVolume( Plane3f( Vector3f( 0.0f, 1.0f, 0.0f ), 0.0f ) ) );
-	Pointer< ColliderComponent > collider( new ColliderComponent( planeBoundingVolume ) );
-	geometry->attachComponent( collider );
+	Pointer< ColliderComponent > collider( new ColliderComponent( planeBoundingVolume.get() ) );
+	geometry->attachComponent( collider.get() );
 
 	return geometry;
 }
@@ -66,20 +66,20 @@ int main( int argc, char **argv )
 	Pointer< Simulation > sim( new GLSimulation( "Physics", argc, argv ) );
 
 	Pointer< Group > scene( new Group() );
-	scene->attachNode( makeGround() );
-	scene->attachNode( makeBall( -2.0f, 1.0f, 0.0f, 5.0f, 2.0f ) );
-	scene->attachNode( makeBall( 2.0f, 5.0f, 0.0f ) );
+	scene->attachNode( makeGround().get() );
+	scene->attachNode( makeBall( -2.0f, 1.0f, 0.0f, 5.0f, 2.0f ).get() );
+	scene->attachNode( makeBall( 2.0f, 5.0f, 0.0f ).get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 3.0f, 10.0f );
 	camera->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
 	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 0.0f, 5.0f, 5.0f );
-	scene->attachNode( light );
+	scene->attachNode( light.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 
 	return sim->run();
 }

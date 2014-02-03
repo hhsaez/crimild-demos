@@ -54,53 +54,53 @@ int main( int argc, char **argv )
 	Pointer< IndexBufferObject > ibo( new IndexBufferObject( 6, indices ) );
 	
 	Pointer< Primitive > primitive( new Primitive( Primitive::Type::TRIANGLES ) );
-	primitive->setVertexBuffer( vbo );
-	primitive->setIndexBuffer( ibo );
+	primitive->setVertexBuffer( vbo.get() );
+	primitive->setIndexBuffer( ibo.get() );
 
 	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 
 	Pointer< Material > material( new Material() );
 		Pointer< Image > colorImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-color.tga" ) ) );
-		Pointer< Texture > colorMap( new Texture( colorImage ) );
-		material->setColorMap( colorMap );
+		Pointer< Texture > colorMap( new Texture( colorImage.get() ) );
+		material->setColorMap( colorMap.get() );
 		Pointer< Image > specularImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-specular.tga" ) ) );
-		Pointer< Texture > specularMap( new Texture( specularImage ) );
-		material->setSpecularMap( specularMap );
+		Pointer< Texture > specularMap( new Texture( specularImage.get() ) );
+		material->setSpecularMap( specularMap.get() );
 		Pointer< Image > normalImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-normal.tga" ) ) );
-		Pointer< Texture > normalMap( new Texture( normalImage ) );
-		material->setNormalMap( normalMap );
-	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+		Pointer< Texture > normalMap( new Texture( normalImage.get() ) );
+		material->setNormalMap( normalMap.get() );
+	geometry->getComponent< MaterialComponent >()->attachMaterial( material.get() );
 	
 	Pointer< Group > scene( new Group() );
-	scene->attachNode( geometry );
+	scene->attachNode( geometry.get() );
 
 	Pointer< Group > interactiveLight( new Group() );
 		Pointer< SpherePrimitive > lightPrimitive( new SpherePrimitive( 0.025f, VertexFormat::VF_P3 ) );
 		Pointer< Geometry > lightGeometry( new Geometry() );
-		lightGeometry->attachPrimitive( lightPrimitive );
-		interactiveLight->attachNode( lightGeometry );
+		lightGeometry->attachPrimitive( lightPrimitive.get() );
+		interactiveLight->attachNode( lightGeometry.get() );
 		Pointer< Light > light( new Light() );
 		light->local().setRotate( Vector3f( 0.0f, 1.0f, 0.0f ), -Numericf::HALF_PI );
-		interactiveLight->attachNode( light );
+		interactiveLight->attachNode( light.get() );
 		interactiveLight->local().setTranslate( 1.0f, 1.0f, 1.0f );
-	scene->attachNode( interactiveLight );
+	scene->attachNode( interactiveLight.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 6.0f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
 	Pointer< LambdaComponent > controls( new LambdaComponent( [&]( Node *, const Time &t ) {
 		if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
-			material->setColorMap( material->getColorMap() != nullptr ? nullptr : colorMap );
+			material->setColorMap( material->getColorMap() != nullptr ? nullptr : colorMap.get() );
 		}
 
 		if ( InputState::getCurrentState().isKeyDown( '2' ) ) {
-			material->setSpecularMap( material->getSpecularMap() != nullptr ? nullptr : specularMap );
+			material->setSpecularMap( material->getSpecularMap() != nullptr ? nullptr : specularMap.get() );
 		}
 		
 		if ( InputState::getCurrentState().isKeyDown( '3' ) ) {
-			material->setNormalMap( material->getNormalMap() != nullptr ? nullptr : normalMap );
+			material->setNormalMap( material->getNormalMap() != nullptr ? nullptr : normalMap.get() );
 		}
 
 		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
@@ -116,9 +116,9 @@ int main( int argc, char **argv )
 			interactiveLight->local().translate() += Vector3f( t.getDeltaTime(), 0.0f, 0.0f );
 		}
 	}));
-	scene->attachComponent( controls );
+	scene->attachComponent( controls.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

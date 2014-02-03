@@ -76,11 +76,11 @@ Pointer< Geometry > buildSkin( void )
 	Pointer< IndexBufferObject > ibo( new IndexBufferObject( indexCount, indices ) );
 	
 	Pointer< Primitive > primitive( new Primitive( Primitive::Type::TRIANGLES ) );
-	primitive->setVertexBuffer( vbo );
-	primitive->setIndexBuffer( ibo );
+	primitive->setVertexBuffer( vbo.get() );
+	primitive->setIndexBuffer( ibo.get() );
 
 	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 
 	return geometry;
 }
@@ -90,7 +90,7 @@ Pointer< Group > buildJoint( std::string name, unsigned int index, char rotKey, 
 	Pointer< Group > joint( new Group( name ) );
 
 	Pointer< NodeComponent > jointComponent( new JointComponent() );
-	joint->attachComponent( jointComponent );
+	joint->attachComponent( jointComponent.get() );
 
 	Pointer< LambdaComponent > jointControls( new LambdaComponent( [=]( crimild::Node *node, const Time &t ) {
 		if ( InputState::getCurrentState().isKeyStillDown( rotKey ) ) {
@@ -100,7 +100,7 @@ Pointer< Group > buildJoint( std::string name, unsigned int index, char rotKey, 
 			node->local().rotate() *= Quaternion4f::createFromAxisAngle( Vector3f( 1.0f, 0.0f, 0.0f ), -t.getDeltaTime() );
 		}
 	}));
-	joint->attachComponent( jointControls );
+	joint->attachComponent( jointControls.get() );
 
 	return joint;
 }
@@ -110,33 +110,33 @@ Pointer< Node > buildArm( void )
 	Pointer< Group > arm( new Group() );
 
 	Pointer< Group > shoulderJoint = buildJoint( "shoulder", 0, '1', '2' );
-	arm->attachNode( shoulderJoint );
+	arm->attachNode( shoulderJoint.get() );
 
 	Pointer< Group > elbowJoint = buildJoint( "elbow", 1, '3', '4' );
 	elbowJoint->local().setTranslate( 0.0f, 0.0f, 2.0f );
-	shoulderJoint->attachNode( elbowJoint );
+	shoulderJoint->attachNode( elbowJoint.get() );
 
 	Pointer< Group > wristJoint = buildJoint( "wrist", 2, '5', '6' );
 	wristJoint->local().setTranslate( 0.0f, 0.0f, 2.0f );
-	elbowJoint->attachNode( wristJoint );
+	elbowJoint->attachNode( wristJoint.get() );
 
 	shoulderJoint->getComponent< JointComponent >()->computeInverseBindMatrix();
 	elbowJoint->getComponent< JointComponent >()->computeInverseBindMatrix();
 	wristJoint->getComponent< JointComponent >()->computeInverseBindMatrix();
 
 	Pointer< Geometry > skin = buildSkin();
-	arm->attachNode( skin );
+	arm->attachNode( skin.get() );
 
 	Pointer< SkinComponent > skinning( new SkinComponent() );
 	skinning->attachJoint( shoulderJoint.get() );
 	skinning->attachJoint( elbowJoint.get() );
 	skinning->attachJoint( wristJoint.get() );
-	skin->attachComponent( skinning );
+	skin->attachComponent( skinning.get() );
 
 	Pointer< Material > material( new Material() );
 	Pointer< ShaderProgram > program( new gl3::SkinningShaderProgram() );
-	material->setProgram( program );
-	skin->getComponent< MaterialComponent >()->attachMaterial( material );
+	material->setProgram( program.get() );
+	skin->getComponent< MaterialComponent >()->attachMaterial( material.get() );
 
 	return arm;
 }
@@ -163,20 +163,20 @@ int main( int argc, char **argv )
 			node->local().rotate() *= Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0f ), -t.getDeltaTime() );
 		}
 	}));
-	arm->attachComponent( controls );
-	scene->attachNode( arm );
+	arm->attachComponent( controls.get() );
+	scene->attachNode( arm.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 15.0f );
 
 	Pointer< HierarchyRenderPass > renderPass( new HierarchyRenderPass() );
-	renderPass->setTargetScene( scene );
+	renderPass->setTargetScene( scene.get() );
 	renderPass->setRenderBoundings( true );
-	camera->setRenderPass( renderPass );
+	camera->setRenderPass( renderPass.get() );
 
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

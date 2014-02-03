@@ -36,20 +36,20 @@ Pointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf &colo
 
 	Pointer< SpherePrimitive > primitive( new SpherePrimitive( 0.05f ) );
 	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 	Pointer< Material > material( new gl3::FlatMaterial( color ) );
-	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
-	orbitingLight->attachNode( geometry );
+	geometry->getComponent< MaterialComponent >()->attachMaterial( material.get() );
+	orbitingLight->attachNode( geometry.get() );
 
 	Pointer< Light > light( new Light() );
 	light->setColor( color );
-	orbitingLight->attachNode( light );
+	orbitingLight->attachNode( light.get() );
 
 	Pointer< OrbitComponent > orbitComponent( new OrbitComponent( 0.0f, 0.0f, major, minor, speed ) );
-	orbitingLight->attachComponent( orbitComponent );
+	orbitingLight->attachComponent( orbitComponent.get() );
 
 	Pointer< Group > group( new Group() );
-	group->attachNode( orbitingLight );
+	group->attachNode( orbitingLight.get() );
 	group->local().setRotate( rotation );
 
 	return group;
@@ -64,7 +64,7 @@ int main( int argc, char **argv )
 
 	Pointer< Geometry > trefoilKnot( new Geometry() );
 	Pointer< Primitive > trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 ) );
-	trefoilKnot->attachPrimitive( trefoilKnotPrimitive );
+	trefoilKnot->attachPrimitive( trefoilKnotPrimitive.get() );
 	
 	Pointer< Material > phongMaterial( new gl3::PhongMaterial() );
 	phongMaterial->setAmbient( RGBAColorf( 0.0f, 0.0f, 0.0f, 1.0f ) );
@@ -75,45 +75,45 @@ int main( int argc, char **argv )
 	gouraudMaterial->setDiffuse( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ) );
 
 	MaterialComponent *materials = trefoilKnot->getComponent< MaterialComponent >();
-	materials->attachMaterial( gouraudMaterial );
+	materials->attachMaterial( gouraudMaterial.get() );
 
 	Pointer< NodeComponent > changeMaterial( new LambdaComponent( [&]( Node *node, const Time & ) {
 		if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
 			materials->detachAllMaterials();
-			materials->attachMaterial( phongMaterial );
+			materials->attachMaterial( phongMaterial.get() );
 			node->perform( UpdateRenderState() );
 		}
 		else if ( InputState::getCurrentState().isKeyDown( '2' ) ) {
 			materials->detachAllMaterials();
-			materials->attachMaterial( gouraudMaterial );
+			materials->attachMaterial( gouraudMaterial.get() );
 			node->perform( UpdateRenderState() );
 		}
 	}));
-	trefoilKnot->attachComponent( changeMaterial );
+	trefoilKnot->attachComponent( changeMaterial.get() );
 	
 	Pointer< Group > scene( new Group() );
-	scene->attachNode( trefoilKnot );
+	scene->attachNode( trefoilKnot.get() );
 
 	scene->attachNode( buildLight( 
 		Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 1.0 ).getNormalized(), Numericf::HALF_PI ), 
 		RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ), 
-		-1.0f, 1.25f, 0.95f ) );
+		-1.0f, 1.25f, 0.95f ).get() );
 
 	scene->attachNode( buildLight( 
 		Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, -1.0 ).getNormalized(), -Numericf::HALF_PI ), 
 		RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ), 
-		1.0f, 1.25f, -0.75f ) );
+		1.0f, 1.25f, -0.75f ).get() );
 
 	scene->attachNode( buildLight( 
 		Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0 ).getNormalized(), Numericf::HALF_PI ), 
 		RGBAColorf( 0.0f, 0.0f, 1.0f, 1.0f ), 
-		1.25f, 1.0f, -0.85f ) );
+		1.25f, 1.0f, -0.85f ).get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

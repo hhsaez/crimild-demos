@@ -106,7 +106,7 @@ Pointer< Node > generateText( std::string fontName, std::string str, const Vecto
 	Pointer< Font > font( new Font( FileSystem::getInstance().pathForResource( fontName + ( program != nullptr ? "_sdf" : "" ) + ".tga" ), FileSystem::getInstance().pathForResource( fontName + ".txt" ) ) );
 	
 	Pointer< Text > text( new Text() );
-	text->setFont( font );
+	text->setFont( font.get() );
 	text->setSize( 1.0f );
 	text->setText( str );
 
@@ -132,13 +132,13 @@ int main( int argc, char **argv )
 
 	Pointer< Group > texts( new Group() );
 	Pointer< Node > text1 = generateText( "LucidaGrande", "Normal text", Vector3f( 0.0f, 0.5f, 0.0f ), RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ), nullptr );
-	texts->attachNode( text1 );
-	Pointer< Node > text2 = generateText( "LucidaGrande", "Text with SDF", Vector3f( 0.0f, -0.5f, 0.0f ), RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ), sdfProgram );
-	texts->attachNode( text2 );
-	Pointer< Node > text3 = generateText( "LucidaGrande", "Outlined Text", Vector3f( 0.0f, -1.5f, 0.0f ), RGBAColorf( 1.0f, 1.0f, 0.0f, 1.0f ), outlineProgram );
-	texts->attachNode( text3 );
+	texts->attachNode( text1.get() );
+	Pointer< Node > text2 = generateText( "LucidaGrande", "Text with SDF", Vector3f( 0.0f, -0.5f, 0.0f ), RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ), sdfProgram.get() );
+	texts->attachNode( text2.get() );
+	Pointer< Node > text3 = generateText( "LucidaGrande", "Outlined Text", Vector3f( 0.0f, -1.5f, 0.0f ), RGBAColorf( 1.0f, 1.0f, 0.0f, 1.0f ), outlineProgram.get() );
+	texts->attachNode( text3.get() );
 
-	scene->attachNode( texts );
+	scene->attachNode( texts.get() );
 	Pointer< NodeComponent > translate( new LambdaComponent( [&]( Node *node, const Time & ) {
 		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
 			node->local().translate() += Vector3f( 0.0f, 0.0f, 1.0f );
@@ -147,15 +147,15 @@ int main( int argc, char **argv )
 			node->local().translate() -= Vector3f( 0.0f, 0.0f, 1.0f );
 		}
 	}));
-	texts->attachComponent( translate );
+	texts->attachComponent( translate.get() );
 
 	scene->perform( UpdateWorldState() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( scene->getWorldBound()->getCenter() + Vector3f( 0.0f, 0.0f, 2.0f ) );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

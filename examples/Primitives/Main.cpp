@@ -36,22 +36,22 @@ int main( int argc, char **argv )
 	
 	Pointer< Geometry > geometry( new Geometry() );
 	Pointer< Primitive > primitive( new NewellTeapotPrimitive() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 	Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.25 ) );
-	geometry->attachComponent( rotationComponent );
+	geometry->attachComponent( rotationComponent.get() );
 
 	Pointer< Group > scene( new Group() );
-	scene->attachNode( geometry );
+	scene->attachNode( geometry.get() );
 
 	Pointer< Light > light( new Light() );
 	light->local().setTranslate( -10.0f, 20.0f, 30.0f );
-	scene->attachNode( light );
+	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 15.0f, 80.0f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

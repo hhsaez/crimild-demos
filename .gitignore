@@ -41,3 +41,7 @@ examples/Text/Text
 examples/Physics/Physics
 examples/Collada/Collada
 examples/SkeletalAnimation/SkeletalAnimation
+examples/**/Debug
+CRIMILD_EXAMPLES.build
+CRIMILD_EXAMPLES.xcodeproj
+CMakeScripts

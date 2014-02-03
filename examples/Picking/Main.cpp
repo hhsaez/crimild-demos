@@ -78,13 +78,13 @@ Pointer< Node > makeSphere( float x, float y, float z )
 {
 	Pointer< Primitive > primitive( new ParametricSpherePrimitive( Primitive::Type::TRIANGLES, 1.0f ) );
 	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 
 	Pointer< Material > material( new Material() );
 	material->setDiffuse( RGBAColorf( 0.75f, 0.75f, 0.75f, 1.0f ) );
 	Pointer< MaterialComponent > materials( new MaterialComponent() );
-	materials->attachMaterial( material );
-	geometry->attachComponent( materials );
+	materials->attachMaterial( material.get() );
+	geometry->attachComponent( materials.get() );
 
 	geometry->local().setTranslate( x, y, z );
 
@@ -102,21 +102,21 @@ int main( int argc, char **argv )
 	Pointer< Group > spheres( new Group() );
 	for ( float x = -5.0f; x <= 5.0f; x++ ) {
 		for ( float y = -3.0f; y <= 3.0f; y++ ) {
-			spheres->attachNode( makeSphere( x * 3.0f, y * 3.0f, 0.0f ) );
+			spheres->attachNode( makeSphere( x * 3.0f, y * 3.0f, 0.0f ).get() );
 		}
 	}
 	Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.01f ) );
-	spheres->attachComponent( rotationComponent );
-	scene->attachNode( spheres );
+	spheres->attachComponent( rotationComponent.get() );
+	scene->attachNode( spheres.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	Pointer< NodeComponent > pickingComponent( new PickingComponent() );
-	camera->attachComponent( pickingComponent );
+	camera->attachComponent( pickingComponent.get() );
 	camera->local().setTranslate( 10.0f, 15.0f, 50.0f );
 	camera->local().setRotate( Vector3f( -1.0f, 0.5f, 0.0f ).getNormalized(), 0.1 * Numericf::PI );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

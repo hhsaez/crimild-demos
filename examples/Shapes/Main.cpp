@@ -37,40 +37,40 @@ int main( int argc, char **argv )
 	Pointer< Group > scene( new Group() );
 
 	Pointer< Group > shapes( new Group() );
-	scene->attachNode( shapes );
+	scene->attachNode( shapes.get() );
 
 	Pointer< Geometry > kleinBottle( new Geometry() );
 	Pointer< Primitive > kleinBottlePrimitive( new KleinBottlePrimitive( Primitive::Type::LINES, 0.1 ) );
-	kleinBottle->attachPrimitive( kleinBottlePrimitive );
+	kleinBottle->attachPrimitive( kleinBottlePrimitive.get() );
 	kleinBottle->local().setTranslate( 0.0f, 0.0f, 3.0f );
-	shapes->attachNode( kleinBottle );
+	shapes->attachNode( kleinBottle.get() );
 
 	Pointer< Geometry > mobiusStrip( new Geometry() );
 	Pointer< Primitive > mobiusStripPrimitive( new MobiusStripPrimitive( Primitive::Type::LINES, 0.5f ) );
-	mobiusStrip->attachPrimitive( mobiusStripPrimitive );
+	mobiusStrip->attachPrimitive( mobiusStripPrimitive.get() );
 	mobiusStrip->local().setTranslate( 0.0f, 0.0f, -3.0f );
-	shapes->attachNode( mobiusStrip );
+	shapes->attachNode( mobiusStrip.get() );
 
 	Pointer< Geometry > torus( new Geometry() );
 	Pointer< Primitive > torusPrimitive( new TorusPrimitive( Primitive::Type::LINES, 1.0f, 0.25f ) );
-	torus->attachPrimitive( torusPrimitive );
+	torus->attachPrimitive( torusPrimitive.get() );
 	torus->local().setTranslate( 3.0f, 0.0f, 0.0f );
-	shapes->attachNode( torus );
+	shapes->attachNode( torus.get() );
 
 	Pointer< Geometry > trefoilKnot( new Geometry() );
 	Pointer< Primitive > trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::LINES, 1.0 ) );
-	trefoilKnot->attachPrimitive( trefoilKnotPrimitive );
+	trefoilKnot->attachPrimitive( trefoilKnotPrimitive.get() );
 	trefoilKnot->local().setTranslate( -3.0f, 0.0f, 0.0f );
-	shapes->attachNode( trefoilKnot );
+	shapes->attachNode( trefoilKnot.get() );
 
 	Pointer< NodeComponent > rotate( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.1f ) );
-	shapes->attachComponent( rotate );
+	shapes->attachComponent( rotate.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

@@ -41,7 +41,7 @@ int main( int argc, char **argv )
 
 	Pointer< Geometry > trefoilKnot( new Geometry() );
 	Pointer< Primitive > trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 ) );
-	trefoilKnot->attachPrimitive( trefoilKnotPrimitive );
+	trefoilKnot->attachPrimitive( trefoilKnotPrimitive.get() );
 
 	Vector3f from( -3.0f, -1.0f, 0.0f );
 	Vector3f to( 3.0f, 2.0f, 0.0f );
@@ -91,20 +91,20 @@ int main( int argc, char **argv )
 			functTime = -0.5f;
 		}
 	}));
-	trefoilKnot->attachComponent( updateCmp );
+	trefoilKnot->attachComponent( updateCmp.get() );
 
 	Pointer< Group > scene( new Group() );
-	scene->attachNode( trefoilKnot );
+	scene->attachNode( trefoilKnot .get());
 
 	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
-	scene->attachNode( light );
+	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

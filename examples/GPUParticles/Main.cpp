@@ -38,11 +38,11 @@ int main( int argc, char **argv )
 
 	Pointer< Primitive > ballPrimitive( new SpherePrimitive( 2.0f ) );
 	Pointer< Geometry > sphere( new Geometry() );
-	sphere->attachPrimitive( ballPrimitive );
+	sphere->attachPrimitive( ballPrimitive.get() );
 	Pointer< Material > material( new Material() );
 	material->setDiffuse( RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ) );
-	sphere->getComponent< MaterialComponent >()->attachMaterial( material );
-	scene->attachNode( sphere );
+	sphere->getComponent< MaterialComponent >()->attachMaterial( material.get() );
+	scene->attachNode( sphere.get() );
 
 	Pointer< gl3::ParticleSystem > particleSystem( new gl3::ParticleSystem() );
 	ParticleSystemComponent *particleSystemComponent = particleSystem->getComponent< ParticleSystemComponent >();
@@ -55,19 +55,19 @@ int main( int argc, char **argv )
 	particleSystemComponent->setLooping( true );
 	particleSystemComponent->generateParticles();
 	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "particle.tga" ) ) );
-	Pointer< Texture > texture( new Texture( image ) );
+	Pointer< Texture > texture( new Texture( image.get() ) );
 	particleSystemComponent->getParticleMaterial()->getDepthState()->setEnabled( false );
-	particleSystemComponent->getParticleMaterial()->setColorMap( texture );
+	particleSystemComponent->getParticleMaterial()->setColorMap( texture.get() );
 	particleSystemComponent->setShape( sphere->worldBound() );
-	scene->attachNode( particleSystem );
+	scene->attachNode( particleSystem.get() );
 
 	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
-	scene->attachNode( light );
+	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 5.0f, -5.0f, 25.0f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
 	Pointer< NodeComponent > controls( new LambdaComponent( [&]( Node *node, const Time &t ) {
 		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
@@ -90,9 +90,9 @@ int main( int argc, char **argv )
 			particleSystem->local().rotate() *= Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 0.0f, 1.0f ), -0.1f );
 		}
 	}));
-	scene->attachComponent( controls );
+	scene->attachComponent( controls.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

@@ -38,29 +38,29 @@ int main( int argc, char **argv )
 
 	Pointer< Geometry > geometry( new Geometry() );
 	Pointer< Primitive > primitive( new NewellTeapotPrimitive() );
-	geometry->attachPrimitive( primitive );
+	geometry->attachPrimitive( primitive.get() );
 	Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f ) );
-	geometry->attachComponent( rotationComponent );
-	scene->attachNode( geometry );
+	geometry->attachComponent( rotationComponent.get() );
+	scene->attachNode( geometry.get() );
 
 	Pointer< Light > light( new Light() );
 	light->local().setTranslate( -10.0f, 20.0f, 30.0f );
-	scene->attachNode( light );
+	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 15.0f, 80.0f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 	
 	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
-	camera->setRenderPass( renderPass );
+	camera->setRenderPass( renderPass.get() );
 
 	Pointer< ImageEffect > sepiaEffect( new ImageEffect() );
 	Pointer< ShaderProgram > sepiaProgram( new gl3::SepiaToneShaderProgram() );
-	sepiaEffect->setProgram( sepiaProgram );
+	sepiaEffect->setProgram( sepiaProgram.get() );
 	//sepiaEffect->setAlphaState( new AlphaState( true ) );
-	renderPass->attachImageEffect( sepiaEffect );
+	renderPass->attachImageEffect( sepiaEffect.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

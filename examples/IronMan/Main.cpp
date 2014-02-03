@@ -44,26 +44,26 @@ int main( int argc, char **argv )
 	Pointer< Node > ironman = loader.load();
 	if ( ironman != nullptr ) {
 		Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.01 ) );
-		ironman->attachComponent( rotationComponent );
-		scene->attachNode( ironman );
+		ironman->attachComponent( rotationComponent.get() );
+		scene->attachNode( ironman.get() );
 	}
 
 	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 1.0f, 2.0f, 5.0f );
-	scene->attachNode( light );
+	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 2.88f, 3.5f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
 	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
-	camera->setRenderPass( renderPass );
+	camera->setRenderPass( renderPass.get() );
 	Pointer< ImageEffect > glowEffect( new ImageEffect() );
 	Pointer< ShaderProgram > glowProgram( new gl3::GlowShaderProgram() );
-	glowEffect->setProgram( glowProgram );
-	renderPass->attachImageEffect( glowEffect );
+	glowEffect->setProgram( glowProgram.get() );
+	renderPass->attachImageEffect( glowEffect.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 

@@ -73,30 +73,30 @@ int main( int argc, char **argv )
 	Pointer< Node > droneModel = loader.load();
 	if ( droneModel != nullptr ) {
 		Pointer< Group > drone( new Group( "drone" ) );
-		drone->attachNode( droneModel );
+		drone->attachNode( droneModel.get() );
 
 		Pointer< NodeComponent > droneComponent( new DroneComponent() );
-		drone->attachComponent( droneComponent );
+		drone->attachComponent( droneComponent.get() );
 
 		Pointer< AudioClip > audioClip( new WavAudioClip( FileSystem::getInstance().pathForResource( "drone_mono.wav" ) ) );
-		Pointer< AudioComponent > audioComponent( new AudioComponent( audioClip ) );
-		drone->attachComponent( audioComponent );
+		Pointer< AudioComponent > audioComponent( new AudioComponent( audioClip.get() ) );
+		drone->attachComponent( audioComponent.get() );
 		audioComponent->play( true );
 
-		scene->attachNode( drone );
+		scene->attachNode( drone.get() );
 	}
 
 	AudioManager::getInstance().setGeneralGain( 800.0f );
 
 	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 0.0f, 300.0f, 50.0f );
-	scene->attachNode( light );
+	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 1.5f, 50.0f );
-	scene->attachNode( camera );
+	scene->attachNode( camera.get() );
 
-	sim->setScene( scene );
+	sim->setScene( scene.get() );
 	return sim->run();
 }
 
