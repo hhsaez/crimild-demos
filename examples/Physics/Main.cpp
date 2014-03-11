@@ -30,6 +30,37 @@
 
 using namespace crimild;
 
+class RestartComponent : public RigidBodyComponent {
+public:
+    RestartComponent( void ) { }
+    virtual ~RestartComponent( void ) { }
+    
+    virtual void onAttach( void ) override
+    {
+        _startPos = getNode()->getLocal().getTranslate();
+        _startForce = getForce();
+        _t = 0;
+    }
+    
+    virtual void update( const Time &t ) override
+    {
+        RigidBodyComponent::update( t );
+        if ( _t >= 3.0f ) {
+            getNode()->local().setTranslate( _startPos );
+            setForce( _startForce );
+            _t = 0;
+        }
+        else {
+            _t += t.getDeltaTime();
+        }
+    }
+    
+private:
+    Vector3f _startPos;
+    Vector3f _startForce;
+    float _t;
+};
+
 Pointer< Node > makeBall( float x, float y, float z, float fx = 0.0f, float fy = 0.0f, float fz = 0.0f )
 {
 	Pointer< Primitive > sphere( new SpherePrimitive( 1.0 ) );
@@ -37,13 +68,13 @@ Pointer< Node > makeBall( float x, float y, float z, float fx = 0.0f, float fy =
 	geometry->attachPrimitive( sphere.get() );
 	geometry->local().setTranslate( x, y, z );
 
-	Pointer< RigidBodyComponent > rigidBody( new RigidBodyComponent() );
+	Pointer< RigidBodyComponent > rigidBody( new RestartComponent() );
 	rigidBody->setForce( Vector3f( fx, fy, fz ) );
 	geometry->attachComponent( rigidBody.get() );
 
 	Pointer< ColliderComponent > collider( new ColliderComponent() );
 	geometry->attachComponent( collider.get() );
-
+    
 	return geometry;
 }
 
@@ -71,12 +102,14 @@ int main( int argc, char **argv )
 	scene->attachNode( makeBall( 2.0f, 5.0f, 0.0f ).get() );
 
 	Pointer< Camera > camera( new Camera() );
+    camera->setRenderPass( new ForwardRenderPass() );
 	camera->local().setTranslate( 0.0f, 3.0f, 10.0f );
 	camera->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
 	scene->attachNode( camera.get() );
 
 	Pointer< Light > light( new Light() );
-	light->local().setTranslate( 0.0f, 5.0f, 5.0f );
+	light->local().setTranslate( -5.0f, 5.0f, 1.0f );
+    light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
 	scene->attachNode( light.get() );
 
 	sim->setScene( scene.get() );
