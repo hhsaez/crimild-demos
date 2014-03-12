@@ -34,6 +34,16 @@
 
 using namespace crimild;
 
+Pointer< Node > makeGround( void )
+{
+	Pointer< Primitive > primitive( new QuadPrimitive( 100.0f, 100.0f ) );
+	Pointer< Geometry > geometry( new Geometry() );
+	geometry->attachPrimitive( primitive.get() );
+	geometry->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
+	
+	return geometry;
+}
+
 int main( int argc, char **argv )
 {
 	Pointer< Simulation > sim( new GLSimulation( "Lightcycle", argc, argv ) );
@@ -53,21 +63,32 @@ int main( int argc, char **argv )
 		group->attachComponent( rotationComponent.get() );
 		scene->attachNode( group.get() );
 	}
+    
+    scene->attachNode( makeGround().get() );
 
 	Pointer< Light > light( new Light() );
-	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
+	light->local().setTranslate( 5.0f, 5.0f, 2.0f );
+    light->local().lookAt( Vector3f( -1.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
+    light->setCastShadows( true );
+    light->setShadowNearCoeff( 1.0f );
+    light->setShadowFarCoeff( 50.0f );
 	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
-	camera->local().setTranslate( -0.5f, 0.75f, 3.0f );
+	camera->local().setTranslate( 1.5f, 2.15f, 3.25f );
+    camera->local().lookAt( Vector3f( -1.0f, 0.0f, 0.5f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
 	scene->attachNode( camera.get() );
-
+    
+#if 1
+    camera->setRenderPass( new ForwardRenderPass() );
+#else
 	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
 	camera->setRenderPass( renderPass.get() );
 	Pointer< ImageEffect > glowEffect( new ImageEffect() );
 	Pointer< ShaderProgram > glowProgram( new gl3::GlowShaderProgram() );
 	glowEffect->setProgram( glowProgram.get() );
 	renderPass->attachImageEffect( glowEffect.get() );
+#endif
 
 	sim->setScene( scene.get() );
 	return sim->run();
