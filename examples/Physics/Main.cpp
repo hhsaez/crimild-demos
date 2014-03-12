@@ -110,6 +110,9 @@ int main( int argc, char **argv )
 	Pointer< Light > light( new Light() );
 	light->local().setTranslate( -5.0f, 5.0f, 1.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
+    light->setCastShadows( true );
+    light->setShadowNearCoeff( 0.1f );
+    light->setShadowFarCoeff( 10.0f );
 	scene->attachNode( light.get() );
 
 	sim->setScene( scene.get() );

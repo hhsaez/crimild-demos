@@ -108,6 +108,9 @@ int main( int argc, char **argv )
 	Pointer< Light > light( new Light() );
 	light->local().setTranslate( 10.0f, 25.0f, 20.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, -8.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
+    light->setCastShadows( true );
+    light->setShadowNearCoeff( 1.0f );
+    light->setShadowFarCoeff( 100.0f );
 	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
