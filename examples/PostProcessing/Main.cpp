@@ -51,14 +51,14 @@ int main( int argc, char **argv )
 	camera->local().setTranslate( 0.0f, 15.0f, 80.0f );
 	scene->attachNode( camera.get() );
 	
-	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
-	camera->setRenderPass( renderPass.get() );
+//	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
+//	camera->setRenderPass( renderPass.get() );
 
-	Pointer< ImageEffect > sepiaEffect( new ImageEffect() );
-	Pointer< ShaderProgram > sepiaProgram( new gl3::SepiaToneShaderProgram() );
-	sepiaEffect->setProgram( sepiaProgram.get() );
+//	Pointer< ImageEffect > sepiaEffect( new ImageEffect() );
+//	Pointer< ShaderProgram > sepiaProgram( new gl3::SepiaToneShaderProgram() );
+//	sepiaEffect->setProgram( sepiaProgram.get() );
 	//sepiaEffect->setAlphaState( new AlphaState( true ) );
-	renderPass->attachImageEffect( sepiaEffect.get() );
+//	renderPass->attachImageEffect( sepiaEffect.get() );
 
 	sim->setScene( scene.get() );
 	return sim->run();

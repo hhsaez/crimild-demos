@@ -61,6 +61,7 @@ int main( int argc, char **argv )
 	scene->attachNode( geometry.get() );
 
 	Pointer< Camera > camera( new Camera() );
+    camera->setRenderPass( new RenderPass() );  // force the simple render pass
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
 	scene->attachNode( camera.get() );
 

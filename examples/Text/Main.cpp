@@ -141,10 +141,10 @@ int main( int argc, char **argv )
 	scene->attachNode( texts.get() );
 	Pointer< NodeComponent > translate( new LambdaComponent( [&]( Node *node, const Time & ) {
 		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
-			node->local().translate() += Vector3f( 0.0f, 0.0f, 1.0f );
+			node->local().translate() += Vector3f( 0.0f, 0.0f, 0.5f );
 		}
 		else if ( InputState::getCurrentState().isKeyStillDown( 'S' ) ) {
-			node->local().translate() -= Vector3f( 0.0f, 0.0f, 1.0f );
+			node->local().translate() -= Vector3f( 0.0f, 0.0f, 0.5f );
 		}
 	}));
 	texts->attachComponent( translate.get() );

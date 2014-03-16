@@ -32,7 +32,7 @@ using namespace crimild;
 
 Pointer< Node > buildBackground( float x, float y, float z ) 
 {
-	Pointer< Primitive > primitive( new QuadPrimitive( 9.0f, 9.0f, VertexFormat::VF_P3_UV2 ) );
+	Pointer< Primitive > primitive( new QuadPrimitive( 9.0f, 9.0f, VertexFormat::VF_P3_N3_UV2 ) );
 	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive.get() );
 
@@ -52,7 +52,7 @@ Pointer< Node > buildBackground( float x, float y, float z )
 
 Pointer< Node > buildEarth( float x, float y, float z )
 {
-	Pointer< Primitive > primitive( new SpherePrimitive( 1.0f, VertexFormat::VF_P3_UV2 ) );
+	Pointer< Primitive > primitive( new SpherePrimitive( 1.0f, VertexFormat::VF_P3_N3_UV2 ) );
 	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive.get() );
 
@@ -84,6 +84,10 @@ int main( int argc, char **argv )
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 4.0f );
 	scene->attachNode( camera.get() );
+    
+    Light *light = new Light();
+    light->local().setTranslate( -5.0f, 0.0f, 4.0f );
+    scene->attachNode( light );
 
 	sim->setScene( scene.get() );
 	return sim->run();

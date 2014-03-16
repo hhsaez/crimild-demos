@@ -115,6 +115,10 @@ int main( int argc, char **argv )
 	camera->local().setTranslate( 10.0f, 15.0f, 50.0f );
 	camera->local().setRotate( Vector3f( -1.0f, 0.5f, 0.0f ).getNormalized(), 0.1 * Numericf::PI );
 	scene->attachNode( camera.get() );
+    
+    Light *light = new Light();
+    light->local().setTranslate( 0.0f, 0.0f, 50.0f );
+    scene->attachNode( light );
 
 	sim->setScene( scene.get() );
 	return sim->run();

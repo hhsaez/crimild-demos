@@ -32,7 +32,7 @@ using namespace crimild;
 
 Pointer< Node > buildBackground( float x, float y, float z ) 
 {
-	Pointer< Primitive > primitive( new QuadPrimitive( 9.0f, 9.0f, VertexFormat::VF_P3_UV2 ) );
+	Pointer< Primitive > primitive( new QuadPrimitive( 9.0f, 9.0f, VertexFormat::VF_P3_N3_UV2 ) );
 	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive.get() );
 
@@ -52,7 +52,7 @@ Pointer< Node > buildBackground( float x, float y, float z )
 
 Pointer< Node > buildEarth( float x, float y, float z )
 {
-	Pointer< Primitive > primitive( new SpherePrimitive( 1.0f, VertexFormat::VF_P3_UV2 ) );
+	Pointer< Primitive > primitive( new SpherePrimitive( 1.0f, VertexFormat::VF_P3_N3_UV2 ) );
 	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive.get() );
 
@@ -75,7 +75,7 @@ Pointer< Node > buildEarth( float x, float y, float z )
 
 Pointer< Node > buildAtmosphere( float x, float y, float z )
 {
-	Pointer< Primitive > primitive( new SpherePrimitive( 1.02f, VertexFormat::VF_P3_UV2 ) );
+	Pointer< Primitive > primitive( new SpherePrimitive( 1.02f, VertexFormat::VF_P3_N3_UV2 ) );
 	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive.get() );
 
@@ -84,11 +84,12 @@ Pointer< Node > buildAtmosphere( float x, float y, float z )
 	Pointer< Texture > texture( new Texture( image.get() ) );
 	material->setColorMap( texture.get() );
 	material->getAlphaState()->setEnabled( true );
+    material->setAmbient( RGBAColorf( 0.35f, 0.35f, 0.35f, 1.0f ) );
 	material->getAlphaState()->setSrcBlendFunc( AlphaState::SrcBlendFunc::SRC_COLOR );
 	material->getAlphaState()->setDstBlendFunc( AlphaState::DstBlendFunc::ONE_MINUS_SRC_COLOR );
 	geometry->getComponent< MaterialComponent >()->attachMaterial( material.get() );
 
-	Pointer< NodeComponent > rotation( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.0015 ) );
+	Pointer< NodeComponent > rotation( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.005 ) );
 	geometry->attachComponent( rotation.get() );
 
 	geometry->local().setTranslate( x, y, z );
@@ -108,6 +109,10 @@ int main( int argc, char **argv )
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
 	scene->attachNode( camera.get() );
+    
+    Light *light = new Light();
+    light->local().setTranslate( -3.0f, 1.0f, 3.0f );
+    scene->attachNode( light );
 
 	sim->setScene( scene.get() );
 	return sim->run();

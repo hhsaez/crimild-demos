@@ -49,19 +49,23 @@ int main( int argc, char **argv )
 	}
 
 	Pointer< Light > light( new Light() );
-	light->local().setTranslate( 1.0f, 2.0f, 5.0f );
+	light->local().setTranslate( 5.0f, 4.0f, 10.0f );
+    light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
+//    light->setCastShadows( true );
+//    light->setShadowNearCoeff( 1.0f );
+//    light->setShadowFarCoeff( 50.0f );
 	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 2.88f, 3.5f );
 	scene->attachNode( camera.get() );
 
-	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
-	camera->setRenderPass( renderPass.get() );
-	Pointer< ImageEffect > glowEffect( new ImageEffect() );
-	Pointer< ShaderProgram > glowProgram( new gl3::GlowShaderProgram() );
-	glowEffect->setProgram( glowProgram.get() );
-	renderPass->attachImageEffect( glowEffect.get() );
+//	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
+//	camera->setRenderPass( renderPass.get() );
+//	Pointer< ImageEffect > glowEffect( new ImageEffect() );
+//	Pointer< ShaderProgram > glowProgram( new gl3::GlowShaderProgram() );
+//	glowEffect->setProgram( glowProgram.get() );
+//	renderPass->attachImageEffect( glowEffect.get() );
 
 	sim->setScene( scene.get() );
 	return sim->run();

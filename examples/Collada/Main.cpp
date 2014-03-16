@@ -53,7 +53,7 @@ int main( int argc, char **argv )
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( model->getWorldBound()->getCenter() + Vector3f( 0.0f, 0.0f, model->getWorldBound()->getRadius() ) );
-	Pointer< RenderPass > defaultRP( new RenderPass() );
+	Pointer< RenderPass > defaultRP( camera->getRenderPass() );
 	Pointer< HierarchyRenderPass > debugRP( new HierarchyRenderPass( defaultRP.get() ) );
 	debugRP->setTargetScene( model.get() );
 	debugRP->setRenderBoundings( true );

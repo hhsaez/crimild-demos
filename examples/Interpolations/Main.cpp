@@ -46,7 +46,6 @@ int main( int argc, char **argv )
 	Vector3f from( -3.0f, -1.0f, 0.0f );
 	Vector3f to( 3.0f, 2.0f, 0.0f );
 	float functTime = 0.0f;
-	int funcIdx = 0;
 	std::map< std::string, std::function< void ( const float &, const float &, float, float & ) > > easingFunctions;
 	easingFunctions[ "linear" ] = Interpolation::linear< float, float >;
 	easingFunctions[ "cuadraticIn" ] = Interpolation::cuadraticIn< float, float >;

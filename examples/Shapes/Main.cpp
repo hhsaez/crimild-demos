@@ -69,6 +69,10 @@ int main( int argc, char **argv )
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
 	scene->attachNode( camera.get() );
+    
+    Light *light = new Light();
+    light->local().setTranslate( 0.0f, 0.0f, 10.0f );
+    scene->attachNode( light );
 
 	sim->setScene( scene.get() );
 	return sim->run();

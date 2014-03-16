@@ -40,7 +40,7 @@ int main( int argc, char **argv )
 	scene->attachNode( shapes.get() );
 
 	Pointer< Geometry > kleinBottle( new Geometry() );
-	Pointer< Primitive > kleinBottlePrimitive( new KleinBottlePrimitive( Primitive::Type::TRIANGLES, 0.1, VertexFormat::VF_P3 ) );
+	Pointer< Primitive > kleinBottlePrimitive( new KleinBottlePrimitive( Primitive::Type::TRIANGLES, 0.1 ) );
 	kleinBottle->attachPrimitive( kleinBottlePrimitive.get() );
 	kleinBottle->local().setTranslate( 0.0f, 0.0f, 3.0f );
 	shapes->attachNode( kleinBottle.get() );
@@ -74,8 +74,7 @@ int main( int argc, char **argv )
 	camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
 	scene->attachNode( camera.get() );
 
-	Pointer< RenderPass > renderPass( new RenderPass() );
-	Pointer< DebugRenderPass > debugRenderPass( new DebugRenderPass( renderPass.get() ) );
+	Pointer< DebugRenderPass > debugRenderPass( new DebugRenderPass( camera->getRenderPass() ) );
 	debugRenderPass->setRenderBoundings( true );
 	debugRenderPass->setRenderNormals( true );
 	camera->setRenderPass( debugRenderPass.get() );
