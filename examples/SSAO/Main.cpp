@@ -30,10 +30,18 @@
 
 using namespace crimild;
 
-Node *makeBall( float x, float y, float z, float radius )
+Node *makeGround( void )
+{
+	Geometry *geometry( new Geometry() );
+	geometry->attachPrimitive( new QuadPrimitive( 100.0f, 100.0f ) );
+	geometry->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
+    return geometry;
+}
+
+Node *makeBall( float x, float y, float z )
 {
     Geometry *ball = new Geometry( "ball" );
-    ball->attachPrimitive( new SpherePrimitive( radius, VertexFormat::VF_P3_N3 ) );
+    ball->attachPrimitive( new SpherePrimitive( 1.0, VertexFormat::VF_P3_N3 ) );
     ball->local().setTranslate( x, y, z );
     return ball;
 }
@@ -44,27 +52,29 @@ int main( int argc, char **argv )
 
 	Pointer< Group > scene( new Group() );
     
-    Group *balls = new Group();
+    Group *objects = new Group();
+    objects->attachNode( makeGround() );
     for ( int line = 0; line < 5; line++ ) {
         for ( float x = 0; x < line; x++ ) {
             for ( float z = 0; z < line; z++ ) {
-                balls->attachNode( makeBall( 2 * ( x - 0.5f * line ), 1.65f * ( 3 - line ), 2 * ( z - 0.5f * line ), 1.0f ) );
+                objects->attachNode( makeBall( 2 * ( x - 0.5f * line ), 7.5f - 1.5f * line, 2 * ( z - 0.5f * line ) ) );
             }
         }
     }
-    balls->attachComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.01f ) );
-    scene->attachNode( balls );
+//    objects->attachComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.025f ) );
+    scene->attachNode( objects );
 
 	Pointer< Camera > camera( new Camera() );
     camera->setRenderPass( new DeferredRenderPass() );
-	camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
+	camera->local().setTranslate( 0.0f, 4.0f, 10.0f );
     camera->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ) );
 	scene->attachNode( camera.get() );
     
     Light *light = new Light();
-    light->local().setTranslate( 0.0f, 5.0f, 5.0f );
+    light->local().setTranslate( 0.0f, 5.0f, 10.0f );
+    light->setAmbient( RGBAColorf( 0.1f, 0.1f, 0.1f, 1.0f ) );
     scene->attachNode( light );
-
+    
 	sim.setScene( scene.get() );
 	return sim.run();
 }
