@@ -32,10 +32,37 @@ using namespace crimild;
 
 Node *makeGround( void )
 {
-	Geometry *geometry( new Geometry() );
-	geometry->attachPrimitive( new QuadPrimitive( 100.0f, 100.0f ) );
+    Group *group = new Group();
+
+	Geometry *geometry = new Geometry();
+	geometry->attachPrimitive( new QuadPrimitive( 20.0f, 20.0f ) );
 	geometry->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
-    return geometry;
+    group->attachNode( geometry );
+    
+	geometry = new Geometry();
+	geometry->attachPrimitive( new QuadPrimitive( 20.0f, 20.0f ) );
+    geometry->local().setTranslate( 0.0f, 10.0f, -10.0f );
+    group->attachNode( geometry );
+    
+	geometry = new Geometry();
+	geometry->attachPrimitive( new QuadPrimitive( 20.0f, 20.0f ) );
+    geometry->local().setTranslate( 10.0f, 10.0f, 0.0f );
+	geometry->local().setRotate( Vector3f( 0.0f, 1.0f, 0.0f ), -Numericf::HALF_PI );
+    group->attachNode( geometry );
+    
+	geometry = new Geometry();
+	geometry->attachPrimitive( new QuadPrimitive( 20.0f, 20.0f ) );
+    geometry->local().setTranslate( -10.0f, 10.0f, 0.0f );
+	geometry->local().setRotate( Vector3f( 0.0f, 1.0f, 0.0f ), Numericf::HALF_PI );
+    group->attachNode( geometry );
+    
+	geometry = new Geometry();
+	geometry->attachPrimitive( new QuadPrimitive( 20.0f, 20.0f ) );
+    geometry->local().setTranslate( 0.0f, 10.0f, 10.0f );
+	geometry->local().setRotate( Vector3f( 0.0f, 1.0f, 0.0f ), Numericf::PI );
+    group->attachNode( geometry );
+    
+    return group;
 }
 
 Node *makeBall( float x, float y, float z )
@@ -57,22 +84,22 @@ int main( int argc, char **argv )
     for ( int line = 0; line < 5; line++ ) {
         for ( float x = 0; x < line; x++ ) {
             for ( float z = 0; z < line; z++ ) {
-                objects->attachNode( makeBall( 2 * ( x - 0.5f * line ), 7.5f - 1.5f * line, 2 * ( z - 0.5f * line ) ) );
+                objects->attachNode( makeBall( 2 * ( x - 0.5f * line ), 6.8f - 1.5f * line, 2 * ( z - 0.5f * line ) ) );
             }
         }
     }
-//    objects->attachComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.025f ) );
+    objects->attachComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.025f ) );
     scene->attachNode( objects );
 
 	Pointer< Camera > camera( new Camera() );
     camera->setRenderPass( new DeferredRenderPass() );
-	camera->local().setTranslate( 0.0f, 4.0f, 10.0f );
+	camera->local().setTranslate( -1.0f, 6.0f, 15.0f );
     camera->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ) );
 	scene->attachNode( camera.get() );
     
     Light *light = new Light();
-    light->local().setTranslate( 0.0f, 5.0f, 10.0f );
-    light->setAmbient( RGBAColorf( 0.1f, 0.1f, 0.1f, 1.0f ) );
+    light->local().setTranslate( -1.0f, 10.0f, 5.0f );
+    light->setAmbient( RGBAColorf( 0.05f, 0.05f, 0.05f, 1.0f ) );
     scene->attachNode( light );
     
 	sim.setScene( scene.get() );
