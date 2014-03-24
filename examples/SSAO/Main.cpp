@@ -93,6 +93,7 @@ int main( int argc, char **argv )
 
 	Pointer< Camera > camera( new Camera() );
     camera->setRenderPass( new DeferredRenderPass() );
+    camera->getRenderPass()->getImageEffects().add( new gl3::SSAOImageEffect() );
 	camera->local().setTranslate( -1.0f, 6.0f, 15.0f );
     camera->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ) );
 	scene->attachNode( camera.get() );
