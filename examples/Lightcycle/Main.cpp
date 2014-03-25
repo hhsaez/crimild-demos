@@ -80,12 +80,11 @@ int main( int argc, char **argv )
 	scene->attachNode( camera.get() );
     
     camera->setRenderPass( new ForwardRenderPass() );
-#if 0
+
     gl3::GlowImageEffect *glow = new gl3::GlowImageEffect();
-    glow->setAmount( 5 );
+    glow->setAmount( 2 );
     glow->setGlowMapSize( 512 );
     camera->getRenderPass()->getImageEffects().add( glow );
-#endif
 
 	sim->setScene( scene.get() );
 	return sim->run();
