@@ -79,15 +79,12 @@ int main( int argc, char **argv )
     camera->local().lookAt( Vector3f( -1.0f, 0.0f, 0.5f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
 	scene->attachNode( camera.get() );
     
-#if 1
     camera->setRenderPass( new ForwardRenderPass() );
-#else
-	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
-	camera->setRenderPass( renderPass.get() );
-	Pointer< ImageEffect > glowEffect( new ImageEffect() );
-	Pointer< ShaderProgram > glowProgram( new gl3::GlowShaderProgram() );
-	glowEffect->setProgram( glowProgram.get() );
-	renderPass->attachImageEffect( glowEffect.get() );
+#if 0
+    gl3::GlowImageEffect *glow = new gl3::GlowImageEffect();
+    glow->setAmount( 5 );
+    glow->setGlowMapSize( 512 );
+    camera->getRenderPass()->getImageEffects().add( glow );
 #endif
 
 	sim->setScene( scene.get() );
