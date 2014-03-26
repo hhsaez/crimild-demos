@@ -57,6 +57,7 @@ int main( int argc, char **argv )
 	scene->attachNode( light.get() );
 
 	Pointer< Camera > camera( new Camera() );
+    camera->setRenderPass( new DeferredRenderPass() );
     camera->getRenderPass()->getImageEffects().add( new gl3::GlowImageEffect() );
 	camera->local().setTranslate( 0.0f, 2.88f, 3.5f );
 	scene->attachNode( camera.get() );
