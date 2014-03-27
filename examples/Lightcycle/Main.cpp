@@ -79,7 +79,7 @@ int main( int argc, char **argv )
     camera->local().lookAt( Vector3f( -1.0f, 0.0f, 0.5f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
 	scene->attachNode( camera.get() );
     
-#if 1
+#if 0
     camera->setRenderPass( new ForwardRenderPass() );
 #else
     camera->setRenderPass( new DeferredRenderPass() );

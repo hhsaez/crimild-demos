@@ -6,9 +6,9 @@
 # 
 
 newmtl MG_MovieCycle_Body_MI
-Ka 0.2 0.1 0.1
-Kd 0.9 0.0 0.0
-Ks 1.0 0.9 0.9
+Ka 0.0 0.16 0.15
+Kd 0.0 0.0 0.9
+Ks 0.9 1.0 0.9
 illum 2
 Ns 32
 map_Kd MG_MovieCycle_Body_DIFF.tga
@@ -23,9 +23,9 @@ map_kA
 map_Ns 
 
 newmtl MG_MovieCycle_Glass_MI
-Ka 1.0 0.85 0.85
-Kd 1 1 1
-Ks 0.84 0.84 0.84
+Ka 0.0 0.16 0.15
+Kd 0.0 0.0 0.9
+Ks 0.9 1.0 0.9
 d 0.5
 illum 2
 Ns 33.6359
@@ -40,9 +40,9 @@ map_kA
 map_Ns 
 
 newmtl MG_MovieCycle_Tire_MI
-Ka 1.0 0.85 0.85
-Kd 1.0 0.9 0.9
-Ks 1.0 1.0 1.0
+Ka 0.0 0.16 0.15
+Kd 0.0 0.0 0.9
+Ks 0.9 1.0 0.9
 illum 2
 Ns 10
 map_Kd MG_MovieCycle_Tire_DIFF.tga
@@ -57,9 +57,9 @@ map_kA
 map_Ns 
 
 newmtl MG_MovieCycle_Engine_MI
-Ka 0.1 0.1 0.1
-Kd 1 1 1
-Ks 0.1 0.1 0.1
+Ka 0.0 0.16 0.15
+Kd 0.0 0.0 0.9
+Ks 0.9 1.0 0.9
 illum 2
 Ns 10
 map_Kd MG_MovieCycle_Engine_DIFF.tga
@@ -74,9 +74,9 @@ map_kA
 map_Ns 
 
 newmtl MG_MovieCycle_PlayerBody_MI
-Ka 0.1 0.1 0.1
-Kd 1 1 1
-Ks 1 1 1
+Ka 0.0 0.16 0.15
+Kd 0.0 0.0 0.9
+Ks 0.9 1.0 0.9
 illum 2
 Ns 10
 map_Kd MG_Player_Body_DIFF.tga
@@ -91,9 +91,9 @@ map_kA
 map_Ns 
 
 newmtl MG_MovieCycle_PlayerHelmet_MI
-Ka 0.1 0.1 0.1
-Kd 1 1 1
-Ks 1 1 1
+Ka 0.0 0.16 0.15
+Kd 0.0 0.0 0.9
+Ks 0.9 1.0 0.9
 illum 2
 Ns 6.27667
 map_Kd MG_Player_Helmet_DIFF.tga
@@ -108,9 +108,9 @@ map_kA
 map_Ns 
 
 newmtl MG_MovieCycle_PlayerDisc_MI
-Ka 1.0 0.85 0.85
-Kd 1 0 0
-Ks 1 1 1
+Ka 0.0 0.16 0.15
+Kd 0.0 0.0 0.9
+Ks 0.9 1.0 0.9
 illum 2
 Ns 10
 map_Kd MG_Player_Disc_DIFF.tga
@@ -125,9 +125,9 @@ map_kA
 map_Ns 
 
 newmtl MG_MovieCycle_PlayerBaton_MI
-Ka 0.1 0.1 0.1
-Kd 1 1 1
-Ks 1 1 1
+Ka 0.0 0.16 0.15
+Kd 0.0 0.0 0.9
+Ks 0.9 1.0 0.9
 illum 2
 Ns 10
 map_Kd MG_Player_Baton_DIFF.tga
