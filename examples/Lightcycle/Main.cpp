@@ -36,10 +36,16 @@ using namespace crimild;
 
 Pointer< Node > makeGround( void )
 {
-	Pointer< Primitive > primitive( new QuadPrimitive( 100.0f, 100.0f ) );
+	Pointer< Primitive > primitive( new QuadPrimitive( 10.0f, 10.0f, VertexFormat::VF_P3_N3_UV2, Vector2f( 0.0f, 0.0f ), Vector2f( 3.0f, 3.0f ) ) );
 	Pointer< Geometry > geometry( new Geometry() );
 	geometry->attachPrimitive( primitive.get() );
 	geometry->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
+    
+    Material *material = new Material();
+    material->setDiffuse( RGBAColorf( 0.0f, 0.16f, 0.25f, 1.0f ) );
+    material->setSpecular( RGBAColorf( 0.0f, 0.0f, 0.0f, 1.0f ) );
+    material->setEmissiveMap( new Texture( new ImageTGA( FileSystem::getInstance().pathForResource( "assets/grid.tga" ) ) ) );
+    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 	
 	return geometry;
 }
@@ -59,25 +65,29 @@ int main( int argc, char **argv )
 		q1.fromAxisAngle( Vector3f( 0.0f, 0.0f, 1.0f ), -Numericf::HALF_PI );
 		model->local().setRotate( q0 * q1 );
 		group->attachNode( model.get() );
-		Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), -0.01 ) );
-		group->attachComponent( rotationComponent.get() );
 		scene->attachNode( group.get() );
 	}
     
     scene->attachNode( makeGround().get() );
 
 	Pointer< Light > light( new Light() );
-	light->local().setTranslate( 5.0f, 5.0f, 2.0f );
+	light->local().setTranslate( 20.0f, 10.0f, 10.0f );
     light->local().lookAt( Vector3f( -1.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
     light->setCastShadows( true );
     light->setShadowNearCoeff( 1.0f );
     light->setShadowFarCoeff( 50.0f );
 	scene->attachNode( light.get() );
+    
+    Group *cameraPivot = new Group();
+    cameraPivot->local().setTranslate( 0.0f, 2.0f, 0.0f );
+    cameraPivot->attachComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), -0.01f ) );
 
 	Pointer< Camera > camera( new Camera() );
-	camera->local().setTranslate( 1.5f, 2.15f, 3.25f );
-    camera->local().lookAt( Vector3f( -1.0f, 0.0f, 0.5f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
-	scene->attachNode( camera.get() );
+	camera->local().setTranslate( 0.0f, 2.0f, 3.0f );
+    camera->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ) );
+	camera->local().setTranslate( 0.0f, 0.0f, 4.0f );
+	cameraPivot->attachNode( camera.get() );
+    scene->attachNode( cameraPivot );
     
 #if 0
     camera->setRenderPass( new ForwardRenderPass() );
