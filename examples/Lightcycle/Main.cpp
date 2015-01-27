@@ -71,7 +71,7 @@ int main( int argc, char **argv )
     scene->attachNode( makeGround().get() );
 
 	Pointer< Light > light( new Light() );
-	light->local().setTranslate( 20.0f, 10.0f, 10.0f );
+	light->local().setTranslate( -20.0f, 10.0f, 10.0f );
     light->local().lookAt( Vector3f( -1.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
     light->setCastShadows( true );
     light->setShadowNearCoeff( 1.0f );
@@ -81,6 +81,16 @@ int main( int argc, char **argv )
     Group *cameraPivot = new Group();
     cameraPivot->local().setTranslate( 0.0f, 2.0f, 0.0f );
     cameraPivot->attachComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), -0.01f ) );
+    
+    Pointer< Font > font( new Font( FileSystem::getInstance().pathForResource( "assets/LucidaGrande_sdf.tga" ), FileSystem::getInstance().pathForResource( "assets/LucidaGrande.txt" ) ) );
+	Pointer< Text > text( new Text() );
+	text->setFont( font.get() );
+	text->setSize( 0.075f );
+	text->setText( "Full Deferred Render Pass" );
+    text->getMaterial()->setProgram( new gl3::SignedDistanceFieldShaderProgram( true ) );
+	text->getMaterial()->setDiffuse( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0 ) );
+	text->local().setTranslate( -0.95f, 0.9f, 0.0f );
+    scene->attachNode( text.get() );
 
 	Pointer< Camera > camera( new Camera() );
 	camera->local().setTranslate( 0.0f, 2.0f, 3.0f );
@@ -89,12 +99,50 @@ int main( int argc, char **argv )
 	cameraPivot->attachNode( camera.get() );
     scene->attachNode( cameraPivot );
     
-#if 0
-    camera->setRenderPass( new ForwardRenderPass() );
-#else
-    camera->setRenderPass( new DeferredRenderPass() );
-    camera->getRenderPass()->getImageEffects().add( new gl3::GlowImageEffect() );
-#endif
+    Pointer< ForwardRenderPass > forwardPass( new ForwardRenderPass() );
+    Pointer< gl3::DeferredRenderPass > deferredPass( new gl3::DeferredRenderPass() );
+    Pointer< gl3::DeferredRenderPass > fullDeferredPass( new gl3::DeferredRenderPass() );
+    Pointer< gl3::GlowImageEffect > glowEffect( new gl3::GlowImageEffect() );
+    fullDeferredPass->getImageEffects().add( glowEffect.get() );
+    
+    camera->setRenderPass( fullDeferredPass.get() );
+    
+    scene->attachComponent( new LambdaComponent( [=]( Node *, const Time & ) {
+        if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
+            text->setText( "Colors" );
+            deferredPass->setGBufferCompositionProgram( new gl3::DeferredColorShaderProgram() );
+            camera->setRenderPass( deferredPass.get() );
+        }
+        else if ( InputState::getCurrentState().isKeyDown( '2' ) ) {
+            text->setText( "Positions" );
+            deferredPass->setGBufferCompositionProgram( new gl3::DeferredPositionShaderProgram() );
+            camera->setRenderPass( deferredPass.get() );
+        }
+        else if ( InputState::getCurrentState().isKeyDown( '3' ) ) {
+            text->setText( "Normals" );
+            deferredPass->setGBufferCompositionProgram( new gl3::DeferredNormalShaderProgram() );
+            camera->setRenderPass( deferredPass.get() );
+        }
+        else if ( InputState::getCurrentState().isKeyDown( '4' ) ) {
+            text->setText( "Specular" );
+            deferredPass->setGBufferCompositionProgram( new gl3::DeferredSpecularShaderProgram() );
+            camera->setRenderPass( deferredPass.get() );
+        }
+        else if ( InputState::getCurrentState().isKeyDown( '5' ) ) {
+            text->setText( "Emissive" );
+            deferredPass->setGBufferCompositionProgram( new gl3::DeferredEmissiveShaderProgram() );
+            camera->setRenderPass( deferredPass.get() );
+        }
+        else if ( InputState::getCurrentState().isKeyDown( '9' ) ) {
+            text->setText( "Forward Render Pass" );
+            camera->setRenderPass( forwardPass.get() );
+        }
+        else if ( InputState::getCurrentState().isKeyDown( '0' ) ) {
+            text->setText( "Full Deferred Render Pass" );
+            deferredPass->setGBufferCompositionProgram( new gl3::DeferredComposeRenderShaderProgram() );
+            camera->setRenderPass( fullDeferredPass.get() );
+        }
+    }));
 
 	sim->setScene( scene.get() );
 	return sim->run();
