@@ -28,41 +28,38 @@
 #include <Crimild.hpp>
 #include <Crimild_GLFW.hpp>
 
-#include <fstream>
-#include <string>
-#include <vector>
-
 using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	Pointer< Simulation > sim( new GLSimulation( "IronMan", argc, argv ) );
+	auto sim = crimild::alloc< GLSimulation >( "IronMan", argc, argv );
 
-	Pointer< Group > scene( new Group() );
+	auto scene = crimild::alloc< Group >();
 
 	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/Iron_Man.obj" ) );
-	Pointer< Node > ironman = loader.load();
+	auto ironman = loader.load();
 	if ( ironman != nullptr ) {
-		Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.01 ) );
-		ironman->attachComponent( rotationComponent.get() );
-		scene->attachNode( ironman.get() );
+		auto rotationComponent = crimild::alloc< RotationComponent >( Vector3f( 0, 1, 0 ), 0.01 );
+		ironman->attachComponent( rotationComponent );
+		scene->attachNode( ironman );
 	}
 
-	Pointer< Light > light( new Light() );
+	auto light = crimild::alloc< Light >();
 	light->local().setTranslate( 5.0f, 4.0f, 10.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
     light->setCastShadows( true );
     light->setShadowNearCoeff( 1.0f );
     light->setShadowFarCoeff( 50.0f );
-	scene->attachNode( light.get() );
+	scene->attachNode( light );
 
-	Pointer< Camera > camera( new Camera() );
-    camera->setRenderPass( new DeferredRenderPass() );
-    camera->getRenderPass()->getImageEffects().add( new gl3::GlowImageEffect() );
+	auto camera = crimild::alloc< Camera >();
+    camera->setRenderPass( crimild::alloc< DeferredRenderPass >() );
+    // camera->getRenderPass()->getImageEffects().add( new gl3::GlowImageEffect() );
 	camera->local().setTranslate( 0.0f, 2.88f, 3.5f );
-	scene->attachNode( camera.get() );
+	scene->attachNode( camera );
 
-	sim->setScene( scene.get() );
+	sim->setScene( scene );
+
 	return sim->run();
 }
 

@@ -34,17 +34,17 @@
 
 using namespace crimild;
 
-Pointer< Node > makeGround( void )
+NodePtr makeGround( void )
 {
-	Pointer< Primitive > primitive( new QuadPrimitive( 10.0f, 10.0f, VertexFormat::VF_P3_N3_UV2, Vector2f( 0.0f, 0.0f ), Vector2f( 3.0f, 3.0f ) ) );
-	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive.get() );
+	auto primitive = crimild::alloc< QuadPrimitive >( 10.0f, 10.0f, VertexFormat::VF_P3_N3_UV2, Vector2f( 0.0f, 0.0f ), Vector2f( 3.0f, 3.0f ) );
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( primitive );
 	geometry->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
     
-    Material *material = new Material();
+    auto material = crimild::alloc< Material >();
     material->setDiffuse( RGBAColorf( 0.0f, 0.16f, 0.25f, 1.0f ) );
     material->setSpecular( RGBAColorf( 0.0f, 0.0f, 0.0f, 1.0f ) );
-    material->setEmissiveMap( new Texture( new ImageTGA( FileSystem::getInstance().pathForResource( "assets/grid.tga" ) ) ) );
+    material->setEmissiveMap( crimild::alloc< Texture >( crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/grid.tga" ) ) ) );
     geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 	
 	return geometry;
@@ -52,99 +52,81 @@ Pointer< Node > makeGround( void )
 
 int main( int argc, char **argv )
 {
-	Pointer< Simulation > sim( new GLSimulation( "Lightcycle", argc, argv ) );
+	auto sim = crimild::alloc< GLSimulation >( "Lightcycle", argc, argv );
 
-	Pointer< Group > scene( new Group() );
+	auto scene = crimild::alloc< Group >();
 
 	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/HQ_Movie cycle.obj" ) );
-	Pointer< Node > model = loader.load();
+	auto model = loader.load();
 	if ( model != nullptr ) {
-		Pointer< Group > group( new Group() );
+		auto group = crimild::alloc< Group >();
 		Quaternion4f q0, q1;
 		q0.fromAxisAngle( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
 		q1.fromAxisAngle( Vector3f( 0.0f, 0.0f, 1.0f ), -Numericf::HALF_PI );
 		model->local().setRotate( q0 * q1 );
-		group->attachNode( model.get() );
-		scene->attachNode( group.get() );
+		group->attachNode( model );
+		scene->attachNode( group );
 	}
     
-    scene->attachNode( makeGround().get() );
+    scene->attachNode( makeGround() );
 
-	Pointer< Light > light( new Light() );
+	auto light = crimild::alloc< Light >();
 	light->local().setTranslate( -20.0f, 10.0f, 10.0f );
     light->local().lookAt( Vector3f( -1.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
     light->setCastShadows( true );
     light->setShadowNearCoeff( 1.0f );
     light->setShadowFarCoeff( 50.0f );
-	scene->attachNode( light.get() );
+	scene->attachNode( light );
     
-    Group *cameraPivot = new Group();
+    auto cameraPivot = crimild::alloc< Group >();
     cameraPivot->local().setTranslate( 0.0f, 2.0f, 0.0f );
-    cameraPivot->attachComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), -0.01f ) );
+    cameraPivot->attachComponent( crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), -0.01f ) );
     
-    Pointer< Font > font( new Font( FileSystem::getInstance().pathForResource( "assets/LucidaGrande_sdf.tga" ), FileSystem::getInstance().pathForResource( "assets/LucidaGrande.txt" ) ) );
-	Pointer< Text > text( new Text() );
-	text->setFont( font.get() );
+    auto font = crimild::alloc< Font >( FileSystem::getInstance().pathForResource( "assets/LucidaGrande_sdf.tga" ), FileSystem::getInstance().pathForResource( "assets/LucidaGrande.txt" ) );
+	auto text = crimild::alloc< Text >();
+	text->setFont( font );
 	text->setSize( 0.075f );
-	text->setText( "Full Deferred Render Pass" );
-    text->getMaterial()->setProgram( new gl3::SignedDistanceFieldShaderProgram( true ) );
+	text->setText( "Deferred Render Pass" );
+    text->getMaterial()->setProgram( sim->getRenderer()->getShaderProgram( "text" ) );
 	text->getMaterial()->setDiffuse( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0 ) );
 	text->local().setTranslate( -0.95f, 0.9f, 0.0f );
-    scene->attachNode( text.get() );
+    scene->attachNode( text );
 
-	Pointer< Camera > camera( new Camera() );
+	auto camera = crimild::alloc< Camera >( 60.0f, 4.0f / 3.0f, 1.0f, 100.0f );
 	camera->local().setTranslate( 0.0f, 2.0f, 3.0f );
     camera->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ) );
 	camera->local().setTranslate( 0.0f, 0.0f, 4.0f );
-	cameraPivot->attachNode( camera.get() );
+	cameraPivot->attachNode( camera );
     scene->attachNode( cameraPivot );
     
-    Pointer< ForwardRenderPass > forwardPass( new ForwardRenderPass() );
-    Pointer< gl3::DeferredRenderPass > deferredPass( new gl3::DeferredRenderPass() );
-    Pointer< gl3::DeferredRenderPass > fullDeferredPass( new gl3::DeferredRenderPass() );
-    Pointer< gl3::GlowImageEffect > glowEffect( new gl3::GlowImageEffect() );
-    fullDeferredPass->getImageEffects().add( glowEffect.get() );
+    auto forwardPass = crimild::alloc< ForwardRenderPass >();
+    auto deferredPass = crimild::alloc< DeferredRenderPass >();
+    // Pointer< gl3::GlowImageEffect > glowEffect( new gl3::GlowImageEffect() );
+    // deferredPass->getImageEffects().add( glowEffect.get() );
     
-    camera->setRenderPass( fullDeferredPass.get() );
+    camera->setRenderPass( deferredPass );
+
+    bool useDeferredRenderPass = true;
     
-    scene->attachComponent( new LambdaComponent( [=]( Node *, const Time & ) {
+    scene->attachComponent( crimild::alloc< LambdaComponent >( [&]( NodePtr const &, const Time & ) {
         if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
-            text->setText( "Colors" );
-            deferredPass->setGBufferCompositionProgram( new gl3::DeferredColorShaderProgram() );
-            camera->setRenderPass( deferredPass.get() );
+            useDeferredRenderPass = !useDeferredRenderPass;
+            if ( useDeferredRenderPass ) {
+                camera->setRenderPass( deferredPass );
+                text->setText( "Deferred Render Pass" );
+            }
+            else {
+                camera->setRenderPass( forwardPass );
+                text->setText( "Forward Render Pass" );
+            }
         }
         else if ( InputState::getCurrentState().isKeyDown( '2' ) ) {
-            text->setText( "Positions" );
-            deferredPass->setGBufferCompositionProgram( new gl3::DeferredPositionShaderProgram() );
-            camera->setRenderPass( deferredPass.get() );
-        }
-        else if ( InputState::getCurrentState().isKeyDown( '3' ) ) {
-            text->setText( "Normals" );
-            deferredPass->setGBufferCompositionProgram( new gl3::DeferredNormalShaderProgram() );
-            camera->setRenderPass( deferredPass.get() );
-        }
-        else if ( InputState::getCurrentState().isKeyDown( '4' ) ) {
-            text->setText( "Specular" );
-            deferredPass->setGBufferCompositionProgram( new gl3::DeferredSpecularShaderProgram() );
-            camera->setRenderPass( deferredPass.get() );
-        }
-        else if ( InputState::getCurrentState().isKeyDown( '5' ) ) {
-            text->setText( "Emissive" );
-            deferredPass->setGBufferCompositionProgram( new gl3::DeferredEmissiveShaderProgram() );
-            camera->setRenderPass( deferredPass.get() );
-        }
-        else if ( InputState::getCurrentState().isKeyDown( '9' ) ) {
-            text->setText( "Forward Render Pass" );
-            camera->setRenderPass( forwardPass.get() );
-        }
-        else if ( InputState::getCurrentState().isKeyDown( '0' ) ) {
-            text->setText( "Full Deferred Render Pass" );
-            deferredPass->setGBufferCompositionProgram( new gl3::DeferredComposeRenderShaderProgram() );
-            camera->setRenderPass( fullDeferredPass.get() );
+            deferredPass->enableDebugMode( !deferredPass->isDebugModeEnabled() );
         }
     }));
 
-	sim->setScene( scene.get() );
+	sim->setScene( scene );
+
 	return sim->run();
 }
 

@@ -32,7 +32,7 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	Pointer< Simulation > sim( new GLSimulation( "A simple example", argc, argv ) );
+	auto sim = crimild::alloc< GLSimulation >( "A simple example", argc, argv );
 
 	float vertices[] = {
 		-1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
@@ -44,28 +44,26 @@ int main( int argc, char **argv )
 		0, 1, 2
 	};
 
-	Pointer< VertexBufferObject > vbo( new VertexBufferObject( VertexFormat::VF_P3_C4, 3, vertices ) );
-	Pointer< IndexBufferObject > ibo( new IndexBufferObject( 3, indices ) );
+	auto vbo = crimild::alloc< VertexBufferObject >( VertexFormat::VF_P3_C4, 3, vertices );
+	auto ibo = crimild::alloc< IndexBufferObject >( 3, indices );
 	
-	Pointer< Primitive > primitive( new Primitive( Primitive::Type::TRIANGLES ) );
-	primitive->setVertexBuffer( vbo.get() );
-	primitive->setIndexBuffer( ibo.get() );
+	auto primitive = crimild::alloc< Primitive >( Primitive::Type::TRIANGLES );
+	primitive->setVertexBuffer( vbo );
+	primitive->setIndexBuffer( ibo );
 
-	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive.get() );
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( primitive );
 
-	Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0, 1, 0 ), 0.5 ) );
-	geometry->attachComponent( rotationComponent.get() );
+	auto scene = crimild::alloc< Group >();
+	scene->attachNode( geometry );
 
-	Pointer< Group > scene( new Group() );
-	scene->attachNode( geometry.get() );
+	auto camera = crimild::alloc< Camera >();
+    camera->setRenderPass( crimild::alloc< BasicRenderPass >() );
+	camera->local().setTranslate( 0.0f, 0.0f, 2.0f );
+	scene->attachNode( camera );
 
-	Pointer< Camera > camera( new Camera() );
-    camera->setRenderPass( new RenderPass() );  // force the simple render pass
-	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-	scene->attachNode( camera.get() );
+	sim->setScene( scene );
 
-	sim->setScene( scene.get() );
 	return sim->run();
 }
 

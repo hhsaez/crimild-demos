@@ -11,21 +11,27 @@ SET( CRIMILD_EXAMPLE_DEPENDENCIES
 	crimild_core
 	crimild_glfw
 	crimild_al
-	crimild_collada
-	glfw )
+	crimild_scripting
+	glfw 
+)
 
 SET( CRIMILD_EXAMPLES_LINK_LIBRARIES 
 	crimild_core
 	crimild_glfw
 	crimild_al
-	crimild_collada
-	glfw )
+	crimild_scripting
+	glfw 
+)
 
 SET( CRIMILD_EXAMPLE_INCLUDE_DIRECTORIES 
 	${CRIMILD_SOURCE_DIR}/core/src
 	${CRIMILD_SOURCE_DIR}/al/src
-	${CRIMILD_SOURCE_DIR}/collada/src
-	${CRIMILD_SOURCE_DIR}/glfw/src ) 
+	${CRIMILD_SOURCE_DIR}/scripting/src
+	${CRIMILD_SOURCE_DIR}/glfw/src 
+	${CRIMILD_SOURCE_DIR}/third-party/glfw-3.0.4/include
+	${CRIMILD_SOURCE_DIR}/third-party/lua-5.2.3/src
+	${CRIMILD_SOURCE_DIR}/third-party/bullet-2.82-r2704/src
+) 
 
 INCLUDE( FindLibXml2 )
 IF ( LIBXML2_FOUND )
@@ -37,12 +43,17 @@ ELSE ( LIBXML2_FOUND )
 ENDIF ( LIBXML2_FOUND )
 
 INCLUDE_DIRECTORIES( ${CRIMILD_EXAMPLE_INCLUDE_DIRECTORIES} )
-LINK_DIRECTORIES( ${CRIMILD_SOURCE_DIR}/lib )
+
+LINK_DIRECTORIES( 
+	${CRIMILD_SOURCE_DIR}/lib 
+	${CRIMILD_SOURCE_DIR}/third-party/glfw-3.0.4/src
+	${CRIMILD_SOURCE_DIR}/third-party/bullet-2.82-r2704/lib 
+)
 
 IF ( APPLE )
 	SET( CRIMILD_EXAMPLES_LINK_LIBRARIES 
 		${CRIMILD_EXAMPLES_LINK_LIBRARIES} 
-		"-framework Cocoa -framework OpenGL -framework IOKit" )
+		"-framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo" )
 ENDIF ( APPLE )
 
 ADD_EXECUTABLE( ${CRIMILD_EXAMPLE_NAME}
