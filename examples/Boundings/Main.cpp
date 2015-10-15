@@ -32,54 +32,55 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	Pointer< Simulation > sim( new GLSimulation( "Default shapes", argc, argv ) );
+	auto sim = crimild::alloc< GLSimulation >( "Default shapes", crimild::alloc< Settings >( argc, argv ) );
 
-	Pointer< Group > scene( new Group() );
+	auto scene = crimild::alloc< Group >();
 
-	Pointer< Group > shapes( new Group() );
-	scene->attachNode( shapes.get() );
+	auto shapes = crimild::alloc< Group >();
+	scene->attachNode( shapes );
 
-	Pointer< Geometry > kleinBottle( new Geometry() );
-	Pointer< Primitive > kleinBottlePrimitive( new KleinBottlePrimitive( Primitive::Type::TRIANGLES, 0.1 ) );
-	kleinBottle->attachPrimitive( kleinBottlePrimitive.get() );
+	auto kleinBottle = crimild::alloc< Geometry >();
+	auto kleinBottlePrimitive = crimild::alloc< KleinBottlePrimitive >( Primitive::Type::TRIANGLES, 0.1 );
+	kleinBottle->attachPrimitive( kleinBottlePrimitive );
 	kleinBottle->local().setTranslate( 0.0f, 0.0f, 3.0f );
-	shapes->attachNode( kleinBottle.get() );
+	shapes->attachNode( kleinBottle );
 
-	Pointer< Geometry > mobiusStrip( new Geometry() );
-	Pointer< Primitive > mobiusStripPrimitive( new MobiusStripPrimitive( Primitive::Type::TRIANGLES, 0.5f ) );
-	mobiusStrip->attachPrimitive( mobiusStripPrimitive.get() );
+	auto mobiusStrip = crimild::alloc< Geometry >();
+	auto mobiusStripPrimitive = crimild::alloc< MobiusStripPrimitive >( Primitive::Type::TRIANGLES, 0.5f );
+	mobiusStrip->attachPrimitive( mobiusStripPrimitive );
 	mobiusStrip->local().setTranslate( 0.0f, 0.0f, -3.0f );
-	shapes->attachNode( mobiusStrip.get() );
+	shapes->attachNode( mobiusStrip );
 
-	Pointer< Geometry > torus( new Geometry() );
-	Pointer< Primitive > torusPrimitive( new TorusPrimitive( Primitive::Type::TRIANGLES, 1.0f, 0.25f ) );
-	torus->attachPrimitive( torusPrimitive.get() );
+	auto torus = crimild::alloc< Geometry >();
+	auto torusPrimitive = crimild::alloc< TorusPrimitive >( Primitive::Type::TRIANGLES, 1.0f, 0.25f );
+	torus->attachPrimitive( torusPrimitive );
 	torus->local().setTranslate( 3.0f, 0.0f, 0.0f );
-	shapes->attachNode( torus.get() );
+	shapes->attachNode( torus );
 
-	Pointer< Geometry > trefoilKnot( new Geometry() );
-	Pointer< Primitive > trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::TRIANGLES, 1.0 ) );
-	trefoilKnot->attachPrimitive( trefoilKnotPrimitive.get() );
+	auto trefoilKnot = crimild::alloc< Geometry >();
+	auto trefoilKnotPrimitive = crimild::alloc< TrefoilKnotPrimitive >( Primitive::Type::TRIANGLES, 1.0 );
+	trefoilKnot->attachPrimitive( trefoilKnotPrimitive );
 	trefoilKnot->local().setTranslate( -3.0f, 0.0f, 0.0f );
-	shapes->attachNode( trefoilKnot.get() );
+	shapes->attachNode( trefoilKnot );
 
-	Pointer< NodeComponent > rotate( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.1f ) );
-	shapes->attachComponent( rotate.get() );
+	auto rotate = crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.1f );
+	shapes->attachComponent( rotate );
 
-	Pointer< Light > light( new Light() );
+	auto light = crimild::alloc< Light >();
 	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
-	scene->attachNode( light.get() );
+	scene->attachNode( light );
 
-	Pointer< Camera > camera( new Camera() );
+	auto camera = crimild::alloc< Camera >();
 	camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
-	scene->attachNode( camera.get() );
+	scene->attachNode( camera );
 
-	Pointer< DebugRenderPass > debugRenderPass( new DebugRenderPass( camera->getRenderPass() ) );
-	debugRenderPass->setRenderBoundings( true );
-	debugRenderPass->setRenderNormals( true );
-	camera->setRenderPass( debugRenderPass.get() );
+	//Pointer< DebugRenderPass > debugRenderPass( new DebugRenderPass( camera->getRenderPass() ) );
+	//debugRenderPass->setRenderBoundings( true );
+	//debugRenderPass->setRenderNormals( true );
+	//camera->setRenderPass( debugRenderPass );
 
-	sim->setScene( scene.get() );
+	sim->setScene( scene );
+	
 	return sim->run();
 }
 

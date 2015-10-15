@@ -34,7 +34,7 @@
 
 using namespace crimild;
 
-NodePtr makeGround( void )
+SharedPointer< Node > makeGround( void )
 {
 	auto primitive = crimild::alloc< QuadPrimitive >( 10.0f, 10.0f, VertexFormat::VF_P3_N3_UV2, Vector2f( 0.0f, 0.0f ), Vector2f( 3.0f, 3.0f ) );
 	auto geometry = crimild::alloc< Geometry >();
@@ -42,8 +42,9 @@ NodePtr makeGround( void )
 	geometry->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
     
     auto material = crimild::alloc< Material >();
-    material->setDiffuse( RGBAColorf( 0.0f, 0.16f, 0.25f, 1.0f ) );
+    // material->setDiffuse( RGBAColorf( 0.0f, 0.16f, 0.25f, 1.0f ) );
     material->setSpecular( RGBAColorf( 0.0f, 0.0f, 0.0f, 1.0f ) );
+    material->setColorMap( crimild::alloc< Texture >( crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/grid.tga" ) ) ) );
     material->setEmissiveMap( crimild::alloc< Texture >( crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/grid.tga" ) ) ) );
     geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 	
@@ -52,7 +53,7 @@ NodePtr makeGround( void )
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Lightcycle", argc, argv );
+	auto sim = crimild::alloc< GLSimulation >( "Lightcycle", crimild::alloc< Settings >( argc, argv ) );
 
 	auto scene = crimild::alloc< Group >();
 
@@ -60,10 +61,6 @@ int main( int argc, char **argv )
 	auto model = loader.load();
 	if ( model != nullptr ) {
 		auto group = crimild::alloc< Group >();
-		Quaternion4f q0, q1;
-		q0.fromAxisAngle( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
-		q1.fromAxisAngle( Vector3f( 0.0f, 0.0f, 1.0f ), -Numericf::HALF_PI );
-		model->local().setRotate( q0 * q1 );
 		group->attachNode( model );
 		scene->attachNode( group );
 	}
@@ -81,34 +78,32 @@ int main( int argc, char **argv )
     auto cameraPivot = crimild::alloc< Group >();
     cameraPivot->local().setTranslate( 0.0f, 2.0f, 0.0f );
     cameraPivot->attachComponent( crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), -0.01f ) );
-    
-    auto font = crimild::alloc< Font >( FileSystem::getInstance().pathForResource( "assets/LucidaGrande_sdf.tga" ), FileSystem::getInstance().pathForResource( "assets/LucidaGrande.txt" ) );
-	auto text = crimild::alloc< Text >();
-	text->setFont( font );
-	text->setSize( 0.075f );
-	text->setText( "Deferred Render Pass" );
-    text->getMaterial()->setProgram( sim->getRenderer()->getShaderProgram( "text" ) );
-	text->getMaterial()->setDiffuse( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0 ) );
-	text->local().setTranslate( -0.95f, 0.9f, 0.0f );
-    scene->attachNode( text );
 
-	auto camera = crimild::alloc< Camera >( 60.0f, 4.0f / 3.0f, 1.0f, 100.0f );
-	camera->local().setTranslate( 0.0f, 2.0f, 3.0f );
-    camera->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ) );
+	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 1.0f, 100.0f );
+	camera->local().setTranslate( 0.0f, 3.0f, 5.0f );
+    camera->local().lookAt( Vector3f( 0.0f, 1.0f, 0.0f ) );
 	camera->local().setTranslate( 0.0f, 0.0f, 4.0f );
 	cameraPivot->attachNode( camera );
     scene->attachNode( cameraPivot );
     
+    auto font = crimild::alloc< Font >( FileSystem::getInstance().pathForResource( "assets/LucidaGrande.txt" ) );
+	auto text = crimild::alloc< Text >();
+	text->setFont( font );
+	text->setSize( 0.075f );
+	text->setText( "Deferred Render Pass" );
+	text->setTextColor( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0 ) );
+	text->local().setTranslate( -0.95f, 0.9f, -1.0f );
+    camera->attachNode( text );
+
     auto forwardPass = crimild::alloc< ForwardRenderPass >();
     auto deferredPass = crimild::alloc< DeferredRenderPass >();
-    // Pointer< gl3::GlowImageEffect > glowEffect( new gl3::GlowImageEffect() );
-    // deferredPass->getImageEffects().add( glowEffect.get() );
+    //deferredPass->getImageEffects().add( crimild::alloc< opengl::BloomImageEffect >( 0.5f, 16.0f, 0.1f, 2.0f ) );
     
-    camera->setRenderPass( deferredPass );
+    //camera->setRenderPass( deferredPass );
 
-    bool useDeferredRenderPass = true;
+    bool useDeferredRenderPass = false;
     
-    scene->attachComponent( crimild::alloc< LambdaComponent >( [&]( NodePtr const &, const Time & ) {
+    scene->attachComponent( crimild::alloc< LambdaComponent >( [&]( Node *, const Clock & ) {
         if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
             useDeferredRenderPass = !useDeferredRenderPass;
             if ( useDeferredRenderPass ) {

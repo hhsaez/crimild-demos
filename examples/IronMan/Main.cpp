@@ -32,7 +32,7 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "IronMan", argc, argv );
+	auto sim = crimild::alloc< GLSimulation >( "IronMan", crimild::alloc< Settings >( argc, argv ) );
 
 	auto scene = crimild::alloc< Group >();
 
@@ -53,7 +53,7 @@ int main( int argc, char **argv )
 	scene->attachNode( light );
 
 	auto camera = crimild::alloc< Camera >();
-    camera->setRenderPass( crimild::alloc< DeferredRenderPass >() );
+    //camera->setRenderPass( crimild::alloc< DeferredRenderPass >() );
     // camera->getRenderPass()->getImageEffects().add( new gl3::GlowImageEffect() );
 	camera->local().setTranslate( 0.0f, 2.88f, 3.5f );
 	scene->attachNode( camera );

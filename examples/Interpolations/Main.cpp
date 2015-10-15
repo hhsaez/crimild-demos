@@ -37,11 +37,11 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	Pointer< Simulation > sim( new GLSimulation( "Interpolations", argc, argv ) );
+	auto sim = crimild::alloc< GLSimulation >( "Interpolations", crimild::alloc< Settings >( argc, argv ) );
 
-	Pointer< Geometry > trefoilKnot( new Geometry() );
-	Pointer< Primitive > trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 ) );
-	trefoilKnot->attachPrimitive( trefoilKnotPrimitive.get() );
+	auto trefoilKnot = crimild::alloc< Geometry >();
+	auto trefoilKnotPrimitive = crimild::alloc< TrefoilKnotPrimitive >( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 );
+	trefoilKnot->attachPrimitive( trefoilKnotPrimitive );
 
 	Vector3f from( -3.0f, -1.0f, 0.0f );
 	Vector3f to( 3.0f, 2.0f, 0.0f );
@@ -68,7 +68,7 @@ int main( int argc, char **argv )
 	easingFunctions[ "elasticOutSmall" ] = Interpolation::elasticOutSmall< float, float >;
 	easingFunctions[ "elasticOutBig" ] = Interpolation::elasticOutBig< float, float >;
 	auto funcIt = easingFunctions.begin();
-	Pointer< NodeComponent > updateCmp( new LambdaComponent( [&]( Node *node, const Time &appTime ) {
+	auto updateCmp = crimild::alloc< LambdaComponent >( [&]( Node *node, const Clock &appTime ) {
 		float x, y;
 
 		float t = Numericf::min( Numericf::max( functTime, 0.0 ), 1.0 );
@@ -89,21 +89,21 @@ int main( int argc, char **argv )
 			}
 			functTime = -0.5f;
 		}
-	}));
-	trefoilKnot->attachComponent( updateCmp.get() );
+	});
+	trefoilKnot->attachComponent( updateCmp );
 
-	Pointer< Group > scene( new Group() );
-	scene->attachNode( trefoilKnot .get());
+	auto scene = crimild::alloc< Group >();
+	scene->attachNode( trefoilKnot );
 
-	Pointer< Light > light( new Light() );
+	auto light = crimild::alloc< Light >();
 	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
-	scene->attachNode( light.get() );
+	scene->attachNode( light );
 
-	Pointer< Camera > camera( new Camera() );
+	auto camera = crimild::alloc< Camera >();
 	camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
-	scene->attachNode( camera.get() );
+	scene->attachNode( camera );
 
-	sim->setScene( scene.get() );
+	sim->setScene( scene );
 	return sim->run();
 }
 

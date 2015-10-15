@@ -30,26 +30,30 @@
 
 using namespace crimild;
 
-Pointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf &color, float major, float minor, float speed )
+SharedPointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf &color, float major, float minor, float speed )
 {
-	Pointer< Group > orbitingLight( new Group() );
+	auto orbitingLight = crimild::alloc< Group >();
 
-	Pointer< SpherePrimitive > primitive( new SpherePrimitive( 0.05f ) );
-	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive.get() );
-	Pointer< Material > material( new gl3::FlatMaterial( color ) );
-	geometry->getComponent< MaterialComponent >()->attachMaterial( material.get() );
-	orbitingLight->attachNode( geometry.get() );
+	auto primitive = crimild::alloc< SpherePrimitive >( 0.05f );
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( primitive );
 
-	Pointer< Light > light( new Light() );
+	auto material = crimild::alloc< Material >();
+	material->setDiffuse( color );
+   	material->setProgram( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_DIFFUSE ) );
+	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+
+	orbitingLight->attachNode( geometry );
+
+	auto light = crimild::alloc< Light >();
 	light->setColor( color );
-	orbitingLight->attachNode( light.get() );
+	orbitingLight->attachNode( light );
 
-	Pointer< OrbitComponent > orbitComponent( new OrbitComponent( 0.0f, 0.0f, major, minor, speed ) );
-	orbitingLight->attachComponent( orbitComponent.get() );
+	auto orbitComponent = crimild::alloc< OrbitComponent >( 0.0f, 0.0f, major, minor, speed );
+	orbitingLight->attachComponent( orbitComponent );
 
-	Pointer< Group > group( new Group() );
-	group->attachNode( orbitingLight.get() );
+	auto group = crimild::alloc< Group >();
+	group->attachNode( orbitingLight );
 	group->local().setRotate( rotation );
 
 	return group;
@@ -57,42 +61,19 @@ Pointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf &colo
 
 int main( int argc, char **argv )
 {
-	Pointer< Simulation > sim( new GLSimulation( "Lighting", argc, argv ) );
+	auto sim = crimild::alloc< GLSimulation >( "Lighting", crimild::alloc< Settings >( argc, argv ) );
 
-	std::cout << "Press 1 to use Phong shading (default)\n"
-		  	  << "Press 2 to use Gouraud shading" << std::endl;
-
-	Pointer< Geometry > trefoilKnot( new Geometry() );
-	Pointer< Primitive > trefoilKnotPrimitive( new TrefoilKnotPrimitive( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 ) );
-	trefoilKnot->attachPrimitive( trefoilKnotPrimitive.get() );
+	auto trefoilKnot = crimild::alloc< Geometry >();
+	auto trefoilKnotPrimitive = crimild::alloc< TrefoilKnotPrimitive >( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 );
+	trefoilKnot->attachPrimitive( trefoilKnotPrimitive );
 	
-	Pointer< Material > phongMaterial( new gl3::PhongMaterial() );
-	phongMaterial->setAmbient( RGBAColorf( 0.0f, 0.0f, 0.0f, 1.0f ) );
-	phongMaterial->setDiffuse( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ) );
+	auto material = crimild::alloc< Material >();
+	material->setAmbient( RGBAColorf( 0.0f, 0.0f, 0.0f, 1.0f ) );
+	material->setDiffuse( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ) );
+	trefoilKnot->getComponent< MaterialComponent >()->attachMaterial( material );
 
-	Pointer< Material > gouraudMaterial( new gl3::GouraudMaterial() );
-	gouraudMaterial->setAmbient( RGBAColorf( 0.0f, 0.0f, 0.0f, 1.0f ) );
-	gouraudMaterial->setDiffuse( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ) );
-
-	MaterialComponent *materials = trefoilKnot->getComponent< MaterialComponent >();
-	materials->attachMaterial( gouraudMaterial.get() );
-
-	Pointer< NodeComponent > changeMaterial( new LambdaComponent( [&]( Node *node, const Time & ) {
-		if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
-			materials->detachAllMaterials();
-			materials->attachMaterial( phongMaterial.get() );
-			node->perform( UpdateRenderState() );
-		}
-		else if ( InputState::getCurrentState().isKeyDown( '2' ) ) {
-			materials->detachAllMaterials();
-			materials->attachMaterial( gouraudMaterial.get() );
-			node->perform( UpdateRenderState() );
-		}
-	}));
-	trefoilKnot->attachComponent( changeMaterial.get() );
-	
-	Pointer< Group > scene( new Group() );
-	scene->attachNode( trefoilKnot.get() );
+	auto scene = crimild::alloc< Group >();
+	scene->attachNode( trefoilKnot );
 
 	scene->attachNode( buildLight( 
 		Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 1.0 ).getNormalized(), Numericf::HALF_PI ), 
@@ -109,11 +90,11 @@ int main( int argc, char **argv )
 		RGBAColorf( 0.0f, 0.0f, 1.0f, 1.0f ), 
 		1.25f, 1.0f, -0.85f ).get() );
 
-	Pointer< Camera > camera( new Camera() );
+	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-	scene->attachNode( camera.get() );
+	scene->attachNode( camera );
 
-	sim->setScene( scene.get() );
+	sim->setScene( scene );
 	return sim->run();
 }
 
