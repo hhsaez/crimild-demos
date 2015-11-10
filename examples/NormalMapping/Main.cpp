@@ -40,10 +40,11 @@ int main( int argc, char **argv )
 	auto sim = crimild::alloc< GLSimulation >( "A simple example", crimild::alloc< Settings >( argc, argv ) );
 
 	float vertices[] = {
-		-2.0f, +2.0f, 0.0f, 	0.0f, 0.0f, 1.0f,	0.0f, -1.0f, 0.0f,	0.0f, 0.0f,
-		-2.0f, -2.0f, 0.0f, 	0.0f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f, 	0.0f, 1.0f, 
-		+2.0f, -2.0f, 0.0, 		0.0f, 0.0f, 1.0f,	0.0f, +1.0f, 0.0f,	1.0f, 1.0f, 
-		+2.0f, +2.0f, 0.0f,		0.0f, 0.0f, 1.0f, 	-1.0f, 0.0f, 0.0f, 	1.0f, 0.0f
+        /* Positions */         /* Normals */       /* Tangents */      /* UVs */
+		-2.0f, +2.0f, 0.0f, 	0.0f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f,	0.0f, 1.0f,
+		-2.0f, -2.0f, 0.0f, 	0.0f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f, 	0.0f, 0.0f,
+		+2.0f, -2.0f, 0.0, 		0.0f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f,	1.0f, 0.0f,
+		+2.0f, +2.0f, 0.0f,		0.0f, 0.0f, 1.0f, 	1.0f, 0.0f, 0.0f, 	1.0f, 1.0f
 	};
 
 	unsigned short indices[] = {
@@ -80,7 +81,6 @@ int main( int argc, char **argv )
 	lightGeometry->getComponent< MaterialComponent >()->attachMaterial( lightGeometryMaterial );
 	interactiveLight->attachNode( lightGeometry );
 	auto light = crimild::alloc< Light >();
-	light->local().setRotate( Vector3f( 0.0f, 1.0f, 0.0f ), -Numericf::HALF_PI );
 	interactiveLight->attachNode( light );
 	interactiveLight->local().setTranslate( 1.0f, 1.0f, 1.0f );
 	scene->attachNode( interactiveLight );
