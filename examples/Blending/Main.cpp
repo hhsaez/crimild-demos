@@ -30,67 +30,53 @@
 
 using namespace crimild;
 
-Pointer< Node > buildBackground( float x, float y, float z ) 
+SharedPointer< Node > buildBackground( float x, float y, float z ) 
 {
-	Pointer< Primitive > primitive( new QuadPrimitive( 9.0f, 9.0f, VertexFormat::VF_P3_N3_UV2 ) );
-	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive.get() );
+	auto primitive = crimild::alloc< QuadPrimitive >( 9.0f, 9.0f, VertexFormat::VF_P3_N3_UV2 );
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( primitive );
 
-	Pointer< Material > material( new Material() );
-	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "stars.tga" ) ) );
-	Pointer< Texture > texture( new Texture( image.get() ) );
-	material->setColorMap( texture.get() );
-	
-	Pointer< MaterialComponent > materials( new MaterialComponent() );
-	materials->attachMaterial( material.get() );
-	geometry->attachComponent( materials.get() );
+	auto material = crimild::alloc< Material >();
+	material->setColorMap( AssetManager::getInstance()->get< Texture >( "stars.tga" ) );
+	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
 	geometry->local().setTranslate( x, y, z );
 
 	return geometry;	
 }
 
-Pointer< Node > buildEarth( float x, float y, float z )
+SharedPointer< Node > buildEarth( float x, float y, float z )
 {
-	Pointer< Primitive > primitive( new SpherePrimitive( 1.0f, VertexFormat::VF_P3_N3_UV2 ) );
-	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive.get() );
+	auto primitive = crimild::alloc< SpherePrimitive >( 1.0f, VertexFormat::VF_P3_N3_UV2 );
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( primitive );
 
-	Pointer< Material > material( new Material() );
-	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-color.tga" ) ) );
-	Pointer< Texture > texture( new Texture( image.get() ) );
-	material->setColorMap( texture.get() );
-	
-	Pointer< MaterialComponent > materials( new MaterialComponent() );
-	materials->attachMaterial( material.get() );
-	geometry->attachComponent( materials.get() );
+	auto material = crimild::alloc< Material >();
+	material->setColorMap( AssetManager::getInstance()->get< Texture >( "earth-color.tga" ) );
+	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
-	Pointer< NodeComponent > rotation( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.001 ) );
-	geometry->attachComponent( rotation.get() );
+	geometry->attachComponent( crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.001 ) );
 
 	geometry->local().setTranslate( x, y, z );
 
 	return geometry;
 }
 
-Pointer< Node > buildAtmosphere( float x, float y, float z )
+SharedPointer< Node > buildAtmosphere( float x, float y, float z )
 {
-	Pointer< Primitive > primitive( new SpherePrimitive( 1.02f, VertexFormat::VF_P3_N3_UV2 ) );
-	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive.get() );
+	auto primitive = crimild::alloc< SpherePrimitive >( 1.02f, VertexFormat::VF_P3_N3_UV2 );
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( primitive );
 
-	Pointer< Material > material( new Material() );
-	Pointer< Image > image( new ImageTGA( FileSystem::getInstance().pathForResource( "earth-atmosphere.tga" ) ) );
-	Pointer< Texture > texture( new Texture( image.get() ) );
-	material->setColorMap( texture.get() );
+	auto material = crimild::alloc< Material >();
+	material->setColorMap( AssetManager::getInstance()->get< Texture >( "earth-atmosphere.tga" ) );
 	material->getAlphaState()->setEnabled( true );
     material->setAmbient( RGBAColorf( 0.35f, 0.35f, 0.35f, 1.0f ) );
 	material->getAlphaState()->setSrcBlendFunc( AlphaState::SrcBlendFunc::SRC_COLOR );
 	material->getAlphaState()->setDstBlendFunc( AlphaState::DstBlendFunc::ONE_MINUS_SRC_COLOR );
-	geometry->getComponent< MaterialComponent >()->attachMaterial( material.get() );
+	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
-	Pointer< NodeComponent > rotation( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.005 ) );
-	geometry->attachComponent( rotation.get() );
+	geometry->attachComponent( crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.005 ) );
 
 	geometry->local().setTranslate( x, y, z );
 
@@ -99,22 +85,23 @@ Pointer< Node > buildAtmosphere( float x, float y, float z )
 
 int main( int argc, char **argv )
 {
-	Pointer< Simulation > sim( new GLSimulation( "Textures", argc, argv ) );
+	auto sim = crimild::alloc< GLSimulation >( "Textures", crimild::alloc< Settings >( argc, argv ) );
 
-	Pointer< Group > scene( new Group() );
-	scene->attachNode( buildBackground( 0, 0, -5 ).get() );
-	scene->attachNode( buildEarth( 0.5, 0, 0 ).get() );
-	scene->attachNode( buildAtmosphere( 0.5, 0, 0 ).get() );
+	auto scene = crimild::alloc< Group >();
+	scene->attachNode( buildBackground( 0, 0, -5 ) );
+	scene->attachNode( buildEarth( 0.5, 0, 0 ) );
+	scene->attachNode( buildAtmosphere( 0.5, 0, 0 ) );
 
-	Pointer< Camera > camera( new Camera() );
+	auto camera = crimild::alloc< Camera >();
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-	scene->attachNode( camera.get() );
+	scene->attachNode( camera );
     
-    Light *light = new Light();
+    auto light = crimild::alloc< Light >();
     light->local().setTranslate( -3.0f, 1.0f, 3.0f );
     scene->attachNode( light );
 
-	sim->setScene( scene.get() );
+	sim->setScene( scene );
+
 	return sim->run();
 }
 

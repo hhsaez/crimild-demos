@@ -36,71 +36,70 @@ int main( int argc, char **argv )
 			  << "\nPress 1 to toggle color map"
 		  	  << "\nPress 2 to toggle specular map"
 		  	  << "\nPress 3 to toggle normal map" << std::endl;
-
-	Pointer< Simulation > sim( new GLSimulation( "A simple example", argc, argv ) );
+	
+	auto sim = crimild::alloc< GLSimulation >( "A simple example", crimild::alloc< Settings >( argc, argv ) );
 
 	float vertices[] = {
-		-2.0f, +2.0f, 0.0f, 	0.0f, 0.0f, 1.0f,	0.0f, -1.0f, 0.0f,	0.0f, 0.0f,
-		-2.0f, -2.0f, 0.0f, 	0.0f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f, 	0.0f, 1.0f, 
-		+2.0f, -2.0f, 0.0, 		0.0f, 0.0f, 1.0f,	0.0f, +1.0f, 0.0f,	1.0f, 1.0f, 
-		+2.0f, +2.0f, 0.0f,		0.0f, 0.0f, 1.0f, 	-1.0f, 0.0f, 0.0f, 	1.0f, 0.0f
+        /* Positions */         /* Normals */       /* Tangents */      /* UVs */
+		-2.0f, +2.0f, 0.0f, 	0.0f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f,	0.0f, 1.0f,
+		-2.0f, -2.0f, 0.0f, 	0.0f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f, 	0.0f, 0.0f,
+		+2.0f, -2.0f, 0.0, 		0.0f, 0.0f, 1.0f,	1.0f, 0.0f, 0.0f,	1.0f, 0.0f,
+		+2.0f, +2.0f, 0.0f,		0.0f, 0.0f, 1.0f, 	1.0f, 0.0f, 0.0f, 	1.0f, 1.0f
 	};
 
 	unsigned short indices[] = {
 		0, 1, 2, 0, 2, 3
 	};
 
-	Pointer< VertexBufferObject > vbo( new VertexBufferObject( VertexFormat::VF_P3_N3_TG3_UV2, 4, vertices ) );
-	Pointer< IndexBufferObject > ibo( new IndexBufferObject( 6, indices ) );
+	auto vbo = crimild::alloc< VertexBufferObject >( VertexFormat::VF_P3_N3_TG3_UV2, 4, vertices );
+	auto ibo = crimild::alloc< IndexBufferObject >( 6, indices );
 	
-	Pointer< Primitive > primitive( new Primitive( Primitive::Type::TRIANGLES ) );
-	primitive->setVertexBuffer( vbo.get() );
-	primitive->setIndexBuffer( ibo.get() );
+	auto primitive = crimild::alloc< Primitive >( Primitive::Type::TRIANGLES );
+	primitive->setVertexBuffer( vbo );
+	primitive->setIndexBuffer( ibo );
 
-	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive.get() );
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( primitive );
 
-	Pointer< Material > material( new Material() );
-		Pointer< Image > colorImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-color.tga" ) ) );
-		Pointer< Texture > colorMap( new Texture( colorImage.get() ) );
-		material->setColorMap( colorMap.get() );
-		Pointer< Image > specularImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-specular.tga" ) ) );
-		Pointer< Texture > specularMap( new Texture( specularImage.get() ) );
-		material->setSpecularMap( specularMap.get() );
-		Pointer< Image > normalImage( new ImageTGA( FileSystem::getInstance().pathForResource( "stone-normal.tga" ) ) );
-		Pointer< Texture > normalMap( new Texture( normalImage.get() ) );
-		material->setNormalMap( normalMap.get() );
-	geometry->getComponent< MaterialComponent >()->attachMaterial( material.get() );
+	auto material = crimild::alloc< Material >();
+	auto colorMap = crimild::retain( AssetManager::getInstance()->get< Texture >( "stone-color.tga" ) );
+	material->setColorMap( colorMap );
+	auto specularMap = crimild::retain( AssetManager::getInstance()->get< Texture >( "stone-specular.tga" ) );
+	material->setSpecularMap( specularMap );
+	auto normalMap = crimild::retain( AssetManager::getInstance()->get< Texture >( "stone-normal.tga" ) );
+	material->setNormalMap( normalMap );
+	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 	
-	Pointer< Group > scene( new Group() );
-	scene->attachNode( geometry.get() );
+	auto scene = crimild::alloc< Group >();
+	scene->attachNode( geometry );
 
-	Pointer< Group > interactiveLight( new Group() );
-		Pointer< SpherePrimitive > lightPrimitive( new SpherePrimitive( 0.025f, VertexFormat::VF_P3 ) );
-		Pointer< Geometry > lightGeometry( new Geometry() );
-		lightGeometry->attachPrimitive( lightPrimitive.get() );
-		interactiveLight->attachNode( lightGeometry.get() );
-		Pointer< Light > light( new Light() );
-		light->local().setRotate( Vector3f( 0.0f, 1.0f, 0.0f ), -Numericf::HALF_PI );
-		interactiveLight->attachNode( light.get() );
-		interactiveLight->local().setTranslate( 1.0f, 1.0f, 1.0f );
-	scene->attachNode( interactiveLight.get() );
+	auto interactiveLight = crimild::alloc< Group >();
+	auto lightGeometry = crimild::alloc< Geometry >();
+	lightGeometry->attachPrimitive( crimild::alloc< SpherePrimitive >( 0.025f, VertexFormat::VF_P3 ) );
+	auto lightGeometryMaterial = crimild::alloc< Material >();
+	lightGeometryMaterial->setProgram( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_DIFFUSE ) );
+	lightGeometry->getComponent< MaterialComponent >()->attachMaterial( lightGeometryMaterial );
+	interactiveLight->attachNode( lightGeometry );
+	auto light = crimild::alloc< Light >();
+	interactiveLight->attachNode( light );
+	interactiveLight->local().setTranslate( 1.0f, 1.0f, 1.0f );
+	scene->attachNode( interactiveLight );
 
-	Pointer< Camera > camera( new Camera() );
+	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 0.0f, 0.0f, 6.0f );
-	scene->attachNode( camera.get() );
+	scene->attachNode( camera );
 
-	Pointer< LambdaComponent > controls( new LambdaComponent( [&]( Node *, const Time &t ) {
+	scene->attachComponent( crimild::alloc< LambdaComponent >( [material, colorMap, normalMap, specularMap, interactiveLight, camera]( Node *, const Clock &t ) {
 		if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
-			material->setColorMap( material->getColorMap() != nullptr ? nullptr : colorMap.get() );
+			material->setColorMap( material->getColorMap() != nullptr ? nullptr : colorMap );
 		}
 
 		if ( InputState::getCurrentState().isKeyDown( '2' ) ) {
-			material->setSpecularMap( material->getSpecularMap() != nullptr ? nullptr : specularMap.get() );
+			material->setSpecularMap( material->getSpecularMap() != nullptr ? nullptr : specularMap );
 		}
 		
 		if ( InputState::getCurrentState().isKeyDown( '3' ) ) {
-			material->setNormalMap( material->getNormalMap() != nullptr ? nullptr : normalMap.get() );
+			material->setNormalMap( material->getNormalMap() != nullptr ? nullptr : normalMap );
 		}
 
 		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
@@ -115,10 +114,28 @@ int main( int argc, char **argv )
 		if ( InputState::getCurrentState().isKeyStillDown( 'D' ) ) {
 			interactiveLight->local().translate() += Vector3f( t.getDeltaTime(), 0.0f, 0.0f );
 		}
-	}));
-	scene->attachComponent( controls.get() );
 
-	sim->setScene( scene.get() );
+		if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_UP ) ) {
+			camera->local().translate() += Vector3f( 0.0f, t.getDeltaTime(), 0.0f );
+		}
+		if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_DOWN ) ) {
+			camera->local().translate() += Vector3f( 0.0f, -t.getDeltaTime(), 0.0f );
+		}
+		if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_LEFT ) ) {
+			camera->local().translate() += Vector3f( -t.getDeltaTime(), 0.0f, 0.0f );
+		}
+		if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_RIGHT ) ) {
+			camera->local().translate() += Vector3f( t.getDeltaTime(), 0.0f, 0.0f );
+		}
+		if ( InputState::getCurrentState().isKeyStillDown( '-' ) ) {
+			camera->local().translate() += Vector3f( 0.0f, 0.0f, t.getDeltaTime() );
+		}
+		if ( InputState::getCurrentState().isKeyStillDown( '=' ) ) {
+			camera->local().translate() += Vector3f( 0.0f, 0.0f, -t.getDeltaTime() );
+		}
+	}));
+
+	sim->setScene( scene );
 	return sim->run();
 }
 

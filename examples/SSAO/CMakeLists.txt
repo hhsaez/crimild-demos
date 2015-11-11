@@ -1,3 +1,5 @@
+RETURN()
+
 SET( CRIMILD_EXAMPLE_NAME SSAO )
 INCLUDE( ModuleBuildExample )
 

@@ -32,35 +32,29 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	Pointer< Simulation > sim( new GLSimulation( "Image effects", argc, argv ) );
+	auto sim = crimild::alloc< GLSimulation >( "Image effects", crimild::alloc< Settings >( argc, argv ) );
 
-	Pointer< Group > scene( new Group() );
+	auto scene = crimild::alloc< Group >();
 
-	Pointer< Geometry > geometry( new Geometry() );
-	Pointer< Primitive > primitive( new NewellTeapotPrimitive() );
-	geometry->attachPrimitive( primitive.get() );
-	Pointer< RotationComponent > rotationComponent( new RotationComponent( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f ) );
-	geometry->attachComponent( rotationComponent.get() );
-	scene->attachNode( geometry.get() );
+	auto geometry = crimild::alloc< Geometry >();
+	auto primitive = crimild::alloc< NewellTeapotPrimitive >();
+	geometry->attachPrimitive( primitive );
+	auto rotationComponent = crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f );
+	geometry->attachComponent( rotationComponent );
+	scene->attachNode( geometry );
 
-	Pointer< Light > light( new Light() );
+	auto light = crimild::alloc< Light >();
 	light->local().setTranslate( -10.0f, 20.0f, 30.0f );
-	scene->attachNode( light.get() );
+	scene->attachNode( light );
 
-	Pointer< Camera > camera( new Camera() );
+	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 0.0f, 15.0f, 80.0f );
-	scene->attachNode( camera.get() );
+	scene->attachNode( camera );
+
+	auto sepiaToneEffect = crimild::alloc< ColorTintImageEffect >( ColorTintImageEffect::TINT_SEPIA );
+	camera->getRenderPass()->getImageEffects().add( sepiaToneEffect );
 	
-//	Pointer< OffscreenRenderPass > renderPass( new OffscreenRenderPass() );
-//	camera->setRenderPass( renderPass.get() );
-
-//	Pointer< ImageEffect > sepiaEffect( new ImageEffect() );
-//	Pointer< ShaderProgram > sepiaProgram( new gl3::SepiaToneShaderProgram() );
-//	sepiaEffect->setProgram( sepiaProgram.get() );
-	//sepiaEffect->setAlphaState( new AlphaState( true ) );
-//	renderPass->attachImageEffect( sepiaEffect.get() );
-
-	sim->setScene( scene.get() );
+	sim->setScene( scene );
 	return sim->run();
 }
 

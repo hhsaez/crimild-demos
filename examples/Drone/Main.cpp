@@ -36,59 +36,64 @@
 using namespace crimild;
 using namespace crimild::al;
 
-class DroneComponent : public NodeComponent {
+class DroneComponent : public BehaviorComponent {
 public:
 	DroneComponent( void ) { }
 	virtual ~DroneComponent( void ) { }
 
-	virtual void onAttach( void )
+	virtual void onAttach( void ) override
 	{
 		getNode()->local().setTranslate( 0.0f, 10.0f, -80.0f );
 	}
 
-	virtual void update( const Time &t ) override
+	virtual void update( const Clock &t ) override
 	{
-		float z = -50.0f + 50.0f * std::sin( t.getCurrentTime() );
-		float y = 5.0f + 1.0f * std::sin( 2.0f * t.getCurrentTime() );
+		_accumTime += t.getDeltaTime();
+
+		float z = -50.0f + 50.0f * Numericf::sin( _accumTime );
+		float y = 5.0f + 1.0f * Numericf::sin( 2.0f * _accumTime );
 
 		getNode()->local().setTranslate( 0.0f, y, z );
 
-		float pitchAngle = -0.15f * std::sin( 0.5f * t.getCurrentTime() ) * std::cos( 0.5f * t.getCurrentTime() );
-		float rollAngle = 0.025f * std::sin( 4.0f * t.getCurrentTime() );
+		float pitchAngle = -0.15f * Numericf::sin( 0.5f * _accumTime ) * Numericf::cos( 0.5f * _accumTime );
+		float rollAngle = 0.025f * Numericf::sin( 4.0f * _accumTime );
 		Quaternion4f pitch, roll, yaw;
 		pitch.fromAxisAngle( Vector3f( 1.0f, 0.0f, 0.0f ), pitchAngle );
 		roll.fromAxisAngle( Vector3f( 0.0f, 0.0f, 1.0f ), rollAngle );
 		yaw.fromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0f ), -Numericf::HALF_PI );
 		getNode()->local().setRotate( roll * pitch * yaw );
 	}
+
+    private:
+	float _accumTime = 0.0f;
 };
 
-Pointer< Node > loadDrone( void )
+SharedPointer< Node > loadDrone( void )
 {
-    Pointer< Group > drone( new Group( "drone" ) );
+    auto drone = crimild::alloc< Group >( "drone" );
     
 	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/MQ-27b.obj" ) );
-	Pointer< Node > droneModel = loader.load();
+	auto droneModel = loader.load();
 	if ( droneModel != nullptr ) {
-		drone->attachNode( droneModel.get() );
+		drone->attachNode( droneModel );
         
-		Pointer< NodeComponent > droneComponent( new DroneComponent() );
-		drone->attachComponent( droneComponent.get() );
+		auto droneComponent = crimild::alloc< DroneComponent >();
+		drone->attachComponent( droneComponent );
         
-		Pointer< AudioClip > audioClip( new WavAudioClip( FileSystem::getInstance().pathForResource( "drone_mono.wav" ) ) );
-		Pointer< AudioComponent > audioComponent( new AudioComponent( audioClip.get() ) );
-		drone->attachComponent( audioComponent.get() );
+		auto audioClip = crimild::alloc< WavAudioClip >( FileSystem::getInstance().pathForResource( "drone_mono.wav" ) );
+		auto audioComponent = crimild::alloc< AudioComponent >( audioClip );
+		drone->attachComponent( audioComponent );
 		audioComponent->play( true );
 	}
     
     return drone;
 }
 
-Pointer< Node > makeGround( void )
+SharedPointer< Node > makeGround( void )
 {
-	Pointer< Primitive > primitive( new QuadPrimitive( 200.0f, 200.0f ) );
-	Pointer< Geometry > geometry( new Geometry() );
-	geometry->attachPrimitive( primitive.get() );
+	auto primitive = crimild::alloc< QuadPrimitive >( 200.0f, 200.0f );
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( primitive );
 	geometry->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
     geometry->local().setTranslate( 0.0f, 0.0f, -30.0f );
 	
@@ -97,29 +102,28 @@ Pointer< Node > makeGround( void )
 
 int main( int argc, char **argv )
 {
-	Pointer< Simulation > sim( new GLSimulation( "Drone", argc, argv ) );
+	auto sim = crimild::alloc< GLSimulation >( "Drone", crimild::alloc< Settings >( argc, argv ) );
 
-	Pointer< Group > scene( new Group() );
-    scene->attachNode( loadDrone().get() );
-	scene->attachNode( makeGround().get() );
+	auto scene = crimild::alloc< Group >();
+    scene->attachNode( loadDrone() );
+	scene->attachNode( makeGround() );
 
 	AudioManager::getInstance().setGeneralGain( 80.0f );
 
-	Pointer< Light > light( new Light() );
+	auto light = crimild::alloc< Light >();
 	light->local().setTranslate( 10.0f, 25.0f, 20.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, -8.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
     light->setCastShadows( true );
     light->setShadowNearCoeff( 1.0f );
     light->setShadowFarCoeff( 100.0f );
-	scene->attachNode( light.get() );
+	scene->attachNode( light );
 
-	Pointer< Camera > camera( new Camera() );
-    camera->setRenderPass( new ForwardRenderPass() );
+	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 1.0f, 6.0f, 15.0f );
     camera->local().lookAt( Vector3f( 0.0f, 1.0f, 0.0 ), Vector3f( 0.0f, 1.0f, 0.0f ) );
-	scene->attachNode( camera.get() );
+	scene->attachNode( camera );
 
-	sim->setScene( scene.get() );
+	sim->setScene( scene );
 	return sim->run();
 }
 

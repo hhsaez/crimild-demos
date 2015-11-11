@@ -45,3 +45,6 @@ examples/**/Debug
 CRIMILD_EXAMPLES.build
 CRIMILD_EXAMPLES.xcodeproj
 CMakeScripts
+*.*~
+examples/Planets/Planets
+examples/AncientTomb/AncientTomb
