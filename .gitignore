@@ -48,3 +48,4 @@ CMakeScripts
 *.*~
 examples/Planets/Planets
 examples/AncientTomb/AncientTomb
+examples/**/*.exe
