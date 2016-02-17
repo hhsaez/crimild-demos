@@ -30,7 +30,7 @@
 
 using namespace crimild;
 
-class PickingComponent : public BehaviorComponent {
+class PickingComponent : public NodeComponent {
 	CRIMILD_NODE_COMPONENT_NAME( "picking" )
 
 public:
@@ -46,11 +46,11 @@ public:
 
 	virtual void update( const Clock &t ) override 
 	{
-		if ( InputState::getCurrentState().isMouseButtonDown( 0 ) ) {
+		if ( Input::getInstance()->isMouseButtonDown( 0 ) ) {
 			Camera *camera = getNode< Camera >();
 
 			Ray3f ray;
-			Vector2f mousePos = InputState::getCurrentState().getNormalizedMousePosition();
+			Vector2f mousePos = Input::getInstance()->getNormalizedMousePosition();
 			if ( camera->getPickRay( mousePos[ 0 ], mousePos[ 1 ], ray ) ) {
 				SelectNodes selectNodes( [&]( Node *node ) {
 					MaterialComponent *materials = node->getComponent< MaterialComponent >();

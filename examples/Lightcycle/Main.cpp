@@ -104,7 +104,7 @@ int main( int argc, char **argv )
     bool useDeferredRenderPass = false;
     
     scene->attachComponent( crimild::alloc< LambdaComponent >( [&]( Node *, const Clock & ) {
-        if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
+        if ( Input::getInstance()->isKeyDown( '1' ) ) {
             useDeferredRenderPass = !useDeferredRenderPass;
             if ( useDeferredRenderPass ) {
                 camera->setRenderPass( deferredPass );
@@ -115,7 +115,7 @@ int main( int argc, char **argv )
                 text->setText( "Forward Render Pass" );
             }
         }
-        else if ( InputState::getCurrentState().isKeyDown( '2' ) ) {
+        else if ( Input::getInstance()->isKeyDown( '2' ) ) {
             deferredPass->enableDebugMode( !deferredPass->isDebugModeEnabled() );
         }
     }));

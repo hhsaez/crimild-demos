@@ -54,16 +54,16 @@ int main( int argc, char **argv )
     auto texts = crimild::alloc< Group >();
     texts->attachNode( generateText( font, lorem, Vector3f( -5.0f, 0.0f, 0.0f ), RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ) ) );
     texts->attachComponent( crimild::alloc< LambdaComponent >( []( Node *node, const Clock &t ) {
-        if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_UP ) ) {
+        if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_UP ) ) {
             node->local().translate() -= 2.0f * t.getDeltaTime() * node->getLocal().computeDirection();
         }
-        else if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_DOWN ) ) {
+        else if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_DOWN ) ) {
             node->local().translate() += 2.0f * t.getDeltaTime() * node->getLocal().computeDirection();
         }
-        if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_LEFT ) ) {
+        if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_LEFT ) ) {
             node->local().translate() += 2.0f * t.getDeltaTime() * node->getLocal().computeRight();
         }
-        else if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_RIGHT ) ) {
+        else if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_RIGHT ) ) {
             node->local().translate() -= 2.0f * t.getDeltaTime() * node->getLocal().computeRight();
         }
     }));

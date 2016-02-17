@@ -73,7 +73,7 @@ static float GANYMEDE_SIDERAL_ROTATION_SPEED = EARTH_EQUATORIAL_ROTATION_SPEED /
 static float GANYMEDE_RADIUS = 0.413f * EARTH_RADIUS;
 static float GANYMEDE_DISTANCE = 4.0f * IO_DISTANCE;
 
-class RotationController : public BehaviorComponent {
+class RotationController : public NodeComponent {
 public:
 	RotationController( float rotationSpeed )
 		: _rotationSpeed( rotationSpeed )
@@ -333,7 +333,7 @@ int main( int argc, char **argv )
     camera->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ) );
 
 	camera->attachComponent( crimild::alloc< LambdaComponent >( [=]( Node *, const Clock & ) {
-		if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
+		if ( Input::getInstance()->isKeyDown( '1' ) ) {
 			camera->detachFromParent();
 			camera->local().makeIdentity();
 			camera->local().setTranslate( 0.0f, 0.25f * AU, 7.5f * AU );
@@ -342,7 +342,7 @@ int main( int argc, char **argv )
 			scene->perform( UpdateWorldState() );
 			scene->perform( UpdateRenderState() );
 		}
-		else if ( InputState::getCurrentState().isKeyDown( '2' ) ) {
+		else if ( Input::getInstance()->isKeyDown( '2' ) ) {
 			camera->detachFromParent();
 			camera->local().makeIdentity();
 			camera->local().setTranslate( 0.5f * SUN_RADIUS, 1.0f * SUN_RADIUS, 2.0f * SUN_RADIUS );
@@ -350,7 +350,7 @@ int main( int argc, char **argv )
 			sun->perform( UpdateWorldState() );
 			sun->perform( UpdateRenderState() );
 		}
-		else if ( InputState::getCurrentState().isKeyDown( '3' ) ) {
+		else if ( Input::getInstance()->isKeyDown( '3' ) ) {
 			camera->detachFromParent();
 			camera->local().makeIdentity();
 			camera->local().setTranslate( 0.1f * EARTH_RADIUS, 0.1 * EARTH_RADIUS, 2.0f * MOON_DISTANCE );
@@ -358,7 +358,7 @@ int main( int argc, char **argv )
 			earth->perform( UpdateWorldState() );
 			earth->perform( UpdateRenderState() );
 		}
-		else if ( InputState::getCurrentState().isKeyDown( '4' ) ) {
+		else if ( Input::getInstance()->isKeyDown( '4' ) ) {
 			camera->detachFromParent();
 			camera->local().makeIdentity();
 			camera->local().rotate().fromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0f ), Numericf::HALF_PI );
@@ -367,7 +367,7 @@ int main( int argc, char **argv )
 			moon->perform( UpdateWorldState() );
 			moon->perform( UpdateRenderState() );
 		}
-		else if ( InputState::getCurrentState().isKeyDown( '5' ) ) {
+		else if ( Input::getInstance()->isKeyDown( '5' ) ) {
 			camera->detachFromParent();
 			camera->local().makeIdentity();
 			camera->local().setTranslate( 0.1f * JUPITER_RADIUS, 0.1 * JUPITER_RADIUS, -2.0f * GANYMEDE_DISTANCE );
@@ -376,7 +376,7 @@ int main( int argc, char **argv )
 			jupiter->perform( UpdateWorldState() );
 			jupiter->perform( UpdateRenderState() );
 		}
-		else if ( InputState::getCurrentState().isKeyDown( '6' ) ) {
+		else if ( Input::getInstance()->isKeyDown( '6' ) ) {
 			camera->detachFromParent();
 			camera->local().makeIdentity();
 			camera->local().setTranslate( 1.1f * IO_RADIUS, 1.1f * IO_RADIUS, 2.0f * IO_RADIUS );
@@ -384,7 +384,7 @@ int main( int argc, char **argv )
 			io->perform( UpdateWorldState() );
 			io->perform( UpdateRenderState() );
 		}
-		else if ( InputState::getCurrentState().isKeyDown( '7' ) ) {
+		else if ( Input::getInstance()->isKeyDown( '7' ) ) {
 			camera->detachFromParent();
 			camera->local().makeIdentity();
 			camera->local().setTranslate( 1.1f * EUROPA_RADIUS, 1.1f * EUROPA_RADIUS, 2.0f * EUROPA_RADIUS );
@@ -392,7 +392,7 @@ int main( int argc, char **argv )
 			europa->perform( UpdateWorldState() );
 			europa->perform( UpdateRenderState() );
 		}
-		else if ( InputState::getCurrentState().isKeyDown( '8' ) ) {
+		else if ( Input::getInstance()->isKeyDown( '8' ) ) {
 			camera->detachFromParent();
 			camera->local().makeIdentity();
 			camera->local().setTranslate( 1.1f * GANYMEDE_RADIUS, 1.1f * GANYMEDE_RADIUS, 2.0f * GANYMEDE_RADIUS );
@@ -400,22 +400,22 @@ int main( int argc, char **argv )
 			ganymede->perform( UpdateWorldState() );
 			ganymede->perform( UpdateRenderState() );
 		}
-		else if ( InputState::getCurrentState().isKeyDown( '0' ) ) {
+		else if ( Input::getInstance()->isKeyDown( '0' ) ) {
 			deferredRenderPass->enableDebugMode( !deferredRenderPass->isDebugModeEnabled() );
 		}
 	}));
 
 	scene->attachComponent( crimild::alloc< LambdaComponent >( [=]( Node *, const Clock & ) {
-		if ( InputState::getCurrentState().isKeyStillDown( '-' ) ) {
-			SIMULATION_SPEED -= InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_LSHIFT ) ? 10.0 : 0.001f;
+		if ( Input::getInstance()->isKeyDown( '-' ) ) {
+			SIMULATION_SPEED -= Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_LEFT_SHIFT ) ? 10.0 : 0.001f;
 		}
-		else if ( InputState::getCurrentState().isKeyStillDown( '=' ) ) {
-			SIMULATION_SPEED += InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_LSHIFT ) ? 10.0 : 0.001f;
+		else if ( Input::getInstance()->isKeyDown( '=' ) ) {
+			SIMULATION_SPEED += Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_LEFT_SHIFT ) ? 10.0 : 0.001f;
 		}
-		else if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_SPACE ) ) {
+		else if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_SPACE ) ) {
 			SIMULATION_SPEED = 0.0f;
 		}
-		else if ( InputState::getCurrentState().isKeyStillDown( 'R' ) ) {
+		else if ( Input::getInstance()->isKeyDown( 'R' ) ) {
 			SIMULATION_SPEED = 1.0f / 60.0f;
 		}
 	}));

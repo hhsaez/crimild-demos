@@ -90,47 +90,47 @@ int main( int argc, char **argv )
 	scene->attachNode( camera );
 
 	scene->attachComponent( crimild::alloc< LambdaComponent >( [material, colorMap, normalMap, specularMap, interactiveLight, camera]( Node *, const Clock &t ) {
-		if ( InputState::getCurrentState().isKeyDown( '1' ) ) {
+		if ( Input::getInstance()->isKeyDown( '1' ) ) {
 			material->setColorMap( material->getColorMap() != nullptr ? nullptr : colorMap );
 		}
 
-		if ( InputState::getCurrentState().isKeyDown( '2' ) ) {
+		if ( Input::getInstance()->isKeyDown( '2' ) ) {
 			material->setSpecularMap( material->getSpecularMap() != nullptr ? nullptr : specularMap );
 		}
 		
-		if ( InputState::getCurrentState().isKeyDown( '3' ) ) {
+		if ( Input::getInstance()->isKeyDown( '3' ) ) {
 			material->setNormalMap( material->getNormalMap() != nullptr ? nullptr : normalMap );
 		}
 
-		if ( InputState::getCurrentState().isKeyStillDown( 'W' ) ) {
+		if ( Input::getInstance()->isKeyDown( 'W' ) ) {
 			interactiveLight->local().translate() += Vector3f( 0.0f, t.getDeltaTime(), 0.0f );
 		}
-		if ( InputState::getCurrentState().isKeyStillDown( 'S' ) ) {
+		if ( Input::getInstance()->isKeyDown( 'S' ) ) {
 			interactiveLight->local().translate() += Vector3f( 0.0f, -t.getDeltaTime(), 0.0f );
 		}
-		if ( InputState::getCurrentState().isKeyStillDown( 'A' ) ) {
+		if ( Input::getInstance()->isKeyDown( 'A' ) ) {
 			interactiveLight->local().translate() += Vector3f( -t.getDeltaTime(), 0.0f, 0.0f );
 		}
-		if ( InputState::getCurrentState().isKeyStillDown( 'D' ) ) {
+		if ( Input::getInstance()->isKeyDown( 'D' ) ) {
 			interactiveLight->local().translate() += Vector3f( t.getDeltaTime(), 0.0f, 0.0f );
 		}
 
-		if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_UP ) ) {
+		if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_UP ) ) {
 			camera->local().translate() += Vector3f( 0.0f, t.getDeltaTime(), 0.0f );
 		}
-		if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_DOWN ) ) {
+		if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_DOWN ) ) {
 			camera->local().translate() += Vector3f( 0.0f, -t.getDeltaTime(), 0.0f );
 		}
-		if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_LEFT ) ) {
+		if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_LEFT ) ) {
 			camera->local().translate() += Vector3f( -t.getDeltaTime(), 0.0f, 0.0f );
 		}
-		if ( InputState::getCurrentState().isKeyStillDown( CRIMILD_INPUT_KEY_RIGHT ) ) {
+		if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_RIGHT ) ) {
 			camera->local().translate() += Vector3f( t.getDeltaTime(), 0.0f, 0.0f );
 		}
-		if ( InputState::getCurrentState().isKeyStillDown( '-' ) ) {
+		if ( Input::getInstance()->isKeyDown( '-' ) ) {
 			camera->local().translate() += Vector3f( 0.0f, 0.0f, t.getDeltaTime() );
 		}
-		if ( InputState::getCurrentState().isKeyStillDown( '=' ) ) {
+		if ( Input::getInstance()->isKeyDown( '=' ) ) {
 			camera->local().translate() += Vector3f( 0.0f, 0.0f, -t.getDeltaTime() );
 		}
 	}));

@@ -36,7 +36,7 @@
 using namespace crimild;
 using namespace crimild::al;
 
-class DroneComponent : public BehaviorComponent {
+class DroneComponent : public NodeComponent {
 public:
 	DroneComponent( void ) { }
 	virtual ~DroneComponent( void ) { }
