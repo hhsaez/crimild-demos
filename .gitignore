@@ -41,6 +41,7 @@ examples/Text/Text
 examples/Physics/Physics
 examples/Collada/Collada
 examples/SkeletalAnimation/SkeletalAnimation
+examples/ModelViewer/ModelViewer
 examples/**/Debug
 CRIMILD_EXAMPLES.build
 CRIMILD_EXAMPLES.xcodeproj
@@ -49,3 +50,4 @@ CMakeScripts
 examples/Planets/Planets
 examples/AncientTomb/AncientTomb
 examples/**/*.exe
+/bin
