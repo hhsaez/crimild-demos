@@ -173,15 +173,20 @@ int main( int argc, char **argv )
     SceneImporter importer;
     auto model = importer.import( FileSystem::getInstance().pathForResource( modelPath ) );
     if ( model != nullptr ) {
+        // model->perform( SceneDebugDump( "dump.txt" ) );
         model->perform( UpdateWorldState() );
-        model->local().translate() -= model->getWorldBound()->getCenter();
+
+        // make sure the object is properly scaled
+        float scale = 10.0f / model->getWorldBound()->getRadius();
+        model->local().setScale( scale );
+        model->local().translate() -= scale * model->getWorldBound()->getCenter();
 
         auto pivot = crimild::alloc< Group >();
         pivot->attachNode( model );
         pivot->attachComponent< ViewControls >();
         scene->attachNode( pivot );
 
-        camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 1.5f * model->getWorldBound()->getRadius() ) );
+        camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 15.0f ) );
     }
 
     sim->setScene( scene );
