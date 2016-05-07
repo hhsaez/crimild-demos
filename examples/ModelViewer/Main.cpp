@@ -50,7 +50,13 @@ public:
                 auto currentMousePos = Input::getInstance()->getNormalizedMousePosition();
                 auto delta = currentMousePos - self->_lastMousePos;
                 self->_lastMousePos = Input::getInstance()->getNormalizedMousePosition();
-                self->rotateView( Vector3f( delta[ 1 ], 3.0f * delta[ 0 ], 0.0f ) );
+
+                if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_LEFT_SHIFT ) ) {
+                    self->translateView( Vector3f( 3.0f * delta[ 0 ], -3.0f * delta[ 1 ], 0.0f ) );
+                }
+                else {
+                    self->rotateView( Vector3f( delta[ 1 ], 3.0f * delta[ 0 ], 0.0f ) );
+                }
             }
         });
 
@@ -70,20 +76,43 @@ public:
 
     virtual void update( const Clock &clock ) override
     {
+        bool shouldTranslate = Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_LEFT_SHIFT );
+        bool translateSpeed = 0.5f * clock.getDeltaTime();
+
         if ( Input::getInstance()->isKeyDown( 'W' ) ) {
-            rotateView( Vector3f( -0.1f, 0.0f, 0.0f ) );
+            if ( shouldTranslate ) {
+                translateView( Vector3f( 0.0f, -translateSpeed, 0.0f ) );
+            }
+            else {
+                rotateView( Vector3f( -0.1f, 0.0f, 0.0f ) );
+            }
         }
 
         if ( Input::getInstance()->isKeyDown( 'S' ) ) {
-            rotateView( Vector3f( 0.1f, 0.0f, 0.0f ) );
+            if ( shouldTranslate ) {
+                translateView( Vector3f( 0.0f, translateSpeed, 0.0f ) );
+            }
+            else {
+                rotateView( Vector3f( 0.1f, 0.0f, 0.0f ) );
+            }
         }
 
         if ( Input::getInstance()->isKeyDown( 'A' ) ) {
-            rotateView( Vector3f( 0.0f, -0.1f, 0.0f ) );
+            if ( shouldTranslate ) {
+                translateView( Vector3f( translateSpeed, 0.0f, 0.0f ) );
+            }
+            else {
+                rotateView( Vector3f( 0.0f, -0.1f, 0.0f ) );
+            }
         }
 
         if ( Input::getInstance()->isKeyDown( 'D' ) ) {
-            rotateView( Vector3f( 0.0f, 0.1f, 0.0f ) );
+            if ( shouldTranslate ) {
+                translateView( Vector3f( -translateSpeed, 0.0f, 0.0f ) );
+            }
+            else {
+                rotateView( Vector3f( 0.0f, 0.1f, 0.0f ) );
+            }
         }
 
         if ( Input::getInstance()->isKeyDown( 'Q' ) ) {
@@ -96,6 +125,11 @@ public:
     }
 
 private:
+    void translateView( const Vector3f &delta )
+    {
+        getNode()->local().translate() += delta;
+    }
+
     void rotateView( const Vector3f &delta )
     {
         if ( delta[ 0 ] != 0.0f ) {
@@ -154,6 +188,30 @@ public:
     }
 };
 
+class SceneControls : 
+    public NodeComponent,
+    public Messenger {
+public:
+    SceneControls( void )
+    {
+
+    }
+
+    virtual ~SceneControls( void )
+    {
+
+    }
+
+    virtual void start( void ) override
+    {
+        registerMessageHandler< KeyPressed >( []( KeyPressed const &msg ) {
+            if ( msg.key == 'K' ) {
+                MessageQueue::getInstance()->broadcastMessage( ToggleDebugInfo {} );
+            }
+        });
+    }
+};
+
 int main( int argc, char **argv )
 {
     auto sim = crimild::alloc< GLSimulation >( "Crimild Model Viewer", crimild::alloc< Settings >( argc, argv ) );
@@ -161,6 +219,7 @@ int main( int argc, char **argv )
     auto scene = crimild::alloc< Group >();
 
     auto camera = crimild::alloc< Camera >();
+    // camera->setRenderPass( crimild::alloc< BasicRenderPass >() );
     scene->attachNode( camera );
 
     auto light = crimild::alloc< Light >();
@@ -179,7 +238,7 @@ int main( int argc, char **argv )
         // make sure the object is properly scaled
         float scale = 10.0f / model->getWorldBound()->getRadius();
         model->local().setScale( scale );
-        model->local().translate() -= scale * model->getWorldBound()->getCenter();
+        model->local().translate() -= scale * Vector3f( 0.0f, model->getWorldBound()->getCenter()[ 1 ], 0.0f );
 
         auto pivot = crimild::alloc< Group >();
         pivot->attachNode( model );
@@ -188,6 +247,8 @@ int main( int argc, char **argv )
 
         camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 15.0f ) );
     }
+
+    scene->attachComponent< SceneControls >();
 
     sim->setScene( scene );
 	return sim->run();
