@@ -212,9 +212,51 @@ public:
     }
 };
 
+SharedPointer< Node > convert( std::string file )
+{
+    Clock c;
+
+    c.tick();
+
+    SceneImporter importer;
+    auto model = importer.import( FileSystem::getInstance().pathForResource( file ) );
+    if ( model == nullptr ) {
+        return nullptr;
+    }
+
+    c.tick();
+    Log::Debug << "Loading raw model: " << c.getDeltaTime() << "s" << Log::End;
+
+    {
+        FileStream os( FileSystem::getInstance().pathForResource( "assets/model.crimild" ), FileStream::OpenMode::WRITE );
+        os.addObject( model );
+        if ( !os.flush() ) {
+            return nullptr;
+        }
+    }
+    c.tick();
+    Log::Debug << "Saving stream: " << c.getDeltaTime() << "s" << Log::End;
+
+    FileStream is( FileSystem::getInstance().pathForResource( "assets/model.crimild" ), FileStream::OpenMode::READ );
+    if ( !is.load() ) {
+        Log::Error << "Load failed" << Log::End;
+        return nullptr;
+    }
+
+    c.tick();
+    Log::Debug << "Loading stream: " << c.getDeltaTime() << "s" << Log::End;
+
+    if ( is.getObjectCount() == 0 ) {
+        Log::Error << "File is empty?" << Log::End;
+        return nullptr;
+    }
+
+    return is.getObjectAt< Node >( 0 );   
+}
+
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Crimild Model Viewer", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< GLSimulation >( "Crimild Model Converter", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
 
@@ -227,27 +269,18 @@ int main( int argc, char **argv )
     light->attachComponent< LightControls >();
     camera->attachNode( light );
 
-    std::string modelPath = sim->getSettings()->get< std::string >( "file", "assets/models/ironman/Iron_Man.obj" );
-
-    Clock c;
-    c.tick();
-    SharedPointer< Node > model;
-    if ( StringUtils::getFileExtension( modelPath ) == ".crimild" ) {
-        FileStream is( modelPath, FileStream::OpenMode::READ );
-        is.load();
-        if ( is.getObjectCount() > 0 ) {
-            model = is.getObjectAt< Node >( 0 );
-        }
-    }
-    else {
-        SceneImporter importer;
-        model = importer.import( FileSystem::getInstance().pathForResource( modelPath ) );
-    }
-    c.tick();
-    std::cout << "Time: " << c.getDeltaTime() << std::endl;
-
+    std::string modelPath = sim->getSettings()->get< std::string >( "file", "assets/models/astroboy/astroBoy_walk_Max.dae" );
+    auto model = convert( modelPath );
     if ( model != nullptr ) {
-        // model->perform( SceneDebugDump( "dump.txt" ) );
+
+        model->perform( Apply( []( Node *node ) {
+            auto cmp = node->getComponent< SkinnedMeshComponent >();
+            if ( cmp != nullptr ) {
+                cmp->getSkinnedMesh()->debugDump();
+            }
+        }));
+
+        model->perform( SceneDebugDump( "dump.txt" ) );
         model->perform( UpdateWorldState() );
 
         // make sure the object is properly scaled
@@ -263,7 +296,7 @@ int main( int argc, char **argv )
         camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 15.0f ) );
     }
     else {
-        Log::Error << "No model provided" << Log::End;
+        Log::Error << "No model" << Log::End;
         return -1;
     }
 

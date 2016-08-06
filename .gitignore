@@ -54,3 +54,7 @@ examples/**/*.exe
 examples/ModelViewer/assets/models/*
 examples/Bricks/Bricks
 examples/ParticleSystem/ParticleSystem
+*.crimild
+/examples/ArcPrimitive/ArcPrimitive
+/examples/ModelConverter/ModelConverter
+/examples/ModelConverter/assets
