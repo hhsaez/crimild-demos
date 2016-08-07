@@ -280,7 +280,6 @@ int main( int argc, char **argv )
             }
         }));
 
-        model->perform( SceneDebugDump( "dump.txt" ) );
         model->perform( UpdateWorldState() );
 
         // make sure the object is properly scaled
