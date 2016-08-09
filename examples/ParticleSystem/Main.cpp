@@ -38,21 +38,13 @@ int main( int argc, char **argv )
 
     auto ps = crimild::alloc< ParticleSystem >();
     ps->setMaxParticles( 200 );
-    ps->setParticleLifetime( 1.5f );
-    ps->setParticleSpeed( 1.0f );
-    ps->setParticleStartSize( 2.5f );
-    ps->setParticleEndSize( 0.5f );
-    ps->setParticleStartColor( RGBAColorf( 1.0f, 1.0f, 1.0f, 0.9f ) );
-    ps->setParticleEndColor( RGBAColorf( 1.0f, 0.9f, 0.0f, 0.25f ) );
-#if 0
-    auto psEmitter = crimild::alloc< ConeParticleEmitter >( 1.0f, 0.25f );
-    Transformation t;
-    t.rotate().fromAxisAngle( Vector3f( 1.0f, 0.0f, 0.0f ), Numericf::PI );
-    psEmitter->setTransformation( t );
-#else
-    auto psEmitter = crimild::alloc< CylinderParticleEmitter >( 0.1f, 0.5f );
-    // auto psEmitter = crimild::alloc< SphereParticleEmitter >( 1.0f );
-#endif
+    ps->setParticleLifetime( 2.0f );
+    ps->setParticleSpeed( 0.75f );
+    ps->setParticleStartSize( 75.0f );
+    ps->setParticleEndSize( 15.0f );
+    ps->setParticleStartColor( RGBAColorf( 1.0f, 0.9f, 0.1f, 0.9f ) );
+    ps->setParticleEndColor( RGBAColorf( 1.0f, 0.0f, 0.0f, 0.5f ) );
+    auto psEmitter = crimild::alloc< CylinderParticleEmitter >( 0.1f, 0.2f );
     ps->setEmitter( psEmitter );
     ps->setPreComputeParticles( true );
     ps->setTexture( crimild::retain( AssetManager::getInstance()->get< Texture >( "fire.tga" ) ) );
@@ -65,7 +57,6 @@ int main( int argc, char **argv )
 
     auto camera = crimild::alloc< Camera >();
     camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 5.0f ) );
-    camera->setRenderPass( crimild::alloc< BasicRenderPass >() );
     scene->attachNode( camera );
     
     sim->setScene( scene );

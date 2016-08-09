@@ -49,6 +49,7 @@ int main( int argc, char **argv )
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 0.0f, 15.0f, 80.0f );
+	camera->setRenderPass( crimild::alloc< PostRenderPass >( crimild::alloc< StandardRenderPass >() ) );
 	scene->attachNode( camera );
 
 	auto sepiaToneEffect = crimild::alloc< ColorTintImageEffect >( ColorTintImageEffect::TINT_SEPIA );
