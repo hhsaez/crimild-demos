@@ -58,3 +58,6 @@ examples/ParticleSystem/ParticleSystem
 /examples/ArcPrimitive/ArcPrimitive
 /examples/ModelConverter/ModelConverter
 /examples/ModelConverter/assets
+/examples/Raytracing/Raytracing
+*.ppm
+*.jpg
