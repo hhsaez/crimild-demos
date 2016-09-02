@@ -239,6 +239,10 @@ int main( int argc, char **argv )
             model = is.getObjectAt< Node >( 0 );
         }
     }
+    else if ( StringUtils::getFileExtension( modelPath ) == ".obj" ) {
+        OBJLoader loader( FileSystem::getInstance().pathForResource( modelPath ) );
+        model = loader.load();
+    }
     else {
         SceneImporter importer;
         model = importer.import( FileSystem::getInstance().pathForResource( modelPath ) );
