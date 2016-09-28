@@ -61,3 +61,4 @@ examples/ParticleSystem/ParticleSystem
 /examples/Raytracing/Raytracing
 *.ppm
 *.jpg
+examples/Occluders/Occluders
