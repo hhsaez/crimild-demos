@@ -80,27 +80,31 @@ int main( int argc, char **argv )
 	teapot->local().setTranslate( 0.0f, -1.0f, 0.0f );
 	teapot->local().setScale( 0.1f );
 	auto occluderMaterial = crimild::alloc< Material >();
-	occluderMaterial->setDiffuse( RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ) );
+	occluderMaterial->setDiffuse( RGBAColorf( 1.0f, 1.0f, 0.0f, 1.0f ) );
 	occluderMaterial->setColorMaskState( ColorMaskState::DISABLED );
 	teapot->getComponent< MaterialComponent >()->attachMaterial( occluderMaterial );
+	teapot->attachComponent< LambdaComponent >( [occluderMaterial]( Node *, const Clock & ) {
+		bool enabled = Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_SPACE );
+		occluderMaterial->getColorMaskState()->setEnabled( enabled );
+	});
 	scene->attachNode( teapot );
 
-	auto trefoilKnot2 = crimild::alloc< Geometry >();
-	trefoilKnot2->attachPrimitive( crimild::alloc< TrefoilKnotPrimitive >( Primitive::Type::TRIANGLES, 1.0 ) );
-	trefoilKnot2->local().setTranslate( 0.0f, 0.0f, 0.0f );
-	trefoilKnot2->attachComponent< LambdaComponent >( []( Node *n, const Clock &c ) {
-		static float t = 0.0f;
-		t += c.getDeltaTime();
-		n->local().setTranslate( 0.0f, 0.0f, 5.0f * Numericf::sin( t ) );
-	});
-	scene->attachNode( trefoilKnot2 );
+	// auto trefoilKnot2 = crimild::alloc< Geometry >();
+	// trefoilKnot2->attachPrimitive( crimild::alloc< TrefoilKnotPrimitive >( Primitive::Type::TRIANGLES, 1.0 ) );
+	// trefoilKnot2->local().setTranslate( 0.0f, 0.0f, 0.0f );
+	// trefoilKnot2->attachComponent< LambdaComponent >( []( Node *n, const Clock &c ) {
+	// 	static float t = 0.0f;
+	// 	t += c.getDeltaTime();
+	// 	n->local().setTranslate( 0.0f, 0.0f, 5.0f * Numericf::sin( t ) );
+	// });
+	// scene->attachNode( trefoilKnot2 );
 
 	auto light = crimild::alloc< Light >();
 	light->local().setTranslate( 0.0f, 0.0f, 10.0f );
 	scene->attachNode( light );
 
 	auto camera = crimild::alloc< Camera >();
-	camera->local().setTranslate( 2.0f, 2.0f, 7.0f );
+	camera->local().setTranslate( 2.0f, 2.0f, 5.0f );
 	camera->local().lookAt( Vector3f::ZERO );
 	scene->attachNode( camera );
 
