@@ -31,8 +31,7 @@
 using namespace crimild;
 
 class PickingComponent : public NodeComponent {
-	CRIMILD_NODE_COMPONENT_NAME( "picking" )
-
+	CRIMILD_IMPLEMENT_RTTI( PickingComponent )
 public:
 	PickingComponent( void )
 	{

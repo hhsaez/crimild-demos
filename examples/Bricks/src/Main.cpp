@@ -27,35 +27,58 @@
 
 #include <Crimild.hpp>
 #include <Crimild_GLFW.hpp>
+#include <Crimild_Scripting.hpp>
+#include <Crimild_Physics.hpp>
 
 using namespace crimild;
+using namespace crimild::physics;
+using namespace crimild::scripting;
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Image effects", crimild::alloc< Settings >( argc, argv ) );
+    auto settings = crimild::alloc< Settings >( argc, argv );
+    
+	auto sim = crimild::alloc< GLSimulation >( "Bricks", settings );
 
-	auto scene = crimild::alloc< Group >();
+	PhysicsContext::getInstance()->setGravity( Vector3f( 0.0f, 0.0f, 0.0f ) );
 
-	auto geometry = crimild::alloc< Geometry >();
-	auto primitive = crimild::alloc< NewellTeapotPrimitive >();
-	geometry->attachPrimitive( primitive );
-	auto rotationComponent = crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f );
-	geometry->attachComponent( rotationComponent );
-	scene->attachNode( geometry );
+	sim->loadScene( "assets/scenes/bricks.lua", crimild::alloc< LuaSceneBuilder >() );
 
-	auto light = crimild::alloc< Light >();
-	light->local().setTranslate( -10.0f, 20.0f, 30.0f );
-	scene->attachNode( light );
+	sim->registerMessageHandler< messaging::KeyReleased >( []( messaging::KeyReleased const &msg ) {
+		switch ( msg.key ) {
+			case 'R':
+				Simulation::getInstance()->broadcastMessage( messaging::ReloadScene { } );
+				break;
 
-	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
-	camera->local().setTranslate( 0.0f, 15.0f, 80.0f );
-	camera->setRenderPass( crimild::alloc< PostRenderPass >( crimild::alloc< StandardRenderPass >() ) );
-	scene->attachNode( camera );
+			case 'K':
+				Simulation::getInstance()->broadcastMessage( messaging::ToggleDebugInfo { } );
+				break;
 
-	auto sepiaToneEffect = crimild::alloc< ColorTintImageEffect >( ColorTintImageEffect::TINT_SEPIA );
-	camera->getRenderPass()->getImageEffects().add( sepiaToneEffect );
-	
-	sim->setScene( scene );
+			case 'A':
+			case CRIMILD_INPUT_KEY_LEFT:
+				Simulation::getInstance()->broadcastMessage( messaging::SwipeLeft { } );
+				break;
+
+			case 'D':
+			case CRIMILD_INPUT_KEY_RIGHT:
+				Simulation::getInstance()->broadcastMessage( messaging::SwipeRight { } );
+				break;
+
+			case 'W':
+			case CRIMILD_INPUT_KEY_UP:
+				Simulation::getInstance()->broadcastMessage( messaging::SwipeUp { } );
+				break;
+
+			case 'S':
+			case CRIMILD_INPUT_KEY_DOWN:
+				Simulation::getInstance()->broadcastMessage( messaging::SwipeDown { } );
+				break;
+
+			default:
+				break;
+		}
+	});
+
 	return sim->run();
 }
 

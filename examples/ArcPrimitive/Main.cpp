@@ -32,30 +32,34 @@ using namespace crimild;
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Image effects", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< GLSimulation >( "Arc", crimild::alloc< Settings >( argc, argv ) );
 
-	auto scene = crimild::alloc< Group >();
+    auto scene = crimild::alloc< Group >();
 
-	auto geometry = crimild::alloc< Geometry >();
-	auto primitive = crimild::alloc< NewellTeapotPrimitive >();
-	geometry->attachPrimitive( primitive );
-	auto rotationComponent = crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f );
-	geometry->attachComponent( rotationComponent );
-	scene->attachNode( geometry );
+    auto geometry = crimild::alloc< Geometry >();
+    auto material = crimild::alloc< Material >();
+    material->setProgram( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_DIFFUSE ) );
+    material->getCullFaceState()->setEnabled( false );
+    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+    geometry->attachComponent< LambdaComponent >( []( Node *n, const Clock &c ) {
+        static float t = 0.0f;
+        t += 0.25f * c.getDeltaTime();
+        if ( t > 1.0f ) {
+            t = 0.0f;
+        }
 
-	auto light = crimild::alloc< Light >();
-	light->local().setTranslate( -10.0f, 20.0f, 30.0f );
-	scene->attachNode( light );
+        auto g = static_cast< Geometry * >( n );
+        g->detachAllPrimitives();
+        g->attachPrimitive( crimild::alloc< ArcPrimitive >( 3.0f, t * Numericf::TWO_PI, 0.1f, 32 ) );
+    });
+    scene->attachNode( geometry );
 
-	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
-	camera->local().setTranslate( 0.0f, 15.0f, 80.0f );
-	camera->setRenderPass( crimild::alloc< PostRenderPass >( crimild::alloc< StandardRenderPass >() ) );
-	scene->attachNode( camera );
-
-	auto sepiaToneEffect = crimild::alloc< ColorTintImageEffect >( ColorTintImageEffect::TINT_SEPIA );
-	camera->getRenderPass()->getImageEffects().add( sepiaToneEffect );
-	
-	sim->setScene( scene );
+    auto camera = crimild::alloc< Camera >();
+    camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 10.0f ) );
+    camera->setRenderPass( crimild::alloc< BasicRenderPass >() );
+    scene->attachNode( camera );
+    
+    sim->setScene( scene );
 	return sim->run();
 }
 

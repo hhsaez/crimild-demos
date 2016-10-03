@@ -51,3 +51,14 @@ examples/Planets/Planets
 examples/AncientTomb/AncientTomb
 examples/**/*.exe
 /bin
+examples/ModelViewer/assets/models/*
+examples/Bricks/Bricks
+examples/ParticleSystem/ParticleSystem
+*.crimild
+/examples/ArcPrimitive/ArcPrimitive
+/examples/ModelConverter/ModelConverter
+/examples/ModelConverter/assets
+/examples/Raytracing/Raytracing
+*.ppm
+*.jpg
+examples/Occluders/Occluders
