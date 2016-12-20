@@ -225,7 +225,7 @@ SharedPointer< Node > convert( std::string file )
     }
 
     c.tick();
-    Log::Debug << "Loading raw model: " << c.getDeltaTime() << "s" << Log::End;
+    Log::debug( "Loading raw model: ", c.getDeltaTime(), "s" );
 
     {
         FileStream os( FileSystem::getInstance().pathForResource( "assets/model.crimild" ), FileStream::OpenMode::WRITE );
@@ -235,19 +235,19 @@ SharedPointer< Node > convert( std::string file )
         }
     }
     c.tick();
-    Log::Debug << "Saving stream: " << c.getDeltaTime() << "s" << Log::End;
+    Log::debug( "Saving stream: ", c.getDeltaTime(), "s" );
 
     FileStream is( FileSystem::getInstance().pathForResource( "assets/model.crimild" ), FileStream::OpenMode::READ );
     if ( !is.load() ) {
-        Log::Error << "Load failed" << Log::End;
+        Log::error( "Load failed" );
         return nullptr;
     }
 
     c.tick();
-    Log::Debug << "Loading stream: " << c.getDeltaTime() << "s" << Log::End;
+    Log::debug( "Loading stream: ", c.getDeltaTime(), "s" );
 
     if ( is.getObjectCount() == 0 ) {
-        Log::Error << "File is empty?" << Log::End;
+        Log::error( "File is empty?" );
         return nullptr;
     }
 
@@ -295,7 +295,7 @@ int main( int argc, char **argv )
         camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 15.0f ) );
     }
     else {
-        Log::Error << "No model" << Log::End;
+        Log::error( "No model" );
         return -1;
     }
 

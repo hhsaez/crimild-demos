@@ -32,7 +32,7 @@ SharedPointer< Image > rtScene( int nx, int ny, int ns )
 
 	scene->attachNode( createSphere( Vector3f( 0.0f, -1000.0f, 0.0f ), 1000.0f, RGBColorf( 0.5f, 0.5f, 0.5f ), RTMaterial::Type::LAMBERTIAN ) );
 
-	for ( int a = -11; a < 11; a++ ) {
+    for ( int a = -11; a < 11; a++ ) {
 		for ( int b = -11; b < 11; b++ ) {
             float chooseMat = Random::generate< float >();
 			Vector3f center( a + 0.9f * Random::generate< float >(), 0.2f, b * 0.9f * Random::generate< float >() );
@@ -77,7 +77,7 @@ SharedPointer< Image > rtScene( int nx, int ny, int ns )
 	scene->attachNode( createSphere( Vector3f( 0.0f, 1.0f, 0.0f ), 1.0f, RGBColorf( 1.0 ), RTMaterial::Type::DIELECTRIC, 0.0f, 1.5f ) );
 	scene->attachNode( createSphere( Vector3f( -4.0f, 1.0f, 0.0f ), 1.0f, RGBColorf( 0.4f, 0.2f, 0.1f ), RTMaterial::Type::LAMBERTIAN ) );
 	scene->attachNode( createSphere( Vector3f( 4.0f, 1.0f, 0.0f ), 1.0f, RGBColorf( 0.7f, 0.6f, 0.5f ), RTMaterial::Type::METALLIC, 0.0f ) );
-
+ 
 	auto camera = crimild::alloc< Camera >( 60.0f, ( float ) nx / ( float ) ny, 0.1f, 1000.0f );
 	camera->local().setTranslate( 6.0f, 1.5f, 2.5f );
 	camera->local().lookAt( Vector3f::ZERO );
@@ -94,8 +94,8 @@ SharedPointer< Image > rtScene( int nx, int ny, int ns )
 	auto renderer = crimild::alloc< RTRenderer >( nx, ny, ns );
 	auto result = renderer->render( scene, camera );
 	c.tick();
-
-	Log::Debug << "Render time: " << c.getDeltaTime() << "s" << Log::End;
+    
+    Log::debug( "Render time: ", c.getDeltaTime(), "s" );
 
 	std::ofstream os( "output.ppm" );
 	os << "P3\n"
@@ -113,19 +113,14 @@ SharedPointer< Image > rtScene( int nx, int ny, int ns )
 
 	os.close();
 
-	return result;
+    return result;
 }
 
 int main( int argc, char **argv )
 {
-	int quality = 1; // med
-	if ( argc > 1 ) {
-		quality = atoi( argv[ 1 ] );
-	}
-
 	auto settings = crimild::alloc< scripting::LuaSettings >( argc, argv );
-	settings->set( "crimild.raytracer.width", 200 );
-	settings->set( "crimild.raytracer.height", 200 );
+	settings->set( "crimild.raytracer.width", 100 );
+	settings->set( "crimild.raytracer.height", 100 );
 	settings->set( "crimild.raytracer.samples", 1 );
 	settings->set( "crimild.raytracer.workers", -1 );
 	settings->load( "settings.lua" );
@@ -135,37 +130,17 @@ int main( int argc, char **argv )
 	int samples = settings->get< int >( "crimild.raytracer.samples", 1 );
 	int workers = settings->get< int >( "crimild.raytracer.workers", -1 );
 
-	Log::Debug << "Settings: " << screenX << " " << screenY << " " << samples << Log::End;
+    Log::debug( "Settings: ", screenX, " ", screenY, " ", samples );
 
-	crimild::concurrency::JobScheduler jobScheduler;
-	jobScheduler.start( workers );
-	
-	auto rtResult = rtScene( screenX, screenY, samples );
+    for ( int i = 0; i < 1; i++ ) {
+        crimild::concurrency::JobScheduler jobScheduler;
+        jobScheduler.start( workers );
 
-    jobScheduler.stop();
+        auto rtResult = rtScene( screenX, screenY, samples );
 
-#if 0
-	auto sim = crimild::alloc< GLSimulation >( "Triangle", crimild::alloc< Settings >( argc, argv ) );
+        jobScheduler.stop();
+    }
 
-	auto scene = crimild::alloc< Group >();
-
-	auto geometry = crimild::alloc< Geometry >();
-	geometry->attachPrimitive( crimild::alloc< QuadPrimitive >( screenX, screenY, VertexFormat::VF_P3_UV2 ) );
-	auto material = crimild::alloc< Material >();
-	material->setColorMap( crimild::alloc< Texture >( rtResult ) );
-	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
-	scene->attachNode( geometry );
-
-	auto camera = crimild::alloc< Camera >();
-	camera->local().setTranslate( 0.0f, 0.0f, 1.0f / camera->getFrustum().computeAspect() * screenX );
-	scene->attachNode( camera );
-		
-	sim->setScene( scene );
-	sim->run();
-#else
-    
 	return 0;
-#endif
-
 }
 
