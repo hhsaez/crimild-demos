@@ -95,7 +95,7 @@ SharedPointer< Image > rtScene( int nx, int ny, int ns )
 	auto result = renderer->render( scene, camera );
 	c.tick();
     
-    Log::debug( "Render time: ", c.getDeltaTime(), "s" );
+    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Render time: ", c.getDeltaTime(), "s" );
 
 	std::ofstream os( "output.ppm" );
 	os << "P3\n"
@@ -130,11 +130,12 @@ int main( int argc, char **argv )
 	int samples = settings->get< int >( "crimild.raytracer.samples", 1 );
 	int workers = settings->get< int >( "crimild.raytracer.workers", -1 );
 
-    Log::debug( "Settings: ", screenX, " ", screenY, " ", samples );
+    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Settings: ", screenX, " ", screenY, " ", samples );
 
     for ( int i = 0; i < 1; i++ ) {
         crimild::concurrency::JobScheduler jobScheduler;
-        jobScheduler.start( workers );
+        jobScheduler.configure( workers );
+        jobScheduler.start();
 
         auto rtResult = rtScene( screenX, screenY, samples );
 

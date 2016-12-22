@@ -17,7 +17,8 @@ int main( int argc, char **argv )
     for ( int i = 0; i < 100; i++ ) {
         crimild::concurrency::JobScheduler jobScheduler;
 
-        jobScheduler.start( -1 );
+        jobScheduler.configure();
+        jobScheduler.start();
 
         auto parent = crimild::concurrency::async();
 

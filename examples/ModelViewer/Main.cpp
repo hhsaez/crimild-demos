@@ -267,7 +267,7 @@ int main( int argc, char **argv )
         camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 15.0f ) );
     }
     else {
-        Log::error( "No model provided" );
+        Log::error( CRIMILD_CURRENT_CLASS_NAME, "No model provided" );
         return -1;
     }
 

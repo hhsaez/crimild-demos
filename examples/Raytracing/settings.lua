@@ -1,8 +1,8 @@
 crimild = {
 	raytracer = {
-		width = 800,
-		height = 600,
-		samples = 100,
+		width = 200,
+		height = 200,
+		samples = 1,
 		workers = 8,
 	},
 }
