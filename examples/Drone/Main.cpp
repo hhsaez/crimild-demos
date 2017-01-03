@@ -80,10 +80,10 @@ SharedPointer< Node > loadDrone( void )
 		auto droneComponent = crimild::alloc< DroneComponent >();
 		drone->attachComponent( droneComponent );
         
-		auto audioClip = crimild::alloc< WavAudioClip >( FileSystem::getInstance().pathForResource( "drone_mono.wav" ) );
-		auto audioComponent = crimild::alloc< AudioComponent >( audioClip );
-		drone->attachComponent( audioComponent );
-		audioComponent->play( true );
+//		auto audioClip = crimild::alloc< WavAudioClip >( FileSystem::getInstance().pathForResource( "drone_mono.wav" ) );
+//		auto audioComponent = crimild::alloc< AudioComponent >( audioClip );
+//		drone->attachComponent( audioComponent );
+//		audioComponent->play( true );
 	}
     
     return drone;

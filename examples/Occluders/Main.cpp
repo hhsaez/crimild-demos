@@ -41,7 +41,6 @@ int main( int argc, char **argv )
 	background->local().setTranslate( 0.0f, 0.0f, -10.0f );
 	auto backgroundMaterial = crimild::alloc< Material >();
 	backgroundMaterial->setDiffuse( RGBAColorf( 0.25f, 1.0f, 0.25f, 1.0f ) );
-	backgroundMaterial->setDepthState( DepthState::DISABLED );
 	background->getComponent< MaterialComponent >()->attachMaterial( backgroundMaterial );
 	scene->attachNode( background );
 

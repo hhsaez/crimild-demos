@@ -95,7 +95,7 @@ int main( int argc, char **argv )
 	text->local().setTranslate( -0.95f, 0.9f, -1.0f );
     camera->attachNode( text );
 
-    auto forwardPass = crimild::alloc< ForwardRenderPass >();
+    auto forwardPass = crimild::alloc< StandardRenderPass >();
     auto deferredPass = crimild::alloc< DeferredRenderPass >();
     //deferredPass->getImageEffects().add( crimild::alloc< opengl::BloomImageEffect >( 0.5f, 16.0f, 0.1f, 2.0f ) );
     
