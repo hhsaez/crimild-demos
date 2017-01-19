@@ -23,6 +23,7 @@ SET( CRIMILD_EXAMPLE_DEPENDENCIES
 	crimild_opengl
 	crimild_glfw
 	crimild_scripting
+	crimild_raytracing
 	glfw 
 )
 
@@ -31,6 +32,7 @@ SET( CRIMILD_EXAMPLES_LINK_LIBRARIES
 	crimild_opengl
 	crimild_glfw
 	crimild_scripting
+	crimild_raytracing
 	glfw 
 )
 
@@ -38,7 +40,8 @@ SET( CRIMILD_EXAMPLE_INCLUDE_DIRECTORIES
 	${CRIMILD_SOURCE_DIR}/core/src
 	${CRIMILD_SOURCE_DIR}/opengl/src
 	${CRIMILD_SOURCE_DIR}/scripting/src
-	${CRIMILD_SOURCE_DIR}/glfw/src 
+	${CRIMILD_SOURCE_DIR}/glfw/src
+	${CRIMILD_SOURCE_DIR}/raytracing/src
 	${CRIMILD_SOURCE_DIR}/third-party/glfw/include
 	${CRIMILD_SOURCE_DIR}/third-party/glew/include
 	${CRIMILD_SOURCE_DIR}/third-party/lua-5.2.3/src

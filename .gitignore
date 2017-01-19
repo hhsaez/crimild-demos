@@ -62,3 +62,7 @@ examples/ParticleSystem/ParticleSystem
 *.ppm
 *.jpg
 examples/Occluders/Occluders
+build
+examples/ParallelFor/ParallelFor
+examples/Raytracing/test.sh
+examples/RenderOrder/RenderOrder

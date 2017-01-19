@@ -61,7 +61,6 @@ int main( int argc, char **argv )
 
     auto camera = crimild::alloc< Camera >();
     camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 3.0f ) );
-    camera->setRenderPass( crimild::alloc< BasicRenderPass >() );
     scene->attachNode( camera );
     
     sim->setScene( scene );

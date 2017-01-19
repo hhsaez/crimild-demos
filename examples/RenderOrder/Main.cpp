@@ -30,32 +30,37 @@
 
 using namespace crimild;
 
+SharedPointer< Node > createBillboard( const Vector3f &position, std::string imageFileName )
+{
+    auto geometry = crimild::alloc< Geometry >( imageFileName );
+    geometry->attachPrimitive( crimild::alloc< QuadPrimitive >( 1.0f, 1.0f, VertexFormat::VF_P3_UV2, Vector2f( 0.0f, 0.0f ) ) );
+    geometry->local().setTranslate( position );
+    geometry->attachComponent< BillboardComponent >();
+
+    auto material = crimild::alloc< Material >();
+    auto texture = crimild::alloc< Texture >( crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( imageFileName ) ) );
+    material->setColorMap( texture );
+    material->setCullFaceState( crimild::alloc< CullFaceState >( false ) );
+    material->getAlphaState()->setEnabled( true );
+    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+
+    return geometry;
+}
+
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Arc", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< GLSimulation >( "RenderOrder", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
 
-    auto geometry = crimild::alloc< Geometry >();
-    auto material = crimild::alloc< Material >();
-    material->setProgram( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_DIFFUSE ) );
-    material->getCullFaceState()->setEnabled( false );
-    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
-    geometry->attachComponent< LambdaComponent >( []( Node *n, const Clock &c ) {
-        static float t = 0.0f;
-        t += 0.25f * c.getDeltaTime();
-        if ( t > 1.0f ) {
-            t = 0.0f;
-        }
-
-        auto g = static_cast< Geometry * >( n );
-        g->detachAllPrimitives();
-        g->attachPrimitive( crimild::alloc< ArcPrimitive >( 3.0f, t * Numericf::TWO_PI, 0.1f, 32 ) );
-    });
-    scene->attachNode( geometry );
+    auto billboards = crimild::alloc< Group >();
+    billboards->attachNode( createBillboard( Vector3f( 1.0f, 0.0f, 0.0f ), "opengl.tga" ) );
+    billboards->attachNode( createBillboard( Vector3f( -1.0f, 0.0f, 0.0f ), "cpp.tga" ) );
+    billboards->attachComponent< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.1f );
+    scene->attachNode( billboards );
 
     auto camera = crimild::alloc< Camera >();
-    camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 10.0f ) );
+    camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 2.0f ) );
     scene->attachNode( camera );
     
     sim->setScene( scene );
