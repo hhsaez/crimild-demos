@@ -72,7 +72,7 @@ int main( int argc, char **argv )
 	auto offscreenCamera = crimild::alloc< Camera >();
     offscreenCamera->setName( "offscreen camera" );
 	auto offscreenFBO = crimild::alloc< StandardFrameBufferObject >( 128, 128 );
-    offscreenFBO->setClearColor( RGBAColorf( 0.0f, 0.0f, 0.0f, 0.25f ) );
+    offscreenFBO->setClearColor( RGBAColorf( 0.0f, 0.0f, 0.0f, 0.0f ) );
 	auto offscreenPass = crimild::alloc< OffscreenRenderPass >( offscreenFBO );
 	offscreenCamera->setRenderPass( offscreenPass );
     offscreenCamera->setAspectRatio( offscreenFBO->getAspectRatio() );
@@ -109,7 +109,7 @@ int main( int argc, char **argv )
                 quad->local().setScale( 0.75f );
                 quad->local().setTranslate( 2.0f * x, 2.0f * y, -2.0f * z );
                 quad->getComponent< MaterialComponent >()->attachMaterial( quadMaterial );
-                quad->attachComponent< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), -0.1f * Numericf::HALF_PI );
+                //quad->attachComponent< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), -0.1f * Numericf::HALF_PI );
                 scene->attachNode( quad );
             }
         }
