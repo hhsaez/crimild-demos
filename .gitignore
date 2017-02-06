@@ -66,3 +66,4 @@ build
 examples/ParallelFor/ParallelFor
 examples/Raytracing/test.sh
 examples/RenderOrder/RenderOrder
+examples/RenderToTexture/RenderToTexture
