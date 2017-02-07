@@ -14,7 +14,7 @@ SharedPointer< Geometry > createSphere( const Vector3f &center, float radius )
 
 int main( int argc, char **argv )
 {
-    for ( int i = 0; i < 100; i++ ) {
+    for ( int i = 0; i < 10; i++ ) {
         crimild::concurrency::JobScheduler jobScheduler;
 
         jobScheduler.configure();
@@ -29,7 +29,7 @@ int main( int argc, char **argv )
             scene->attachNode( createSphere( Vector3f::ZERO, 1.0f ) );
         }
 
-        for ( int i = 0; i < 4000; i++ ) {
+        for ( int i = 0; i < 400; i++ ) {
             auto child = crimild::concurrency::async( parent, [&counter]() {
                 counter++;
             });
