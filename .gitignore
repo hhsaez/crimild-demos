@@ -53,7 +53,7 @@ examples/**/*.exe
 /bin
 examples/ModelViewer/assets/models/*
 examples/Bricks/Bricks
-examples/ParticleSystem/ParticleSystem
+examples/ParticleShowcase/ParticleShowcase
 *.crimild
 /examples/ArcPrimitive/ArcPrimitive
 /examples/ModelConverter/ModelConverter

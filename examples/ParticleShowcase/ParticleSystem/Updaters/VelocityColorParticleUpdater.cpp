@@ -25,41 +25,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include "VelocityColorParticleUpdater.hpp"
 
 using namespace crimild;
 
-int main( int argc, char **argv )
+VelocityColorParticleUpdater::VelocityColorParticleUpdater( void )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Triangle", crimild::alloc< Settings >( argc, argv ) );
 
-    auto scene = crimild::alloc< Group >();
+}
 
-    auto ps = crimild::alloc< ParticleSystem >();
-    ps->setMaxParticles( 200 );
-    ps->setParticleLifetime( 2.0f );
-    ps->setParticleSpeed( 0.75f );
-    ps->setParticleStartSize( 75.0f );
-    ps->setParticleEndSize( 15.0f );
-    ps->setParticleStartColor( RGBAColorf( 1.0f, 0.9f, 0.1f, 0.9f ) );
-    ps->setParticleEndColor( RGBAColorf( 1.0f, 0.0f, 0.0f, 0.5f ) );
-    auto psEmitter = crimild::alloc< CylinderParticleEmitter >( 0.1f, 0.2f );
-    ps->setEmitter( psEmitter );
-    ps->setPreComputeParticles( true );
-    ps->setTexture( crimild::retain( AssetManager::getInstance()->get< Texture >( "fire.tga" ) ) );
-    ps->generate();
+VelocityColorParticleUpdater::~VelocityColorParticleUpdater( void )
+{
 
-    auto g = crimild::alloc< Group >();
-    g->attachNode( ps );
-    g->local().setTranslate( 0.0f, -1.0f, 0.0f );
-    scene->attachNode( g );
+}
 
-    auto camera = crimild::alloc< Camera >();
-    camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 5.0f ) );
-    scene->attachNode( camera );
-    
-    sim->setScene( scene );
-	return sim->run();
+void VelocityColorParticleUpdater::update( double dt, ParticleData *particles )
+{
+
 }
 
