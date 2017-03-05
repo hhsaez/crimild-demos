@@ -108,6 +108,9 @@ namespace crimild {
 		 */
         void swap( ParticleId a, ParticleId b );
 
+		inline void setComputeInWorldSpace( crimild::Bool value ) { _computeInWorldSpace = value; }
+		inline crimild::Bool shouldComputeInWorldSpace( void ) const { return _computeInWorldSpace; }
+
     private:
         ParticleAttribs _attribs;
 		
@@ -115,6 +118,8 @@ namespace crimild {
         crimild::Size _aliveCount = 0;
 		
 		std::vector< crimild::Bool > _alive; // replace this for a custom array
+
+		crimild::Bool _computeInWorldSpace = false;
     };
 
 	using ParticleDataPtr = SharedPointer< ParticleData >;

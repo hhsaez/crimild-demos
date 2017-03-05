@@ -25,27 +25,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "PointSpriteParticleRendererComponent.hpp"
+#include "OrientedQuadParticleRendererComponent.hpp"
 
 #include "../ParticleSystemComponent.hpp"
 
 using namespace crimild;
 
-PointSpriteParticleRendererComponent::PointSpriteParticleRendererComponent( void )
+OrientedQuadParticleRendererComponent::OrientedQuadParticleRendererComponent( void )
 {
 	// create the material here so it can be modified later
 	_material = crimild::alloc< Material >();
 
-    auto program = crimild::retain( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_POINT_SPRITE ) );
+    auto program = crimild::retain( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_TEXTURE ) );
     _material->setProgram( program );
 }
 
-PointSpriteParticleRendererComponent::~PointSpriteParticleRendererComponent( void )
+OrientedQuadParticleRendererComponent::~OrientedQuadParticleRendererComponent( void )
 {
 
 }
 
-void PointSpriteParticleRendererComponent::onAttach( void )
+void OrientedQuadParticleRendererComponent::onAttach( void )
 {
 	_geometry = crimild::alloc< Geometry >();
 	if ( _material != nullptr ) {
@@ -55,12 +55,12 @@ void PointSpriteParticleRendererComponent::onAttach( void )
 	getNode< Group >()->attachNode( _geometry );
 }
 
-void PointSpriteParticleRendererComponent::onDetach( void )
+void OrientedQuadParticleRendererComponent::onDetach( void )
 {
 
 }
 
-void PointSpriteParticleRendererComponent::start( void )
+void OrientedQuadParticleRendererComponent::start( void )
 {
 	const auto ps = getComponent< ParticleSystemComponent >();
 	_particles = ps->getParticles();
@@ -73,7 +73,7 @@ void PointSpriteParticleRendererComponent::start( void )
 	_geometry->attachPrimitive( _primitive );
 }
 
-void PointSpriteParticleRendererComponent::update( const Clock &c )
+void OrientedQuadParticleRendererComponent::update( const Clock &c )
 {
 	// TODO: sort particles back-to-front?
 
@@ -85,19 +85,9 @@ void PointSpriteParticleRendererComponent::update( const Clock &c )
     auto vbo = crimild::alloc< VertexBufferObject >( VertexFormat::VF_P3_C4_UV2, pCount );
     
     // traversing the arrays in separated loops seems to be more cache-friendly, right? right?
-
-	if ( _particles->shouldComputeInWorldSpace() ) {
-		auto node = getNode();
-		for ( auto i = 0; i < pCount; i++ ) {
-			auto p = _positions[ i ];
-			node->getWorld().applyInverseToPoint( p, p );
-			vbo->setPositionAt( i, p );
-		}
-	}
-	else {
-		for ( auto i = 0; i < pCount; i++ ) {
-			vbo->setPositionAt( i, _positions[ i ] );
-		}
+    
+	for ( auto i = 0; i < pCount; i++ ) {
+		vbo->setPositionAt( i, _positions[ i ] );
 	}
 
 	for ( auto i = 0; i < pCount; i++ ) {

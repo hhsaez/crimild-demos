@@ -48,9 +48,11 @@ void ParticleUpdaterComponent::start( void )
     _particles = ps->getParticles();
 	assert( _particles != nullptr );
 
+	auto node = getNode();
+
 	const auto uCount = _updaters.getCount();
     for ( int i = 0; i < uCount; i++ ) {
-		_updaters[ i ]->configure( _particles );
+		_updaters[ i ]->configure( node, _particles );
 	}
 }
 
@@ -58,9 +60,11 @@ void ParticleUpdaterComponent::update( const Clock &c )
 {
     const auto dt = c.getDeltaTime();
 
+	auto node = getNode();
+
 	const auto uCount = _updaters.getCount();
 	for ( int i = 0; i < uCount; i++ ) {
-		_updaters[ i ]->update( dt, _particles );
+		_updaters[ i ]->update( node, dt, _particles );
 	}
 }
 

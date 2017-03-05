@@ -39,7 +39,7 @@ TimeParticleUpdater::~TimeParticleUpdater( void )
 
 }
 
-void TimeParticleUpdater::configure( ParticleData *particles )
+void TimeParticleUpdater::configure( Node *node, ParticleData *particles )
 {
     auto tAttribs = particles->getAttrib( ParticleAttribType::TIME );
 	assert( tAttribs != nullptr );
@@ -48,7 +48,7 @@ void TimeParticleUpdater::configure( ParticleData *particles )
 	assert( _times != nullptr );
 }
 
-void TimeParticleUpdater::update( double dt, ParticleData *particles )
+void TimeParticleUpdater::update( Node *node, double dt, ParticleData *particles )
 {
 	const auto count = particles->getAliveCount();
 

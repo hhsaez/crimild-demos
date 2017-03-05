@@ -39,7 +39,7 @@ ColorParticleGenerator::~ColorParticleGenerator( void )
 
 }
 
-void ColorParticleGenerator::configure( ParticleData *particles )
+void ColorParticleGenerator::configure( Node *node, ParticleData *particles )
 {
     auto cAttribs = particles->getAttrib( ParticleAttribType::COLOR );
     assert( cAttribs != nullptr );
@@ -60,7 +60,7 @@ void ColorParticleGenerator::configure( ParticleData *particles )
 	assert( _endColors != nullptr );
 }
 
-void ColorParticleGenerator::generate( crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
+void ColorParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
 	for ( ParticleId i = startId; i < endId; i++ ) {
 		auto r = Random::generate< Real32 >( _minStartColor.r(), _maxStartColor.r() );

@@ -42,8 +42,8 @@ namespace crimild {
         FloorParticleUpdater( void );
         virtual ~FloorParticleUpdater( void );
 
-        virtual void configure( ParticleData *particles ) override;
-        virtual void update( crimild::Real64 dt, ParticleData *particles ) override;
+        virtual void configure( Node *node, ParticleData *particles ) override;
+        virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
         
     private:
         Vector3f *_positions;

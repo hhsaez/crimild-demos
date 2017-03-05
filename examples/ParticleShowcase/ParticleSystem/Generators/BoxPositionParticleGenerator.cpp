@@ -41,7 +41,7 @@ BoxPositionParticleGenerator::~BoxPositionParticleGenerator( void )
 
 }
 
-void BoxPositionParticleGenerator::configure( ParticleData *particles )
+void BoxPositionParticleGenerator::configure( Node *node, ParticleData *particles )
 {
     auto pArray = particles->getAttrib( ParticleAttribType::POSITION );
 	assert( pArray != nullptr );
@@ -50,7 +50,7 @@ void BoxPositionParticleGenerator::configure( ParticleData *particles )
 	assert( _positions != nullptr );
 }
 
-void BoxPositionParticleGenerator::generate( crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
+void BoxPositionParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
     const auto posMin = _origin - _size;
     const auto posMax = _origin + _size;
@@ -59,7 +59,14 @@ void BoxPositionParticleGenerator::generate( crimild::Real64 dt, ParticleData *p
         auto x = Random::generate< Real32 >( posMin.x(), posMax.x() );
         auto y = Random::generate< Real32 >( posMin.y(), posMax.y() );
         auto z = Random::generate< Real32 >( posMin.z(), posMax.z() );
-        _positions[ i ] = Vector3f( x, y, z );
+		if ( particles->shouldComputeInWorldSpace() ) {
+			auto p = Vector3f( x, y, z );
+			node->getWorld().applyToPoint( p, p );
+			_positions[ i ] = p;
+		}
+		else {
+			_positions[ i ] = Vector3f( x, y, z );
+		}
     }
 }
 

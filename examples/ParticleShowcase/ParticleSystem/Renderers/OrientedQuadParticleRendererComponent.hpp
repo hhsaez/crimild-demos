@@ -25,33 +25,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CRIMILD_PARTICLE_GENERATOR_TIME_
-#define CRIMILD_PARTICLE_GENERATOR_TIME_
+#ifndef CRIMILD_PARTICLE_RENDERER_ORIENTED_QUAD_
+#define CRIMILD_PARTICLE_RENDERER_ORIENTED_QUAD_
 
-#include "../ParticleEmitterComponent.hpp"
+#include "../ParticleRendererComponent.hpp"
 
 namespace crimild {
 
-    class TimeParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+    class OrientedQuadParticleRendererComponent : public ParticleRendererComponent {
     public:
-        TimeParticleGenerator( void );
-        virtual ~TimeParticleGenerator( void );
+        OrientedQuadParticleRendererComponent( void );
+        virtual ~OrientedQuadParticleRendererComponent( void );
 
-		void setMinTime( crimild::Real32 value ) { _minTime = value; }
-		crimild::Real32 getMinTime( void ) const { return _minTime; }
+        inline Material *getMaterial( void ) { return crimild::get_ptr( _material ); }
+        
+		virtual void onAttach( void ) override;
+		virtual void onDetach( void ) override;
 
-		void setMaxTime( crimild::Real32 value ) { _maxTime = value; }
-		crimild::Real32 getMaxTime( void ) const { return _maxTime; }
+		virtual void start( void ) override;
+		virtual void update( const Clock &c ) override;
+        
+	private:
+		MaterialPtr _material;
+		PrimitivePtr _primitive;
+		GeometryPtr _geometry;
+		
+		ParticleData *_particles = nullptr;
 
-		virtual void configure( Node *node, ParticleData *particles ) override;
-        virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
-
-    private:
-		crimild::Real32 _minTime;
-		crimild::Real32 _maxTime;
-
-		Real32 *_times = nullptr;
-		Real32 *_lifeTimes = nullptr;
+		Vector3f *_positions = nullptr;
+		RGBAColorf *_colors = nullptr;
+		Real32 *_sizes = nullptr;
     };
 
 }

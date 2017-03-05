@@ -40,15 +40,11 @@ namespace crimild {
 		inline void setGlobalAcceleration( const Vector3f &accel ) { _globalAcceleration = accel; }
 		inline const Vector3f &getGlobalAcceleration( void ) const { return _globalAcceleration; }
 
-		inline void setComputeInWorldSpace( crimild::Bool value ) { _computeInWorldSpace = value; }
-		inline crimild::Bool getComputeInWorldSpace( void ) const { return _computeInWorldSpace; }
-
-		virtual void configure( ParticleData *particles ) override;
-        virtual void update( crimild::Real64 dt, ParticleData *particles ) override;
+		virtual void configure( Node *node, ParticleData *particles ) override;
+        virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
 
 	private:
 		Vector3f _globalAcceleration;
-		crimild::Bool _computeInWorldSpace = false;
 
 		Vector3f *_positions = nullptr;
 		Vector3f *_velocities = nullptr;

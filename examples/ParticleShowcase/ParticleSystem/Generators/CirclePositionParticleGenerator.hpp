@@ -40,7 +40,7 @@ namespace crimild {
         CirclePositionParticleGenerator( void );
         virtual ~CirclePositionParticleGenerator( void );
 
-        virtual void generate( double dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
+        virtual void generate( Node *node, double dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
     };
 
 }

@@ -39,7 +39,7 @@ UniformScaleParticleUpdater::~UniformScaleParticleUpdater( void )
 
 }
 
-void UniformScaleParticleUpdater::update( double dt, ParticleData *particles )
+void UniformScaleParticleUpdater::update( Node *node, double dt, ParticleData *particles )
 {
 
 }

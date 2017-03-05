@@ -43,8 +43,8 @@ namespace crimild {
 		inline void setSize( const Vector3f &size ) { _size = size; }
 		inline const Vector3f &getSize( void ) const { return _size; }
 
-		virtual void configure( ParticleData *particles ) override;
-        virtual void generate( crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
+		virtual void configure( Node *node, ParticleData *particles ) override;
+        virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
 
     private:
         Vector3f _origin;

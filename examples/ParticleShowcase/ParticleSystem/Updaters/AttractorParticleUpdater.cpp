@@ -39,7 +39,7 @@ AttractorParticleUpdater::~AttractorParticleUpdater( void )
 
 }
 
-void AttractorParticleUpdater::update( double dt, ParticleData *particles )
+void AttractorParticleUpdater::update( Node *node, double dt, ParticleData *particles )
 {
 
 }

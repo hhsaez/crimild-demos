@@ -43,8 +43,8 @@ namespace crimild {
         public:
             virtual ~ParticleUpdater( void ) { }
 
-			virtual void configure( ParticleData *particles ) = 0;
-            virtual void update( crimild::Real64 dt, ParticleData *particles ) = 0;
+			virtual void configure( Node *node, ParticleData *particles ) = 0;
+            virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) = 0;
         };
 
         using ParticleUpdaterPtr =  SharedPointer< ParticleUpdater >;

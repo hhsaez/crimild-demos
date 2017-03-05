@@ -49,8 +49,8 @@ namespace crimild {
 		inline void setMaxEndColor( const RGBAColorf &color ) { _maxEndColor = color; }
 		inline const RGBAColorf getMaxEndColor( void ) const { return _maxEndColor; }
 
-		virtual void configure( ParticleData *particles ) override;
-        virtual void generate( crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
+		virtual void configure( Node *node, ParticleData *particles ) override;
+        virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
 
     private:
 		RGBAColorf _minStartColor;

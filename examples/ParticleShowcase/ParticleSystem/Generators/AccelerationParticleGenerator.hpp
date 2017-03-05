@@ -43,8 +43,8 @@ namespace crimild {
         inline void setMaxAcceleration( const Vector3f &value ) { _maxAcceleration = value; }
         inline const Vector3f &getMaxAcceleration( void ) const { return _maxAcceleration; }
 
-		virtual void configure( ParticleData *particles ) override;
-        virtual void generate( crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
+		virtual void configure( Node *node, ParticleData *particles ) override;
+        virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
 
     private:
         Vector3f _minAcceleration;

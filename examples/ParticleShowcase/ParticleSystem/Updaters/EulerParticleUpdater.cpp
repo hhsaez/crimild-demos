@@ -39,7 +39,7 @@ EulerParticleUpdater::~EulerParticleUpdater( void )
 
 }
 
-void EulerParticleUpdater::configure( ParticleData *particles )
+void EulerParticleUpdater::configure( Node *node, ParticleData *particles )
 {
 	auto pAttribs = particles->getAttrib( ParticleAttribType::POSITION );
 	assert( pAttribs != nullptr );
@@ -60,7 +60,7 @@ void EulerParticleUpdater::configure( ParticleData *particles )
 	assert( _accelerations != nullptr );
 }
 
-void EulerParticleUpdater::update( crimild::Real64 dt, ParticleData *particles )
+void EulerParticleUpdater::update( Node *node, crimild::Real64 dt, ParticleData *particles )
 {
 	const auto g = dt * _globalAcceleration;
 	const auto count = particles->getAliveCount();
@@ -74,7 +74,8 @@ void EulerParticleUpdater::update( crimild::Real64 dt, ParticleData *particles )
 	}
 
 	for ( int i = 0; i < count; i++ ) {
-		_positions[ i ] += dt * _velocities[ i ];
+		auto v = dt * _velocities[ i ];
+		_positions[ i ] += v;
 	}
 }
 

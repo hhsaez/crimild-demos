@@ -25,33 +25,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CRIMILD_PARTICLE_GENERATOR_TIME_
-#define CRIMILD_PARTICLE_GENERATOR_TIME_
+#ifndef CRIMILD_PARTICLE_GENERATOR_POSITION_SPEED_
+#define CRIMILD_PARTICLE_GENERATOR_POSITION_SPEED_
 
 #include "../ParticleEmitterComponent.hpp"
 
 namespace crimild {
 
-    class TimeParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+	/**
+
+	 */
+    class SpherePositionParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
     public:
-        TimeParticleGenerator( void );
-        virtual ~TimeParticleGenerator( void );
+        SpherePositionParticleGenerator( void );
+        virtual ~SpherePositionParticleGenerator( void );
 
-		void setMinTime( crimild::Real32 value ) { _minTime = value; }
-		crimild::Real32 getMinTime( void ) const { return _minTime; }
+		inline void setOrigin( const Vector3f &origin ) { _origin = origin; }
+		inline const Vector3f &getOrigin( void ) const { return _origin; }
 
-		void setMaxTime( crimild::Real32 value ) { _maxTime = value; }
-		crimild::Real32 getMaxTime( void ) const { return _maxTime; }
+		inline void setSize( const Vector3f &size ) { _size = size; }
+		inline const Vector3f &getSize( void ) const { return _size; }
 
 		virtual void configure( Node *node, ParticleData *particles ) override;
         virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
 
-    private:
-		crimild::Real32 _minTime;
-		crimild::Real32 _maxTime;
+	private:
+		Vector3f _origin;
+		Vector3f _size;
 
-		Real32 *_times = nullptr;
-		Real32 *_lifeTimes = nullptr;
+		Vector3f *_positions = nullptr;
     };
 
 }

@@ -56,7 +56,7 @@ namespace crimild {
         inline ParticleData *getParticles( void ) { return crimild::get_ptr( _particles ); }
 
 		virtual void onAttach( void ) override;
-		virtual void onDetach( void ) override;
+		virtual void onDetach( void ) override;		
 
     private:
         SharedPointer< ParticleData > _particles;

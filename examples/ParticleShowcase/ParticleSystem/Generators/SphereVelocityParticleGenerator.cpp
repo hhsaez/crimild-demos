@@ -25,36 +25,42 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CRIMILD_PARTICLE_GENERATOR_TIME_
-#define CRIMILD_PARTICLE_GENERATOR_TIME_
+#include "SphereVelocityParticleGenerator.hpp"
 
-#include "../ParticleEmitterComponent.hpp"
+using namespace crimild;
 
-namespace crimild {
-
-    class TimeParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
-    public:
-        TimeParticleGenerator( void );
-        virtual ~TimeParticleGenerator( void );
-
-		void setMinTime( crimild::Real32 value ) { _minTime = value; }
-		crimild::Real32 getMinTime( void ) const { return _minTime; }
-
-		void setMaxTime( crimild::Real32 value ) { _maxTime = value; }
-		crimild::Real32 getMaxTime( void ) const { return _maxTime; }
-
-		virtual void configure( Node *node, ParticleData *particles ) override;
-        virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
-
-    private:
-		crimild::Real32 _minTime;
-		crimild::Real32 _maxTime;
-
-		Real32 *_times = nullptr;
-		Real32 *_lifeTimes = nullptr;
-    };
+SphereVelocityParticleGenerator::SphereVelocityParticleGenerator( void )
+{
 
 }
 
-#endif
+SphereVelocityParticleGenerator::~SphereVelocityParticleGenerator( void )
+{
+
+}
+
+void SphereVelocityParticleGenerator::configure( Node *node, ParticleData *particles )
+{
+    auto vArray = particles->getAttrib( ParticleAttribType::VELOCITY );
+	assert( vArray != nullptr );
+	
+    _velocities = vArray->getData< Vector3f >();
+	assert( _velocities != nullptr );
+}
+
+void SphereVelocityParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
+{
+    const auto posMin = -Vector3f::ONE;
+    const auto posMax = Vector3f::ONE;
+
+    for ( ParticleId i = startId; i < endId; i++ ) {
+        auto x = Random::generate< Real32 >( posMin.x(), posMax.x() );
+        auto y = Random::generate< Real32 >( posMin.y(), posMax.y() );
+        auto z = Random::generate< Real32 >( posMin.z(), posMax.z() );		
+        _velocities[ i ] = Vector3f( x, y, z ).getNormalized().times( _magnitude );
+		if ( particles->shouldComputeInWorldSpace() ) {
+			node->getWorld().applyToVector( _velocities[ i ], _velocities[ i ] );
+		}
+    }
+}
 

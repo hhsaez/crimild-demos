@@ -39,7 +39,7 @@ CirclePositionParticleGenerator::~CirclePositionParticleGenerator( void )
 
 }
 
-void CirclePositionParticleGenerator::generate( double dt, ParticleData *particles, ParticleId startId, ParticleId endId )
+void CirclePositionParticleGenerator::generate( Node *node, double dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
 
 }

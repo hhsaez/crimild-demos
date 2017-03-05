@@ -48,9 +48,11 @@ void ParticleEmitterComponent::start( void )
     _particles = ps->getParticles();
 	assert( _particles != nullptr );
 
+	auto node = getNode();
+
 	auto gCount = _generators.getCount();
     for ( int i = 0; i < gCount; i++ ) {
-		_generators[ i ]->configure( _particles );
+		_generators[ i ]->configure( node, _particles );
 	}
 }
 
@@ -58,13 +60,15 @@ void ParticleEmitterComponent::update( const Clock &c )
 {
     const auto dt = c.getDeltaTime();
 
-    const ParticleId maxNewParticles = Numeric< ParticleId >::max( 1, dt * _emitRate );
+    const ParticleId maxNewParticles = _burst ? _emitRate : Numeric< ParticleId >::max( 1, dt * _emitRate );
     const ParticleId startId = _particles->getAliveCount();            
     const ParticleId endId = Numeric< ParticleId >::min( startId + maxNewParticles, _particles->getParticleCount() - 1 );
 
+	auto node = getNode();
+
 	auto gCount = _generators.getCount();
 	for ( int i = 0; i < gCount; i++ ) { // TODO: optimize this loop	   
-		_generators[ i ]->generate( dt, _particles, startId, endId );
+		_generators[ i ]->generate( node, dt, _particles, startId, endId );
 	}
 
     for ( ParticleId i = startId; i < endId; i++ ) {

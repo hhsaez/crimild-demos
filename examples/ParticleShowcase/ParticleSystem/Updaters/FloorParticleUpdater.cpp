@@ -39,7 +39,7 @@ FloorParticleUpdater::~FloorParticleUpdater( void )
 
 }
 
-void FloorParticleUpdater::configure( ParticleData *particles )
+void FloorParticleUpdater::configure( Node *node, ParticleData *particles )
 {
     auto pAttribs = particles->getAttrib( ParticleAttribType::POSITION );
     assert( pAttribs != nullptr );
@@ -48,7 +48,7 @@ void FloorParticleUpdater::configure( ParticleData *particles )
     assert( _positions != nullptr );
 }
 
-void FloorParticleUpdater::update( double dt, ParticleData *particles )
+void FloorParticleUpdater::update( Node *node, double dt, ParticleData *particles )
 {
     const auto count = particles->getAliveCount();
 

@@ -39,7 +39,7 @@ VelocityParticleGenerator::~VelocityParticleGenerator( void )
 
 }
 
-void VelocityParticleGenerator::configure( ParticleData *particles )
+void VelocityParticleGenerator::configure( Node *node, ParticleData *particles )
 {
     auto vAttribs = particles->getAttrib( ParticleAttribType::VELOCITY );
 	assert( vAttribs != nullptr );
@@ -48,13 +48,16 @@ void VelocityParticleGenerator::configure( ParticleData *particles )
 	assert( _velocities != nullptr );
 }
 
-void VelocityParticleGenerator::generate( crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
+void VelocityParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
     for ( ParticleId i = startId; i < endId; i++ ) {
         auto x = Random::generate< Real32 >( _minVelocity.x(), _maxVelocity.x() );
         auto y = Random::generate< Real32 >( _minVelocity.y(), _maxVelocity.y() );
         auto z = Random::generate< Real32 >( _minVelocity.z(), _maxVelocity.z() );
         _velocities[ i ] = Vector3f( x, y, z );
+		if ( particles->shouldComputeInWorldSpace() ) {
+			node->getWorld().applyToVector( _velocities[ i ], _velocities[ i ] );
+		}
     }
 }
 

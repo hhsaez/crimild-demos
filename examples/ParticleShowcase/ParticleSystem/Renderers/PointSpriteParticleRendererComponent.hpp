@@ -38,7 +38,7 @@ namespace crimild {
         virtual ~PointSpriteParticleRendererComponent( void );
 
         inline Material *getMaterial( void ) { return crimild::get_ptr( _material ); }
-        
+
 		virtual void onAttach( void ) override;
 		virtual void onDetach( void ) override;
 

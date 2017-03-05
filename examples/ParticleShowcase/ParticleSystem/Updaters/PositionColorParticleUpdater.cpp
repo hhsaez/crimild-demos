@@ -39,7 +39,7 @@ PositionColorParticleUpdater::~PositionColorParticleUpdater( void )
 
 }
 
-void PositionColorParticleUpdater::update( double dt, ParticleData *particles )
+void PositionColorParticleUpdater::update( Node *node, double dt, ParticleData *particles )
 {
 
 }

@@ -43,8 +43,8 @@ namespace crimild {
 		void setMaxScale( crimild::Real32 value ) { _maxScale = value; }
 		crimild::Real32 getMaxScale( void ) const { return _maxScale; }
 
-		virtual void configure( ParticleData *particles ) override;
-        virtual void generate( crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
+		virtual void configure( Node *node, ParticleData *particles ) override;
+        virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
 
     private:
 		crimild::Real32 _minScale;

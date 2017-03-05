@@ -39,12 +39,12 @@ ColorParticleUpdater::~ColorParticleUpdater( void )
 
 }
 
-void ColorParticleUpdater::configure( ParticleData *particles )
+void ColorParticleUpdater::configure( Node *node, ParticleData *particles )
 {
     
 }
 
-void ColorParticleUpdater::update( double dt, ParticleData *particles )
+void ColorParticleUpdater::update( Node *node, double dt, ParticleData *particles )
 {
 
 }

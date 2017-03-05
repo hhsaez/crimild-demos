@@ -25,36 +25,42 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CRIMILD_PARTICLE_GENERATOR_TIME_
-#define CRIMILD_PARTICLE_GENERATOR_TIME_
+#include "SpherePositionParticleGenerator.hpp"
 
-#include "../ParticleEmitterComponent.hpp"
+using namespace crimild;
 
-namespace crimild {
-
-    class TimeParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
-    public:
-        TimeParticleGenerator( void );
-        virtual ~TimeParticleGenerator( void );
-
-		void setMinTime( crimild::Real32 value ) { _minTime = value; }
-		crimild::Real32 getMinTime( void ) const { return _minTime; }
-
-		void setMaxTime( crimild::Real32 value ) { _maxTime = value; }
-		crimild::Real32 getMaxTime( void ) const { return _maxTime; }
-
-		virtual void configure( Node *node, ParticleData *particles ) override;
-        virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
-
-    private:
-		crimild::Real32 _minTime;
-		crimild::Real32 _maxTime;
-
-		Real32 *_times = nullptr;
-		Real32 *_lifeTimes = nullptr;
-    };
+SpherePositionParticleGenerator::SpherePositionParticleGenerator( void )
+{
 
 }
 
-#endif
+SpherePositionParticleGenerator::~SpherePositionParticleGenerator( void )
+{
+
+}
+
+void SpherePositionParticleGenerator::configure( Node *node, ParticleData *particles )
+{
+    auto pArray = particles->getAttrib( ParticleAttribType::POSITION );
+	assert( pArray != nullptr );
+	
+    _positions = pArray->getData< Vector3f >();
+	assert( _positions != nullptr );
+}
+
+void SpherePositionParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
+{
+    const auto posMin = -Vector3f::ONE;
+    const auto posMax = Vector3f::ONE;
+
+    for ( ParticleId i = startId; i < endId; i++ ) {
+        auto x = Random::generate< Real32 >( posMin.x(), posMax.x() );
+        auto y = Random::generate< Real32 >( posMin.y(), posMax.y() );
+        auto z = Random::generate< Real32 >( posMin.z(), posMax.z() );
+        _positions[ i ] = _origin + Vector3f( x, y, z ).getNormalized().times( _size );
+		if ( particles->shouldComputeInWorldSpace() ) {
+			node->getWorld().applyToPoint( _positions[ i ], _positions[ i ] );
+		}
+    }
+}
 

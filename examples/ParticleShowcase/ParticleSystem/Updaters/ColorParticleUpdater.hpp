@@ -37,8 +37,8 @@ namespace crimild {
         ColorParticleUpdater( void );
         virtual ~ColorParticleUpdater( void );
 
-        virtual void configure( ParticleData *particles ) override;
-        virtual void update( crimild::Real64 dt, ParticleData *particles ) override;
+        virtual void configure( Node *node, ParticleData *particles ) override;
+        virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
     };
 
 }

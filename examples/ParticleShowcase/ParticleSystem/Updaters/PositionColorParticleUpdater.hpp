@@ -37,7 +37,7 @@ namespace crimild {
         PositionColorParticleUpdater( void );
         virtual ~PositionColorParticleUpdater( void );
 
-        virtual void update( double dt, ParticleData *particles ) override;
+        virtual void update( Node *node, double dt, ParticleData *particles ) override;
     };
 
 }

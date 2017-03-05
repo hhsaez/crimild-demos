@@ -39,7 +39,7 @@ VelocityColorParticleUpdater::~VelocityColorParticleUpdater( void )
 
 }
 
-void VelocityColorParticleUpdater::update( double dt, ParticleData *particles )
+void VelocityColorParticleUpdater::update( Node *node, double dt, ParticleData *particles )
 {
 
 }

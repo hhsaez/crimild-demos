@@ -37,7 +37,7 @@ namespace crimild {
         VelocityColorParticleUpdater( void );
         virtual ~VelocityColorParticleUpdater( void );
 
-        virtual void update( double dt, ParticleData *particles ) override;
+        virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
     };
 
 }

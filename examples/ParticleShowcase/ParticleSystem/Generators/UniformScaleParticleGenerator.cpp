@@ -39,7 +39,7 @@ UniformScaleParticleGenerator::~UniformScaleParticleGenerator( void )
 
 }
 
-void UniformScaleParticleGenerator::configure( ParticleData *particles )
+void UniformScaleParticleGenerator::configure( Node *node, ParticleData *particles )
 {
     auto sAttribs = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
 	assert( sAttribs != nullptr );
@@ -48,7 +48,7 @@ void UniformScaleParticleGenerator::configure( ParticleData *particles )
 	assert( _scales != nullptr );
 }
 
-void UniformScaleParticleGenerator::generate( double dt, ParticleData *particles, ParticleId startId, ParticleId endId )
+void UniformScaleParticleGenerator::generate( Node *node, double dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
     for ( ParticleId i = startId; i < endId; i++ ) {
 		_scales[ i ] = Random::generate< crimild::Real32 >( _minScale, _maxScale );

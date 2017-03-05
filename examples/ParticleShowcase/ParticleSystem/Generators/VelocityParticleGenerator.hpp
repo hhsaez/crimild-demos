@@ -43,8 +43,8 @@ namespace crimild {
         inline void setMaxVelocity( const Vector3f &value ) { _maxVelocity = value; }
         inline const Vector3f &getMaxVelocity( void ) const { return _maxVelocity; }
 
-		virtual void configure( ParticleData *particles ) override;
-        virtual void generate( double dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
+		virtual void configure( Node *node, ParticleData *particles ) override;
+        virtual void generate( Node *node, double dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
 
     private:
         Vector3f _minVelocity;

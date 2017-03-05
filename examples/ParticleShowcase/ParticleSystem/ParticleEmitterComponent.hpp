@@ -56,12 +56,12 @@ namespace crimild {
 
 			   This method is invoked in ParticleEmitterComponent::start()
 			 */
-			virtual void configure( ParticleData *particles ) = 0;
+			virtual void configure( Node *node, ParticleData *particles ) = 0;
 
 			/**
 			   \brief Generates data for one or more attributes
 			 */
-            virtual void generate( crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) = 0;
+            virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) = 0;
         };
 
         using ParticleGeneratorPtr =  SharedPointer< ParticleGenerator >;
@@ -78,6 +78,9 @@ namespace crimild {
 			_generators.add( gen );
 		}
 
+		inline void setBurst( bool value ) { _burst = value; }
+		inline crimild::Bool isBurst( void ) const { return _burst; }
+
 		virtual void start( void ) override;
 
 		/**
@@ -90,6 +93,7 @@ namespace crimild {
         crimild::Size _emitRate;
         ThreadSafeArray< ParticleGeneratorPtr > _generators;
 		ParticleData *_particles = nullptr;
+		crimild::Bool _burst = false;
     };
 
 }
