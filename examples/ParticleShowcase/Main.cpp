@@ -28,11 +28,10 @@
 #include <Crimild.hpp>
 #include <Crimild_GLFW.hpp>
 
-#include "Foundation/Types.hpp"
-
 #include "ParticleSystem/ParticleData.hpp"
 #include "ParticleSystem/ParticleSystemComponent.hpp"
 #include "ParticleSystem/ParticleEmitterComponent.hpp"
+
 #include "ParticleSystem/Generators/BoxPositionParticleGenerator.hpp"
 #include "ParticleSystem/Generators/VelocityParticleGenerator.hpp"
 #include "ParticleSystem/Generators/SphereVelocityParticleGenerator.hpp"
@@ -41,12 +40,15 @@
 #include "ParticleSystem/Generators/ColorParticleGenerator.hpp"
 #include "ParticleSystem/Generators/UniformScaleParticleGenerator.hpp"
 #include "ParticleSystem/Generators/TimeParticleGenerator.hpp"
+
 #include "ParticleSystem/Updaters/EulerParticleUpdater.hpp"
 #include "ParticleSystem/Updaters/TimeParticleUpdater.hpp"
 #include "ParticleSystem/Updaters/FloorParticleUpdater.hpp"
 #include "ParticleSystem/Updaters/CameraSortParticleUpdater.hpp"
+
 #include "ParticleSystem/Renderers/PointSpriteParticleRendererComponent.hpp"
 #include "ParticleSystem/Renderers/OrientedQuadParticleRendererComponent.hpp"
+#include "ParticleSystem/Renderers/NodeParticleRendererComponent.hpp"
 
 using namespace crimild;
 
@@ -653,6 +655,79 @@ SharedPointer< Node > sparkles( const Vector3f &position )
     return ps;
 }
 
+SharedPointer< Node > walkers( const Vector3f &position )
+{
+    const crimild::Size MAX_PARTICLES = 10;
+    
+    auto ps = crimild::alloc< crimild::Group >();
+
+	SharedPointer< Node > model;
+	auto modelPath = FileSystem::getInstance().pathForResource( "assets/models/astroboy.crimild" );
+	FileStream is( modelPath, FileStream::OpenMode::READ );
+	is.load();
+	if ( is.getObjectCount() > 0 ) {
+		model = is.getObjectAt< Node >( 0 );
+	}
+
+	// set uniform scale
+	model->perform( UpdateWorldState() );
+	const auto modelScale = 3.0f / model->getWorldBound()->getRadius();
+
+	for ( int i = 0; i < MAX_PARTICLES; i++ ) {
+		ShallowCopy copier;
+		model->perform( copier );
+		auto copy = copier.getResult< Node >();
+		copy->local().setScale( modelScale );
+		ps->attachNode( copy );
+	}
+    
+    auto particles = crimild::alloc< ParticleData >( MAX_PARTICLES );
+    particles->setAttribs( ParticleAttribType::POSITION, crimild::alloc< Vector3fParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::VELOCITY, crimild::alloc< Vector3fParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::ACCELERATION, crimild::alloc< Vector3fParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::TIME, crimild::alloc< Real32ParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::LIFE_TIME, crimild::alloc< Real32ParticleAttribArray >() );
+    ps->attachComponent< ParticleSystemComponent >( particles );
+    
+    auto emitter = crimild::alloc< ParticleEmitterComponent >();
+    emitter->setEmitRate( 0.75f * MAX_PARTICLES );
+    
+    auto posGen = crimild::alloc< BoxPositionParticleGenerator >();
+    posGen->setOrigin( Vector3f::ZERO );
+    posGen->setSize( Vector3f( 5.0f, 0.1f, 5.0f ) );
+    emitter->addGenerator( posGen );
+    
+    auto velGen = crimild::alloc< VelocityParticleGenerator >();
+    velGen->setMinVelocity( Vector3f( -2.0f, 0.0f, -2.0f ) );
+    velGen->setMaxVelocity( Vector3f( 2.0f, 0.0f, 2.0f ) );
+    emitter->addGenerator( velGen );
+    
+    auto accGen = crimild::alloc< AccelerationParticleGenerator >();
+    accGen->setMinAcceleration( Vector3f::ZERO );
+    accGen->setMaxAcceleration( Vector3f::ZERO );
+    emitter->addGenerator( accGen );
+    
+    auto timeGen = crimild::alloc< TimeParticleGenerator >();
+    timeGen->setMinTime( 10.0f );
+    timeGen->setMaxTime( 15.0f );
+    emitter->addGenerator( timeGen );
+    
+    ps->attachComponent( emitter );
+    
+    auto updater = crimild::alloc< ParticleUpdaterComponent >();
+    auto eulerUpdater = crimild::alloc< EulerParticleUpdater >();
+    updater->addUpdater( eulerUpdater );
+    updater->addUpdater( crimild::alloc< TimeParticleUpdater >() );
+    ps->attachComponent( updater );
+    
+    auto renderer = crimild::alloc< NodeParticleRendererComponent >();
+    ps->attachComponent( renderer );
+    
+    ps->local().setTranslate( position );
+    
+    return ps;
+}
+
 int main( int argc, char **argv )
 {
     auto sim = crimild::alloc< GLSimulation >( "Particle Showcase", crimild::alloc< Settings >( argc, argv ) );
@@ -661,14 +736,17 @@ int main( int argc, char **argv )
 
 	scene->attachNode( room() );
     
-    scene->attachNode( fire( Vector3f( -10.0f, 0.5f, 10.0f ) ) );
-    scene->attachNode( fountain( Vector3f( 10.0f, 0.5f, 10.0f ) ) );
-    scene->attachNode( flowers( Vector3f( 0.0f, 3.0f, 0.0f ) ) );
-    scene->attachNode( sprinklers( Vector3f( 0.0f, 2.0f, 0.0f ) ) );
-    scene->attachNode( smoke( Vector3f( 5.0f, 5.0f, -15.0f ), false ) );
-    scene->attachNode( smoke( Vector3f( 15.0f, 5.0f, -15.0f ), true ) );
-	scene->attachNode( explosion( Vector3f( -10.0f, 0.0f, -10.0f ) ) );
-	scene->attachNode( sparkles( Vector3f( 15.0f, 10.0f, 0.0f ) ) );
+    scene->attachNode( fire( Vector3f( -10.0f, 0.5f, 0.0f ) ) );
+    scene->attachNode( flowers( Vector3f( -10.0f, 1.0f, -20.0f ) ) );
+    scene->attachNode( sprinklers( Vector3f( -10.0f, 2.0f, -20.0f ) ) );
+	scene->attachNode( explosion( Vector3f( -10.0f, 0.0f, -60.0f ) ) );
+
+    scene->attachNode( fountain( Vector3f( 10.0f, 0.5f, 0.0f ) ) );
+    scene->attachNode( smoke( Vector3f( 5.0f, 5.0f, -50.0f ), false ) );
+    scene->attachNode( smoke( Vector3f( 15.0f, 5.0f, -50.0f ), true ) );
+	scene->attachNode( sparkles( Vector3f( 15.0f, 10.0f, -30.0f ) ) );
+	
+	scene->attachNode( walkers( Vector3f( 0.0f, 0.0f, -30.0f ) ) );
 
     auto camera = crimild::alloc< Camera >();
     camera->local().setTranslate( Vector3f( 0.0f, 10.0f, 10.0f ) );
