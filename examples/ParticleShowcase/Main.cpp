@@ -44,7 +44,9 @@
 #include "ParticleSystem/Updaters/EulerParticleUpdater.hpp"
 #include "ParticleSystem/Updaters/TimeParticleUpdater.hpp"
 #include "ParticleSystem/Updaters/FloorParticleUpdater.hpp"
+#include "ParticleSystem/Updaters/CameraSortParticleUpdater.hpp"
 #include "ParticleSystem/Renderers/PointSpriteParticleRendererComponent.hpp"
+#include "ParticleSystem/Renderers/OrientedQuadParticleRendererComponent.hpp"
 
 using namespace crimild;
 
@@ -334,13 +336,17 @@ SharedPointer< Node > flowers( const Vector3f &position )
     emitter->addGenerator( colorGen );
     
     auto scaleGen = crimild::alloc< UniformScaleParticleGenerator >();
-    scaleGen->setMinScale( 100.0f );
-    scaleGen->setMaxScale( 200.0f );
+    scaleGen->setMinScale( 1.0f );
+    scaleGen->setMaxScale( 2.0f );
     emitter->addGenerator( scaleGen );
     
     ps->attachComponent( emitter );
+
+	auto updater = crimild::alloc< ParticleUpdaterComponent >();
+	updater->addUpdater( crimild::alloc< CameraSortParticleUpdater >() );
+	ps->attachComponent( updater );
     
-    auto renderer = crimild::alloc< PointSpriteParticleRendererComponent >();
+    auto renderer = crimild::alloc< OrientedQuadParticleRendererComponent >();
     auto texture = crimild::alloc< Texture >( crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/jasmine.tga" ) ) );
     renderer->getMaterial()->setColorMap( texture );
     renderer->getMaterial()->setAlphaState( AlphaState::ENABLED );
@@ -657,7 +663,7 @@ int main( int argc, char **argv )
     
     scene->attachNode( fire( Vector3f( -10.0f, 0.5f, 10.0f ) ) );
     scene->attachNode( fountain( Vector3f( 10.0f, 0.5f, 10.0f ) ) );
-    scene->attachNode( flowers( Vector3f( 0.0f, 0.5f, 0.0f ) ) );
+    scene->attachNode( flowers( Vector3f( 0.0f, 3.0f, 0.0f ) ) );
     scene->attachNode( sprinklers( Vector3f( 0.0f, 2.0f, 0.0f ) ) );
     scene->attachNode( smoke( Vector3f( 5.0f, 5.0f, -15.0f ), false ) );
     scene->attachNode( smoke( Vector3f( 15.0f, 5.0f, -15.0f ), true ) );

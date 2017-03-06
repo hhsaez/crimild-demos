@@ -68,39 +68,70 @@ void OrientedQuadParticleRendererComponent::start( void )
 	_colors = _particles->getAttrib( ParticleAttribType::COLOR )->getData< RGBAColorf >();
 	_sizes = _particles->getAttrib( ParticleAttribType::UNIFORM_SCALE )->getData< crimild::Real32 >();
 
-    _primitive = crimild::alloc< Primitive >( Primitive::Type::POINTS );
+    _primitive = crimild::alloc< Primitive >( Primitive::Type::TRIANGLES );
 
 	_geometry->attachPrimitive( _primitive );
 }
 
 void OrientedQuadParticleRendererComponent::update( const Clock &c )
 {
-	// TODO: sort particles back-to-front?
-
     const auto pCount = _particles->getAliveCount();
     if ( pCount == 0 ) {
         return;
     }
     
-    auto vbo = crimild::alloc< VertexBufferObject >( VertexFormat::VF_P3_C4_UV2, pCount );
-    
-    // traversing the arrays in separated loops seems to be more cache-friendly, right? right?
-    
+    auto vbo = crimild::alloc< VertexBufferObject >( VertexFormat::VF_P3_UV2, 4 * pCount );
+	auto ibo = crimild::alloc< IndexBufferObject >( 6 * pCount );
+
+	const auto camera = Camera::getMainCamera();
+	auto cameraUp = camera->getWorld().computeUp();
+	auto cameraRight = camera->getWorld().computeRight();
+
+	const auto node = getNode();
+	node->getWorld().applyInverseToVector( cameraUp, cameraUp );
+	node->getWorld().applyInverseToVector( cameraRight, cameraRight );
+
+	const auto offset0 = cameraUp - cameraRight;
+	const auto offset1 = -cameraUp - cameraRight;
+	const auto offset2 = -cameraUp + cameraRight;
+	const auto offset3 = cameraUp + cameraRight;
+
+	const auto uv0 = Vector2f( 0.0f, 0.0f );
+	const auto uv1 = Vector2f( 0.0f, 1.0f );
+	const auto uv2 = Vector2f( 1.0f, 1.0f );
+	const auto uv3 = Vector2f( 1.0f, 0.0f );
+
+	// TODO: compute in world space
+
 	for ( auto i = 0; i < pCount; i++ ) {
-		vbo->setPositionAt( i, _positions[ i ] );
+		auto idx = i * 4;
+		auto pos = _positions[ i ];
+		auto s = _sizes[ i ];
+		
+		vbo->setPositionAt( idx + 0, pos + s * offset0 );
+		vbo->setTextureCoordAt( idx + 0, uv0 );
+		
+		vbo->setPositionAt( idx + 1, pos + s * offset1 );
+		vbo->setTextureCoordAt( idx + 1, uv1 );
+		
+		vbo->setPositionAt( idx + 2, pos + s * offset2 );
+		vbo->setTextureCoordAt( idx + 2, uv2 );
+
+		vbo->setPositionAt( idx + 3, pos + s * offset3 );
+		vbo->setTextureCoordAt( idx + 3, uv3 );
 	}
 
 	for ( auto i = 0; i < pCount; i++ ) {
-		vbo->setTextureCoordAt( i, Vector2f( _sizes[ i ], 0.0f ) );
+		const auto idx = i * 6;
+		const auto vdx = i * 4;
+		ibo->setIndexAt( idx + 0, vdx + 0 );
+		ibo->setIndexAt( idx + 1, vdx + 1 );
+		ibo->setIndexAt( idx + 2, vdx + 2 );
+		ibo->setIndexAt( idx + 3, vdx + 0 );
+		ibo->setIndexAt( idx + 4, vdx + 2 );
+		ibo->setIndexAt( idx + 5, vdx + 3 );
 	}
 
-	for ( auto i = 0; i < pCount; i++ ) {
-		vbo->setRGBAColorAt( i, _colors[ i ] );
-	}
-
-    auto ibo = crimild::alloc< IndexBufferObject >( pCount );
-    ibo->generateIncrementalIndices();
-    
     crimild::concurrency::sync_frame( [this, vbo, ibo] {
         _primitive->setVertexBuffer( vbo );
         _primitive->setIndexBuffer( ibo );
