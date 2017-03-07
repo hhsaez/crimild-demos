@@ -42,10 +42,11 @@ SpherePositionParticleGenerator::~SpherePositionParticleGenerator( void )
 void SpherePositionParticleGenerator::configure( Node *node, ParticleData *particles )
 {
     auto pArray = particles->getAttrib( ParticleAttribType::POSITION );
-	assert( pArray != nullptr );
-	
+	if ( pArray == nullptr ) {
+		particles->setAttribs( ParticleAttribType::POSITION, crimild::alloc< Vector3fParticleAttribArray >() );
+		pArray = particles->getAttrib( ParticleAttribType::POSITION );
+	}
     _positions = pArray->getData< Vector3f >();
-	assert( _positions != nullptr );
 }
 
 void SpherePositionParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )

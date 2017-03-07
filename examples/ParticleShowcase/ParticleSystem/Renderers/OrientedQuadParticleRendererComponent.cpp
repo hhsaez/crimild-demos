@@ -65,7 +65,6 @@ void OrientedQuadParticleRendererComponent::start( void )
 	const auto ps = getComponent< ParticleSystemComponent >();
 	_particles = ps->getParticles();
 	_positions = _particles->getAttrib( ParticleAttribType::POSITION )->getData< Vector3f >();
-	_colors = _particles->getAttrib( ParticleAttribType::COLOR )->getData< RGBAColorf >();
 	_sizes = _particles->getAttrib( ParticleAttribType::UNIFORM_SCALE )->getData< crimild::Real32 >();
 
     _primitive = crimild::alloc< Primitive >( Primitive::Type::TRIANGLES );
@@ -101,11 +100,17 @@ void OrientedQuadParticleRendererComponent::update( const Clock &c )
 	const auto uv2 = Vector2f( 1.0f, 1.0f );
 	const auto uv3 = Vector2f( 1.0f, 0.0f );
 
-	// TODO: compute in world space
 
+	// Vertex data is interleaved, so it should be more efficient
+	// to set each vertex attribute per loop (as below) instead of
+	// using separated loops (as in the case of other updaters/renderers)
+	// TODO: I need to confirm this somehow
 	for ( auto i = 0; i < pCount; i++ ) {
 		auto idx = i * 4;
 		auto pos = _positions[ i ];
+		if ( _particles->shouldComputeInWorldSpace() ) {
+			node->getWorld().applyInverseToPoint( pos, pos );
+		}
 		auto s = _sizes[ i ];
 		
 		vbo->setPositionAt( idx + 0, pos + s * offset0 );

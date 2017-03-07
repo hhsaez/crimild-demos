@@ -42,16 +42,18 @@ TimeParticleGenerator::~TimeParticleGenerator( void )
 void TimeParticleGenerator::configure( Node *node, ParticleData *particles )
 {
     auto tAttribs = particles->getAttrib( ParticleAttribType::TIME );
-	assert( tAttribs != nullptr );
-	
+	if ( tAttribs == nullptr ) {
+		particles->setAttribs( ParticleAttribType::TIME, crimild::alloc< Real32ParticleAttribArray >() );
+		tAttribs = particles->getAttrib( ParticleAttribType::TIME );
+	}
     _times = tAttribs->getData< crimild::Real32 >();
-	assert( _times != nullptr );
 
     auto lAttribs = particles->getAttrib( ParticleAttribType::LIFE_TIME );
-	assert( lAttribs != nullptr );
-	
+	if ( lAttribs == nullptr ) {
+		particles->setAttribs( ParticleAttribType::LIFE_TIME, crimild::alloc< Real32ParticleAttribArray >() );
+		lAttribs = particles->getAttrib( ParticleAttribType::LIFE_TIME );
+	}
     _lifeTimes = lAttribs->getData< crimild::Real32 >();
-	assert( _lifeTimes != nullptr );
 }
 
 void TimeParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )

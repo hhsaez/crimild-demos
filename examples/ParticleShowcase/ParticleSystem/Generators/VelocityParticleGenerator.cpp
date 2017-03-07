@@ -42,10 +42,11 @@ VelocityParticleGenerator::~VelocityParticleGenerator( void )
 void VelocityParticleGenerator::configure( Node *node, ParticleData *particles )
 {
     auto vAttribs = particles->getAttrib( ParticleAttribType::VELOCITY );
-	assert( vAttribs != nullptr );
-
+	if ( vAttribs == nullptr ) {
+		particles->setAttribs( ParticleAttribType::VELOCITY, crimild::alloc< Vector3fParticleAttribArray >() );
+		vAttribs = particles->getAttrib( ParticleAttribType::VELOCITY );
+	}
 	_velocities = vAttribs->getData< Vector3f >();
-	assert( _velocities != nullptr );
 }
 
 void VelocityParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )

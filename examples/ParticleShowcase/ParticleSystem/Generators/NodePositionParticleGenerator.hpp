@@ -25,34 +25,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "UniformScaleParticleGenerator.hpp"
+#ifndef CRIMILD_PARTICLE_GENERATOR_POSITION_NODE_
+#define CRIMILD_PARTICLE_GENERATOR_POSITION_NODE_
 
-using namespace crimild;
+#include "../ParticleEmitterComponent.hpp"
 
-UniformScaleParticleGenerator::UniformScaleParticleGenerator( void )
-{
+namespace crimild {
+
+    class NodePositionParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+    public:
+        NodePositionParticleGenerator( void );
+        virtual ~NodePositionParticleGenerator( void );
+
+		inline void setTargetNode( Node *node ) { _targetNode = node; }
+		inline Node *getTargetNode( void ) { return _targetNode; }
+		inline const Node *getTargetNode( void ) const { return _targetNode; }
+
+		inline void setSize( const Vector3f &size ) { _size = size; }
+		inline const Vector3f &getSize( void ) const { return _size; }
+
+		virtual void configure( Node *node, ParticleData *particles ) override;
+        virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override;
+
+    private:
+		Node *_targetNode = nullptr;
+        Vector3f _size;
+
+		Vector3f *_positions = nullptr;
+    };
 
 }
 
-UniformScaleParticleGenerator::~UniformScaleParticleGenerator( void )
-{
-
-}
-
-void UniformScaleParticleGenerator::configure( Node *node, ParticleData *particles )
-{
-    auto sAttribs = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
-	if ( sAttribs == nullptr ) {
-		particles->setAttribs( ParticleAttribType::UNIFORM_SCALE, crimild::alloc< Real32ParticleAttribArray >() );
-		sAttribs = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
-	}
-	_scales = sAttribs->getData< crimild::Real32 >();
-}
-
-void UniformScaleParticleGenerator::generate( Node *node, double dt, ParticleData *particles, ParticleId startId, ParticleId endId )
-{
-    for ( ParticleId i = startId; i < endId; i++ ) {
-		_scales[ i ] = Random::generate< crimild::Real32 >( _minScale, _maxScale );
-    }
-}
+#endif
 

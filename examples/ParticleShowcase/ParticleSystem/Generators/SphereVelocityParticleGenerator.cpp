@@ -42,10 +42,11 @@ SphereVelocityParticleGenerator::~SphereVelocityParticleGenerator( void )
 void SphereVelocityParticleGenerator::configure( Node *node, ParticleData *particles )
 {
     auto vArray = particles->getAttrib( ParticleAttribType::VELOCITY );
-	assert( vArray != nullptr );
-	
+	if ( vArray == nullptr ) {
+		particles->setAttribs( ParticleAttribType::VELOCITY, crimild::alloc< Vector3fParticleAttribArray >() );
+		vArray = particles->getAttrib( ParticleAttribType::VELOCITY );
+	}
     _velocities = vArray->getData< Vector3f >();
-	assert( _velocities != nullptr );
 }
 
 void SphereVelocityParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )

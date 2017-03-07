@@ -40,6 +40,7 @@
 #include "ParticleSystem/Generators/ColorParticleGenerator.hpp"
 #include "ParticleSystem/Generators/UniformScaleParticleGenerator.hpp"
 #include "ParticleSystem/Generators/TimeParticleGenerator.hpp"
+#include "ParticleSystem/Generators/NodePositionParticleGenerator.hpp"
 
 #include "ParticleSystem/Updaters/EulerParticleUpdater.hpp"
 #include "ParticleSystem/Updaters/TimeParticleUpdater.hpp"
@@ -165,6 +166,19 @@ SharedPointer< Node > room( void )
 	return model;
 }
 
+SharedPointer< Group > loadModel( std::string filename )
+{
+	SharedPointer< Group > model;
+	auto modelPath = FileSystem::getInstance().pathForResource( filename );
+	FileStream is( modelPath, FileStream::OpenMode::READ );
+	is.load();
+	if ( is.getObjectCount() > 0 ) {
+		model = is.getObjectAt< Group >( 0 );
+	}
+	
+	return model;
+}
+
 SharedPointer< Node > fire( const Vector3f &position )
 {
     const crimild::Size MAX_PARTICLES = 200;
@@ -235,6 +249,88 @@ SharedPointer< Node > fire( const Vector3f &position )
     ps->local().setTranslate( position );
     
     return ps;
+}
+
+SharedPointer< Node > handsOnFire( const Vector3f &position )
+{
+    const crimild::Size MAX_PARTICLES = 200;
+
+	auto astroboy = loadModel( "assets/models/astroboy.crimild" );
+	astroboy->perform( UpdateWorldState() );
+	astroboy->local().setScale( 10.0 / astroboy->getWorldBound()->getRadius() );
+	
+	std::string jointName = "R_middle_01";
+	Group *joint = nullptr;
+	astroboy->perform( Apply( [&joint, jointName]( Node *node ) {
+		if ( node->getName() == jointName ) {
+			joint = static_cast< Group * >( node );
+		}
+	}));
+
+	assert( joint != nullptr );
+
+    auto ps = crimild::alloc< crimild::Group >();
+    
+    auto particles = crimild::alloc< ParticleData >( MAX_PARTICLES );
+    particles->setAttribs( ParticleAttribType::POSITION, crimild::alloc< Vector3fParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::VELOCITY, crimild::alloc< Vector3fParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::ACCELERATION, crimild::alloc< Vector3fParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::UNIFORM_SCALE, crimild::alloc< Real32ParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::TIME, crimild::alloc< Real32ParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::LIFE_TIME, crimild::alloc< Real32ParticleAttribArray >() );
+	particles->setComputeInWorldSpace( true );
+    ps->attachComponent< ParticleSystemComponent >( particles );
+    
+    auto emitter = crimild::alloc< ParticleEmitterComponent >();
+    emitter->setEmitRate( 0.25f * MAX_PARTICLES );
+    
+    auto posGen = crimild::alloc< NodePositionParticleGenerator >();
+	posGen->setTargetNode( joint );
+    posGen->setSize( Vector3f( 0.25f, 0.25f, 0.25f ) );
+    emitter->addGenerator( posGen );
+    
+    auto velGen = crimild::alloc< VelocityParticleGenerator >();
+    velGen->setMinVelocity( Vector3f( 0.0f, 1.0f, 0.0f ) );
+    velGen->setMaxVelocity( Vector3f( 0.0f, 2.5f, 0.0f ) );
+    emitter->addGenerator( velGen );
+    
+    auto accGen = crimild::alloc< AccelerationParticleGenerator >();
+    emitter->addGenerator( accGen );
+    
+    auto scaleGen = crimild::alloc< UniformScaleParticleGenerator >();
+    scaleGen->setMinScale( 0.25f );
+    scaleGen->setMaxScale( 0.75f );
+    emitter->addGenerator( scaleGen );
+    
+    auto timeGen = crimild::alloc< TimeParticleGenerator >();
+    timeGen->setMinTime( 0.25f );
+    timeGen->setMaxTime( 0.75f );
+    emitter->addGenerator( timeGen );
+    
+    ps->attachComponent( emitter );
+    
+    auto updater = crimild::alloc< ParticleUpdaterComponent >();
+    auto eulerUpdater = crimild::alloc< EulerParticleUpdater >();
+    updater->addUpdater( eulerUpdater );
+    updater->addUpdater( crimild::alloc< TimeParticleUpdater >() );
+    ps->attachComponent( updater );
+    
+    auto renderer = crimild::alloc< OrientedQuadParticleRendererComponent >();
+    auto texture = crimild::alloc< Texture >( crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/fire.tga" ) ) );
+    renderer->getMaterial()->setColorMap( texture );
+	renderer->getMaterial()->setDiffuse( RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ) );
+    renderer->getMaterial()->setAlphaState( crimild::alloc< AlphaState >( true, AlphaState::SrcBlendFunc::SRC_ALPHA, AlphaState::DstBlendFunc::ONE ) );
+    renderer->getMaterial()->setCullFaceState( CullFaceState::DISABLED );
+    renderer->getMaterial()->setDepthState( DepthState::DISABLED );
+    ps->attachComponent( renderer );
+
+	auto scene = crimild::alloc< Group >();
+    scene->attachNode( astroboy );
+	scene->attachNode( ps );
+	
+    scene->local().setTranslate( position );
+    
+    return scene;
 }
 
 SharedPointer< Node > explosion( const Vector3f &position )
@@ -661,21 +757,14 @@ SharedPointer< Node > walkers( const Vector3f &position )
     
     auto ps = crimild::alloc< crimild::Group >();
 
-	SharedPointer< Node > model;
-	auto modelPath = FileSystem::getInstance().pathForResource( "assets/models/astroboy.crimild" );
-	FileStream is( modelPath, FileStream::OpenMode::READ );
-	is.load();
-	if ( is.getObjectCount() > 0 ) {
-		model = is.getObjectAt< Node >( 0 );
-	}
+	auto astroboy = loadModel( "assets/models/astroboy.crimild" );
 
-	// set uniform scale
-	model->perform( UpdateWorldState() );
-	const auto modelScale = 3.0f / model->getWorldBound()->getRadius();
+	astroboy->perform( UpdateWorldState() );
+	const auto modelScale = 3.0f / astroboy->getWorldBound()->getRadius();
 
 	for ( int i = 0; i < MAX_PARTICLES; i++ ) {
 		ShallowCopy copier;
-		model->perform( copier );
+		astroboy->perform( copier );
 		auto copy = copier.getResult< Node >();
 		copy->local().setScale( modelScale );
 		ps->attachNode( copy );
@@ -735,22 +824,22 @@ int main( int argc, char **argv )
     auto scene = crimild::alloc< Group >();
 
 	scene->attachNode( room() );
-    
-    scene->attachNode( fire( Vector3f( -10.0f, 0.5f, 0.0f ) ) );
+
+    scene->attachNode( fire( Vector3f( -10.0f, 0.5f, -10.0f ) ) );
     scene->attachNode( flowers( Vector3f( -10.0f, 1.0f, -20.0f ) ) );
     scene->attachNode( sprinklers( Vector3f( -10.0f, 2.0f, -20.0f ) ) );
 	scene->attachNode( explosion( Vector3f( -10.0f, 0.0f, -60.0f ) ) );
 
-    scene->attachNode( fountain( Vector3f( 10.0f, 0.5f, 0.0f ) ) );
+    scene->attachNode( fountain( Vector3f( 10.0f, 0.5f, -10.0f ) ) );
     scene->attachNode( smoke( Vector3f( 5.0f, 5.0f, -50.0f ), false ) );
     scene->attachNode( smoke( Vector3f( 15.0f, 5.0f, -50.0f ), true ) );
 	scene->attachNode( sparkles( Vector3f( 15.0f, 10.0f, -30.0f ) ) );
-	
+
+	scene->attachNode( handsOnFire( Vector3f( 0.0f, 0.0f, -60.0f ) ) );
 	scene->attachNode( walkers( Vector3f( 0.0f, 0.0f, -30.0f ) ) );
 
     auto camera = crimild::alloc< Camera >();
     camera->local().setTranslate( Vector3f( 0.0f, 10.0f, 10.0f ) );
-    camera->local().lookAt( Vector3f::ZERO );
     camera->attachComponent< CameraController >();
     scene->attachNode( camera );
     

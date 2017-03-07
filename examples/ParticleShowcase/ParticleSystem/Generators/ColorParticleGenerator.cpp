@@ -42,22 +42,25 @@ ColorParticleGenerator::~ColorParticleGenerator( void )
 void ColorParticleGenerator::configure( Node *node, ParticleData *particles )
 {
     auto cAttribs = particles->getAttrib( ParticleAttribType::COLOR );
-    assert( cAttribs != nullptr );
-    
+	if ( cAttribs == nullptr ) {
+		particles->setAttribs( ParticleAttribType::COLOR, crimild::alloc< RGBAColorfParticleAttribArray >() );
+		cAttribs = particles->getAttrib( ParticleAttribType::COLOR );
+	}
     _colors = cAttribs->getData< RGBAColorf >();
-    assert( _colors != nullptr );
     
 	auto sColorAttribs = particles->getAttrib( ParticleAttribType::START_COLOR );
-	assert( sColorAttribs != nullptr );
-
+	if ( sColorAttribs == nullptr ) {
+		particles->setAttribs( ParticleAttribType::START_COLOR, crimild::alloc< RGBAColorfParticleAttribArray >() );
+		sColorAttribs = particles->getAttrib( ParticleAttribType::START_COLOR );
+	}
 	_startColors = sColorAttribs->getData< RGBAColorf >();
-	assert( _startColors != nullptr );
 
 	auto eColorAttribs = particles->getAttrib( ParticleAttribType::END_COLOR );
-	assert( eColorAttribs != nullptr );
-
+	if ( eColorAttribs == nullptr ) {
+		particles->setAttribs( ParticleAttribType::END_COLOR, crimild::alloc< RGBAColorfParticleAttribArray >() );
+		eColorAttribs = particles->getAttrib( ParticleAttribType::END_COLOR );
+	}
 	_endColors = eColorAttribs->getData< RGBAColorf >();
-	assert( _endColors != nullptr );
 }
 
 void ColorParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )

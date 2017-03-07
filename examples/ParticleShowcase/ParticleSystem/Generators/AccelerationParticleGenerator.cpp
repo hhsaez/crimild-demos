@@ -44,10 +44,12 @@ AccelerationParticleGenerator::~AccelerationParticleGenerator( void )
 void AccelerationParticleGenerator::configure( Node *node, ParticleData *particles )
 {
     auto aAttribs = particles->getAttrib( ParticleAttribType::ACCELERATION );
-	assert( aAttribs != nullptr );
+	if ( aAttribs == nullptr ) {
+		particles->setAttribs( ParticleAttribType::ACCELERATION, crimild::alloc< Vector3fParticleAttribArray >() );
+		aAttribs = particles->getAttrib( ParticleAttribType::ACCELERATION );
+	}
 
 	_accelerations = aAttribs->getData< Vector3f >();
-	assert( _accelerations != nullptr );
 }
 
 void AccelerationParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )

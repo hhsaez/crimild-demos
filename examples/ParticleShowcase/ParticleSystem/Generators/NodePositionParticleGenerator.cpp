@@ -25,34 +25,52 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "UniformScaleParticleGenerator.hpp"
+#include "NodePositionParticleGenerator.hpp"
 
 using namespace crimild;
 
-UniformScaleParticleGenerator::UniformScaleParticleGenerator( void )
+NodePositionParticleGenerator::NodePositionParticleGenerator( void )
 {
 
 }
 
-UniformScaleParticleGenerator::~UniformScaleParticleGenerator( void )
+NodePositionParticleGenerator::~NodePositionParticleGenerator( void )
 {
 
 }
 
-void UniformScaleParticleGenerator::configure( Node *node, ParticleData *particles )
+void NodePositionParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-    auto sAttribs = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
-	if ( sAttribs == nullptr ) {
-		particles->setAttribs( ParticleAttribType::UNIFORM_SCALE, crimild::alloc< Real32ParticleAttribArray >() );
-		sAttribs = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
+    auto pArray = particles->getAttrib( ParticleAttribType::POSITION );
+	if ( pArray == nullptr ) {
+		particles->setAttribs( ParticleAttribType::POSITION, crimild::alloc< Vector3fParticleAttribArray >() );
+		pArray = particles->getAttrib( ParticleAttribType::POSITION );
 	}
-	_scales = sAttribs->getData< crimild::Real32 >();
+    _positions = pArray->getData< Vector3f >();
 }
 
-void UniformScaleParticleGenerator::generate( Node *node, double dt, ParticleData *particles, ParticleId startId, ParticleId endId )
+void NodePositionParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
+	assert( _targetNode != nullptr );
+
+	auto origin = _targetNode->getWorld().getTranslate();
+	node->getWorld().applyInverseToPoint( origin, origin );
+	
+    const auto posMin = origin - _size;
+    const auto posMax = origin + _size;
+
     for ( ParticleId i = startId; i < endId; i++ ) {
-		_scales[ i ] = Random::generate< crimild::Real32 >( _minScale, _maxScale );
+        auto x = Random::generate< Real32 >( posMin.x(), posMax.x() );
+        auto y = Random::generate< Real32 >( posMin.y(), posMax.y() );
+        auto z = Random::generate< Real32 >( posMin.z(), posMax.z() );
+		if ( particles->shouldComputeInWorldSpace() ) {
+			auto p = Vector3f( x, y, z );
+			node->getWorld().applyToPoint( p, p );
+			_positions[ i ] = p;
+		}
+		else {
+			_positions[ i ] = Vector3f( x, y, z );
+		}
     }
 }
 

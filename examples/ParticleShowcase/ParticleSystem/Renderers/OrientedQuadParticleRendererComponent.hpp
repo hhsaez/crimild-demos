@@ -53,7 +53,6 @@ namespace crimild {
 		ParticleData *_particles = nullptr;
 
 		Vector3f *_positions = nullptr;
-		RGBAColorf *_colors = nullptr;
 		Real32 *_sizes = nullptr;
     };
 
