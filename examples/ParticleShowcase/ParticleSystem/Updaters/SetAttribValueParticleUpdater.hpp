@@ -25,38 +25,60 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CRIMILD_PARTICLE_UPDATER_ATTRACTOR_
-#define CRIMILD_PARTICLE_UPDATER_ATTRACTOR_
+#ifndef CRIMILD_PARTICLE_UPDATER_SET_ATTRIB_VALUE_
+#define CRIMILD_PARTICLE_UPDATER_SET_ATTRIB_VALUE_
 
 #include "../ParticleUpdaterComponent.hpp"
 
 namespace crimild {
 
 	/**
-	   \brief Attractor for a gravity system
+	   \brief Set a constant value for an attribute whenver its updated
 
-	   \remarks Use it before a position updater
+	   \remarks Useful for reseting values
 	 */
-    class AttractorParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
+	template< typename T >
+    class SetAttribValueParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
     public:
-        AttractorParticleUpdater( void );
-        virtual ~AttractorParticleUpdater( void );
+        SetAttribValueParticleUpdater( void )
+		{
+			
+		}
+		
+        virtual ~SetAttribValueParticleUpdater( void )
+		{
 
-		inline void setAttractor( const Sphere3f &value ) { _attractor = value; }
-		inline const Sphere3f &getAttractor( void ) const { return _attractor; }
+		}
 
-		inline void setStrength( crimild::Real32 value ) { _strength = value; }
-		inline crimild::Real32 getStrength( void ) const { return _strength; }
+		inline void setAttribType( const ParticleAttribType &type ) { _attribType = type; }
+		inline const ParticleAttribType &getAttribType( void ) { return _attribType; }
 
-		virtual void configure( Node *node, ParticleData *particles ) override;
-        virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
+		inline void setValue( const T &value ) { _value = value; }
+		inline const T &getValue( void ) const { return _value; }
+
+		virtual void configure( Node *node, ParticleData *particles ) override
+		{
+			auto attribs = particles->getAttrib( _attribType );
+			assert( attribs != nullptr );
+
+			_attribData = attribs->template getData< T >();
+			assert( _attribData != nullptr );
+		}
+		
+        virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override
+		{
+			const auto count = particles->getAliveCount();
+
+			for ( int i = 0; i < count; i++ ) {
+				_attribData[ i ] = _value;
+			}
+		}
 
 	private:
-		Sphere3f _attractor;
-		crimild::Real32 _strength;
+		ParticleAttribType _attribType;
+		T _value;
 		
-		Vector3f *_positions = nullptr;
-		Vector3f *_accelerations = nullptr;
+		T *_attribData = nullptr;
     };
 
 }

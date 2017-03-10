@@ -46,6 +46,8 @@
 #include "ParticleSystem/Updaters/TimeParticleUpdater.hpp"
 #include "ParticleSystem/Updaters/FloorParticleUpdater.hpp"
 #include "ParticleSystem/Updaters/CameraSortParticleUpdater.hpp"
+#include "ParticleSystem/Updaters/AttractorParticleUpdater.hpp"
+#include "ParticleSystem/Updaters/SetAttribValueParticleUpdater.hpp"
 
 #include "ParticleSystem/Renderers/PointSpriteParticleRendererComponent.hpp"
 #include "ParticleSystem/Renderers/OrientedQuadParticleRendererComponent.hpp"
@@ -632,8 +634,8 @@ SharedPointer< Node > sprinklers( const Vector3f &position )
     emitter->addGenerator( posGen );
     
     auto velGen = crimild::alloc< VelocityParticleGenerator >();
-    velGen->setMinVelocity( Vector3f( 3.0f, 3.0f, 0.0f ) );
-    velGen->setMaxVelocity( Vector3f( 5.0f, 5.0f, 0.0f ) );
+    velGen->setMinVelocity( Vector3f( -3.0f, 5.0f, -3.0f ) );
+    velGen->setMaxVelocity( Vector3f( 3.0f, 8.0f, 3.0f ) );
     emitter->addGenerator( velGen );
     
     auto accGen = crimild::alloc< AccelerationParticleGenerator >();
@@ -706,8 +708,8 @@ SharedPointer< Node > sparkles( const Vector3f &position )
     emitter->addGenerator( posGen );
     
     auto velGen = crimild::alloc< VelocityParticleGenerator >();
-    velGen->setMinVelocity( Vector3f( 0.0, 0.0f, 5.0f ) );
-    velGen->setMaxVelocity( Vector3f( 0.0, 0.0f, 15.0f ) );
+    velGen->setMinVelocity( Vector3f( 0.0, 5.0f, -8.0f ) );
+    velGen->setMaxVelocity( Vector3f( 0.0, 8.0f, 8.0f ) );
     emitter->addGenerator( velGen );
     
     auto accGen = crimild::alloc< AccelerationParticleGenerator >();
@@ -729,7 +731,7 @@ SharedPointer< Node > sparkles( const Vector3f &position )
     
     auto timeGen = crimild::alloc< TimeParticleGenerator >();
     timeGen->setMinTime( 1.0f );
-    timeGen->setMaxTime( 2.0f );
+    timeGen->setMaxTime( 3.0f );
     emitter->addGenerator( timeGen );
     
     ps->attachComponent( emitter );
@@ -746,8 +748,88 @@ SharedPointer< Node > sparkles( const Vector3f &position )
     
     ps->local().setTranslate( position );
 
-	ps->attachComponent< RotationComponent >( Vector3f::UNIT_X, 0.1f );
+    return ps;
+}
+
+SharedPointer< Node > attractors( const Vector3f &position )
+{
+    const crimild::Size MAX_PARTICLES = 500;
     
+    auto ps = crimild::alloc< crimild::Group >();
+    
+    auto particles = crimild::alloc< ParticleData >( MAX_PARTICLES );
+    particles->setAttribs( ParticleAttribType::POSITION, crimild::alloc< Vector3fParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::VELOCITY, crimild::alloc< Vector3fParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::ACCELERATION, crimild::alloc< Vector3fParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::COLOR, crimild::alloc< RGBAColorfParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::START_COLOR, crimild::alloc< RGBAColorfParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::END_COLOR, crimild::alloc< RGBAColorfParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::UNIFORM_SCALE, crimild::alloc< Real32ParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::TIME, crimild::alloc< Real32ParticleAttribArray >() );
+    particles->setAttribs( ParticleAttribType::LIFE_TIME, crimild::alloc< Real32ParticleAttribArray >() );
+	particles->setComputeInWorldSpace( true );
+    ps->attachComponent< ParticleSystemComponent >( particles );
+    
+    auto emitter = crimild::alloc< ParticleEmitterComponent >();
+    emitter->setEmitRate( MAX_PARTICLES );
+	emitter->setBurst( true );
+    
+    auto posGen = crimild::alloc< SpherePositionParticleGenerator >();
+    posGen->setOrigin( Vector3f::ZERO );
+    posGen->setSize( 0.1f * Vector3f::ONE );
+    emitter->addGenerator( posGen );
+    
+    auto velGen = crimild::alloc< SphereVelocityParticleGenerator >();
+	velGen->setMagnitude( 0.0f * Vector3f::ONE );
+    emitter->addGenerator( velGen );
+    
+    auto accGen = crimild::alloc< AccelerationParticleGenerator >();
+    accGen->setMinAcceleration( Vector3f::ZERO );
+    accGen->setMaxAcceleration( Vector3f::ZERO );
+    emitter->addGenerator( accGen );
+    
+    auto colorGen = crimild::alloc< ColorParticleGenerator >();
+    colorGen->setMinStartColor( RGBAColorf( 0.0, 1.0, 0.0, 1.0 ) );
+    colorGen->setMaxStartColor( RGBAColorf( 1.0, 1.0, 1.0, 1.0 ) );
+    colorGen->setMinEndColor( RGBAColorf( 0.0, 0.75, 0.0, 0.0 ) );
+    colorGen->setMaxEndColor( RGBAColorf( 0.5, 0.95, 0.0, 0.0 ) );
+    emitter->addGenerator( colorGen );
+    
+    auto scaleGen = crimild::alloc< UniformScaleParticleGenerator >();
+    scaleGen->setMinScale( 10.0f );
+    scaleGen->setMaxScale( 20.0f );
+    emitter->addGenerator( scaleGen );
+    
+    auto timeGen = crimild::alloc< TimeParticleGenerator >();
+    timeGen->setMinTime( 30.0f );
+    timeGen->setMaxTime( 30.0f );
+    emitter->addGenerator( timeGen );
+    
+    ps->attachComponent( emitter );
+    
+    auto updater = crimild::alloc< ParticleUpdaterComponent >();
+	auto resetAccelerations = crimild::alloc< SetAttribValueParticleUpdater< Vector3f >>();
+	resetAccelerations->setAttribType( ParticleAttribType::ACCELERATION );
+	resetAccelerations->setValue( Vector3f::ZERO );
+	updater->addUpdater( resetAccelerations );
+	auto attractor = crimild::alloc< AttractorParticleUpdater >();
+	attractor->setAttractor( Sphere3f( position + Vector3f( 0.0f, 3.0f, 0.0f ), 5.0f ) );
+	attractor->setStrength( 50.0f );
+	updater->addUpdater( attractor );
+	auto repulsor = crimild::alloc< AttractorParticleUpdater >();
+	repulsor->setAttractor( Sphere3f( position, 2.0f ) );
+	repulsor->setStrength( -25.0f );
+	updater->addUpdater( repulsor );
+    auto eulerUpdater = crimild::alloc< EulerParticleUpdater >();
+    updater->addUpdater( eulerUpdater );
+    updater->addUpdater( crimild::alloc< TimeParticleUpdater >() );
+    ps->attachComponent( updater );
+    
+    auto renderer = crimild::alloc< PointSpriteParticleRendererComponent >();
+    ps->attachComponent( renderer );
+    
+    ps->local().setTranslate( position );
+
     return ps;
 }
 
@@ -829,6 +911,7 @@ int main( int argc, char **argv )
     scene->attachNode( flowers( Vector3f( -10.0f, 1.0f, -20.0f ) ) );
     scene->attachNode( sprinklers( Vector3f( -10.0f, 2.0f, -20.0f ) ) );
 	scene->attachNode( explosion( Vector3f( -10.0f, 0.0f, -60.0f ) ) );
+	scene->attachNode( attractors( Vector3f( -10.0f, 5.0f, -40.0f ) ) );
 
     scene->attachNode( fountain( Vector3f( 10.0f, 0.5f, -10.0f ) ) );
     scene->attachNode( smoke( Vector3f( 5.0f, 5.0f, -50.0f ), false ) );
@@ -841,6 +924,7 @@ int main( int argc, char **argv )
     auto camera = crimild::alloc< Camera >();
     camera->local().setTranslate( Vector3f( 0.0f, 10.0f, 10.0f ) );
     camera->attachComponent< CameraController >();
+	camera->setCullingEnabled( false );
     scene->attachNode( camera );
     
     sim->setScene( scene );

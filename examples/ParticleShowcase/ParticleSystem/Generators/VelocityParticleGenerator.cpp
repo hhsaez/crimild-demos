@@ -56,9 +56,6 @@ void VelocityParticleGenerator::generate( Node *node, crimild::Real64 dt, Partic
         auto y = Random::generate< Real32 >( _minVelocity.y(), _maxVelocity.y() );
         auto z = Random::generate< Real32 >( _minVelocity.z(), _maxVelocity.z() );
         _velocities[ i ] = Vector3f( x, y, z );
-		if ( particles->shouldComputeInWorldSpace() ) {
-			node->getWorld().applyToVector( _velocities[ i ], _velocities[ i ] );
-		}
     }
 }
 

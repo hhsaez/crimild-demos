@@ -50,16 +50,18 @@ void CameraSortParticleUpdater::configure( Node *node, ParticleData *particles )
 
 void CameraSortParticleUpdater::update( Node *node, double dt, ParticleData *particles )
 {
-	// TODO: compute in world space
-
 	const auto camera = Camera::getMainCamera();
 	auto cameraPos = camera->getWorld().getTranslate();
-	node->getWorld().applyInverseToPoint( cameraPos, cameraPos );
+	if ( !particles->shouldComputeInWorldSpace() ) {
+		// compute local camera pos only if we're not using
+		// the world space
+		node->getWorld().applyInverseToPoint( cameraPos, cameraPos );
+	}
 
 	const auto pCount = particles->getAliveCount();
 
 	// TODO: I know, bubble sort is slow...
-	// TODO: Also, precompute distances
+	// TODO: Also, precompute distances?
 	for ( int i = 0; i < pCount; i++ ) {
 		auto pos = _positions[ i ];
 		for ( int j = i + 1; j < pCount; j++ ) {

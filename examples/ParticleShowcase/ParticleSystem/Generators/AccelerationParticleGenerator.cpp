@@ -58,14 +58,7 @@ void AccelerationParticleGenerator::generate( Node *node, crimild::Real64 dt, Pa
         auto x = Random::generate< Real32 >( _minAcceleration.x(), _maxAcceleration.x() );
         auto y = Random::generate< Real32 >( _minAcceleration.y(), _maxAcceleration.y() );
         auto z = Random::generate< Real32 >( _minAcceleration.z(), _maxAcceleration.z() );
-		if ( particles->shouldComputeInWorldSpace() ) {
-			auto a = Vector3f( x, y, z );
-			node->getWorld().applyToVector( a, a );
-			_accelerations[ i ] = a;
-		}
-		else {
-			_accelerations[ i ] = Vector3f( x, y, z );
-		}
+		_accelerations[ i ] = Vector3f( x, y, z );
     }
 }
 

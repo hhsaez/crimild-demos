@@ -62,17 +62,25 @@ void EulerParticleUpdater::configure( Node *node, ParticleData *particles )
 
 void EulerParticleUpdater::update( Node *node, crimild::Real64 dt, ParticleData *particles )
 {
-	const auto g = dt * _globalAcceleration;
 	const auto count = particles->getAliveCount();
 
+	const auto g = dt * _globalAcceleration;
+
+	// TODO: all the accelerations are the same value
+	// I think this could be optimized, but other
+	// updaters may need separated values
+	// Also, accelerations are handled in the same way
+	// regardless of the computation space (world or local)
 	for ( int i = 0; i < count; i++ ) {
 		_accelerations[ i ] += g;
 	}
 
+	// Velocities are handled in the same way
+	// regardless of the computation space (world or local)
 	for ( int i = 0; i < count; i++ ) {
 		_velocities[ i ] += dt * _accelerations[ i ];
 	}
-
+	
 	for ( int i = 0; i < count; i++ ) {
 		auto v = dt * _velocities[ i ];
 		_positions[ i ] += v;
