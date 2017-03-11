@@ -28,32 +28,6 @@
 #include <Crimild.hpp>
 #include <Crimild_GLFW.hpp>
 
-#include "ParticleSystem/ParticleData.hpp"
-#include "ParticleSystem/ParticleSystemComponent.hpp"
-
-#include "ParticleSystem/Generators/BoxPositionParticleGenerator.hpp"
-#include "ParticleSystem/Generators/VelocityParticleGenerator.hpp"
-#include "ParticleSystem/Generators/SphereVelocityParticleGenerator.hpp"
-#include "ParticleSystem/Generators/SpherePositionParticleGenerator.hpp"
-#include "ParticleSystem/Generators/AccelerationParticleGenerator.hpp"
-#include "ParticleSystem/Generators/ColorParticleGenerator.hpp"
-#include "ParticleSystem/Generators/UniformScaleParticleGenerator.hpp"
-#include "ParticleSystem/Generators/TimeParticleGenerator.hpp"
-#include "ParticleSystem/Generators/NodePositionParticleGenerator.hpp"
-#include "ParticleSystem/Generators/RandomValueParticleGenerator.hpp"
-#include "ParticleSystem/Generators/DefaultValueParticleGenerator.hpp"
-
-#include "ParticleSystem/Updaters/EulerParticleUpdater.hpp"
-#include "ParticleSystem/Updaters/TimeParticleUpdater.hpp"
-#include "ParticleSystem/Updaters/FloorParticleUpdater.hpp"
-#include "ParticleSystem/Updaters/CameraSortParticleUpdater.hpp"
-#include "ParticleSystem/Updaters/AttractorParticleUpdater.hpp"
-#include "ParticleSystem/Updaters/SetAttribValueParticleUpdater.hpp"
-
-#include "ParticleSystem/Renderers/PointSpriteParticleRenderer.hpp"
-#include "ParticleSystem/Renderers/OrientedQuadParticleRenderer.hpp"
-#include "ParticleSystem/Renderers/NodeParticleRenderer.hpp"
-
 using namespace crimild;
 
 // TODO: move this to a component
