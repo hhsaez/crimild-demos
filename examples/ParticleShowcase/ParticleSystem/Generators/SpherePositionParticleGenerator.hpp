@@ -28,14 +28,14 @@
 #ifndef CRIMILD_PARTICLE_GENERATOR_POSITION_SPEED_
 #define CRIMILD_PARTICLE_GENERATOR_POSITION_SPEED_
 
-#include "../ParticleEmitterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
 	/**
 
 	 */
-    class SpherePositionParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+    class SpherePositionParticleGenerator : public ParticleSystemComponent::ParticleGenerator {
     public:
         SpherePositionParticleGenerator( void );
         virtual ~SpherePositionParticleGenerator( void );
@@ -53,7 +53,7 @@ namespace crimild {
 		Vector3f _origin;
 		Vector3f _size;
 
-		Vector3f *_positions = nullptr;
+		ParticleAttribArray *_positions = nullptr;
     };
 
 }

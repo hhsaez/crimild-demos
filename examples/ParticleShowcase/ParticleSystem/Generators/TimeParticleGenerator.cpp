@@ -41,27 +41,19 @@ TimeParticleGenerator::~TimeParticleGenerator( void )
 
 void TimeParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-    auto tAttribs = particles->getAttrib( ParticleAttribType::TIME );
-	if ( tAttribs == nullptr ) {
-		particles->setAttribs( ParticleAttribType::TIME, crimild::alloc< Real32ParticleAttribArray >() );
-		tAttribs = particles->getAttrib( ParticleAttribType::TIME );
-	}
-    _times = tAttribs->getData< crimild::Real32 >();
-
-    auto lAttribs = particles->getAttrib( ParticleAttribType::LIFE_TIME );
-	if ( lAttribs == nullptr ) {
-		particles->setAttribs( ParticleAttribType::LIFE_TIME, crimild::alloc< Real32ParticleAttribArray >() );
-		lAttribs = particles->getAttrib( ParticleAttribType::LIFE_TIME );
-	}
-    _lifeTimes = lAttribs->getData< crimild::Real32 >();
+	_times = particles->createAttribArray< crimild::Real32 >( ParticleAttribType::TIME );
+	_lifeTimes = particles->createAttribArray< crimild::Real32 >( ParticleAttribType::LIFE_TIME );
 }
 
 void TimeParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
+	auto ts = _times->getData< crimild::Real32 >();
+	auto lts = _lifeTimes->getData< crimild::Real32 >();
+	
     for ( ParticleId i = startId; i < endId; i++ ) {
 		auto t = Random::generate< crimild::Real32 >( _minTime, _maxTime );
-		_lifeTimes[ i ] = t;
-		_times[ i ] = t;
+		ts[ i ] = t;
+		lts[ i ] = t;
     }
 }
 

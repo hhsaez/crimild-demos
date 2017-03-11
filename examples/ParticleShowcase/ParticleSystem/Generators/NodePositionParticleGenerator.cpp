@@ -41,17 +41,14 @@ NodePositionParticleGenerator::~NodePositionParticleGenerator( void )
 
 void NodePositionParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-    auto pArray = particles->getAttrib( ParticleAttribType::POSITION );
-	if ( pArray == nullptr ) {
-		particles->setAttribs( ParticleAttribType::POSITION, crimild::alloc< Vector3fParticleAttribArray >() );
-		pArray = particles->getAttrib( ParticleAttribType::POSITION );
-	}
-    _positions = pArray->getData< Vector3f >();
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
 }
 
 void NodePositionParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
 	assert( _targetNode != nullptr );
+
+	auto ps = _positions->getData< Vector3f >();
 
 	auto origin = _targetNode->getWorld().getTranslate();
 	node->getWorld().applyInverseToPoint( origin, origin );
@@ -59,6 +56,7 @@ void NodePositionParticleGenerator::generate( Node *node, crimild::Real64 dt, Pa
     const auto posMin = origin - _size;
     const auto posMax = origin + _size;
 
+	// TODO: use random vectors
     for ( ParticleId i = startId; i < endId; i++ ) {
         auto x = Random::generate< Real32 >( posMin.x(), posMax.x() );
         auto y = Random::generate< Real32 >( posMin.y(), posMax.y() );
@@ -66,10 +64,10 @@ void NodePositionParticleGenerator::generate( Node *node, crimild::Real64 dt, Pa
 		if ( particles->shouldComputeInWorldSpace() ) {
 			auto p = Vector3f( x, y, z );
 			node->getWorld().applyToPoint( p, p );
-			_positions[ i ] = p;
+			ps[ i ] = p;
 		}
 		else {
-			_positions[ i ] = Vector3f( x, y, z );
+			ps[ i ] = Vector3f( x, y, z );
 		}
     }
 }

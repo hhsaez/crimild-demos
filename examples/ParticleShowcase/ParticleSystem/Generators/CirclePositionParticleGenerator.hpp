@@ -28,14 +28,14 @@
 #ifndef CRIMILD_PARTICLE_GENERATOR_POSITION_CIRCLE_
 #define CRIMILD_PARTICLE_GENERATOR_POSITION_CIRCLE_
 
-#include "../ParticleEmitterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
 	/**
 	   \todo Lacks implementation
 	 */
-    class CirclePositionParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+    class CirclePositionParticleGenerator : public ParticleSystemComponent::ParticleGenerator {
     public:
         CirclePositionParticleGenerator( void );
         virtual ~CirclePositionParticleGenerator( void );

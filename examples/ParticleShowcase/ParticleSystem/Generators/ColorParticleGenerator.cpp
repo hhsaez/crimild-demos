@@ -41,36 +41,23 @@ ColorParticleGenerator::~ColorParticleGenerator( void )
 
 void ColorParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-    auto cAttribs = particles->getAttrib( ParticleAttribType::COLOR );
-	if ( cAttribs == nullptr ) {
-		particles->setAttribs( ParticleAttribType::COLOR, crimild::alloc< RGBAColorfParticleAttribArray >() );
-		cAttribs = particles->getAttrib( ParticleAttribType::COLOR );
-	}
-    _colors = cAttribs->getData< RGBAColorf >();
-    
-	auto sColorAttribs = particles->getAttrib( ParticleAttribType::START_COLOR );
-	if ( sColorAttribs == nullptr ) {
-		particles->setAttribs( ParticleAttribType::START_COLOR, crimild::alloc< RGBAColorfParticleAttribArray >() );
-		sColorAttribs = particles->getAttrib( ParticleAttribType::START_COLOR );
-	}
-	_startColors = sColorAttribs->getData< RGBAColorf >();
-
-	auto eColorAttribs = particles->getAttrib( ParticleAttribType::END_COLOR );
-	if ( eColorAttribs == nullptr ) {
-		particles->setAttribs( ParticleAttribType::END_COLOR, crimild::alloc< RGBAColorfParticleAttribArray >() );
-		eColorAttribs = particles->getAttrib( ParticleAttribType::END_COLOR );
-	}
-	_endColors = eColorAttribs->getData< RGBAColorf >();
+	_colors = particles->createAttribArray< RGBAColorf >( ParticleAttribType::COLOR );
+	_startColors = particles->createAttribArray< RGBAColorf >( ParticleAttribType::START_COLOR );
+	_endColors = particles->createAttribArray< RGBAColorf >( ParticleAttribType::END_COLOR );
 }
 
 void ColorParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
+	auto cs = _colors->getData< RGBAColorf >();
+	auto sc = _startColors->getData< RGBAColorf >();
+	auto ec = _endColors->getData< RGBAColorf >();
+	
 	for ( ParticleId i = startId; i < endId; i++ ) {
 		auto r = Random::generate< Real32 >( _minStartColor.r(), _maxStartColor.r() );
 		auto g = Random::generate< Real32 >( _minStartColor.g(), _maxStartColor.g() );
 		auto b = Random::generate< Real32 >( _minStartColor.b(), _maxStartColor.b() );
 		auto a = Random::generate< Real32 >( _minStartColor.a(), _maxStartColor.a() );
-		_startColors[ i ] = RGBAColorf( r, g, b, a );
+		sc[ i ] = RGBAColorf( r, g, b, a );
 	}
 
 	for ( ParticleId i = startId; i < endId; i++ ) {
@@ -78,11 +65,11 @@ void ColorParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleD
 		auto g = Random::generate< Real32 >( _minEndColor.g(), _maxEndColor.g() );
 		auto b = Random::generate< Real32 >( _minEndColor.b(), _maxEndColor.b() );
 		auto a = Random::generate< Real32 >( _minEndColor.a(), _maxEndColor.a() );
-		_endColors[ i ] = RGBAColorf( r, g, b, a );
+		ec[ i ] = RGBAColorf( r, g, b, a );
 	}
 
     for ( ParticleId i = startId; i < endId; i++ ) {
-        _colors[ i ] = _startColors[ i ];
+        cs[ i ] = sc[ i ];
     }
 }
 

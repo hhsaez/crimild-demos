@@ -41,18 +41,15 @@ UniformScaleParticleGenerator::~UniformScaleParticleGenerator( void )
 
 void UniformScaleParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-    auto sAttribs = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
-	if ( sAttribs == nullptr ) {
-		particles->setAttribs( ParticleAttribType::UNIFORM_SCALE, crimild::alloc< Real32ParticleAttribArray >() );
-		sAttribs = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
-	}
-	_scales = sAttribs->getData< crimild::Real32 >();
+	_scales = particles->createAttribArray< crimild::Real32 >( ParticleAttribType::UNIFORM_SCALE );
 }
 
 void UniformScaleParticleGenerator::generate( Node *node, double dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
+	auto ss = _scales->getData< crimild::Real32 >();
+
     for ( ParticleId i = startId; i < endId; i++ ) {
-		_scales[ i ] = Random::generate< crimild::Real32 >( _minScale, _maxScale );
+		ss[ i ] = Random::generate< crimild::Real32 >( _minScale, _maxScale );
     }
 }
 

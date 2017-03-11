@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_UPDATER_EULER_
 #define CRIMILD_PARTICLE_UPDATER_EULER_
 
-#include "../ParticleUpdaterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class EulerParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
+    class EulerParticleUpdater : public ParticleSystemComponent::ParticleUpdater {
     public:
         EulerParticleUpdater( void );
         virtual ~EulerParticleUpdater( void );
@@ -46,9 +46,9 @@ namespace crimild {
 	private:
 		Vector3f _globalAcceleration;
 
-		Vector3f *_positions = nullptr;
-		Vector3f *_velocities = nullptr;
-		Vector3f *_accelerations = nullptr;
+		ParticleAttribArray *_positions = nullptr;
+		ParticleAttribArray *_velocities = nullptr;
+		ParticleAttribArray *_accelerations = nullptr;
     };
 
 }

@@ -43,22 +43,19 @@ AccelerationParticleGenerator::~AccelerationParticleGenerator( void )
 
 void AccelerationParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-    auto aAttribs = particles->getAttrib( ParticleAttribType::ACCELERATION );
-	if ( aAttribs == nullptr ) {
-		particles->setAttribs( ParticleAttribType::ACCELERATION, crimild::alloc< Vector3fParticleAttribArray >() );
-		aAttribs = particles->getAttrib( ParticleAttribType::ACCELERATION );
-	}
-
-	_accelerations = aAttribs->getData< Vector3f >();
+	_accelerations = particles->createAttribArray< Vector3f >( ParticleAttribType::ACCELERATION );
 }
 
 void AccelerationParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
+	auto as = _accelerations->getData< Vector3f >();
+
+	// TODO: use random vector
     for ( ParticleId i = startId; i < endId; i++ ) {
         auto x = Random::generate< Real32 >( _minAcceleration.x(), _maxAcceleration.x() );
         auto y = Random::generate< Real32 >( _minAcceleration.y(), _maxAcceleration.y() );
         auto z = Random::generate< Real32 >( _minAcceleration.z(), _maxAcceleration.z() );
-		_accelerations[ i ] = Vector3f( x, y, z );
+		as[ i ] = Vector3f( x, y, z );
     }
 }
 

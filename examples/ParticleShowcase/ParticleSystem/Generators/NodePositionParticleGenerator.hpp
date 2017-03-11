@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_GENERATOR_POSITION_NODE_
 #define CRIMILD_PARTICLE_GENERATOR_POSITION_NODE_
 
-#include "../ParticleEmitterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class NodePositionParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+    class NodePositionParticleGenerator : public ParticleSystemComponent::ParticleGenerator {
     public:
         NodePositionParticleGenerator( void );
         virtual ~NodePositionParticleGenerator( void );
@@ -51,7 +51,7 @@ namespace crimild {
 		Node *_targetNode = nullptr;
         Vector3f _size;
 
-		Vector3f *_positions = nullptr;
+		ParticleAttribArray *_positions = nullptr;
     };
 
 }

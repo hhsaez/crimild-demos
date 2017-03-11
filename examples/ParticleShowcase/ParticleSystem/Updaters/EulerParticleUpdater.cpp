@@ -41,23 +41,9 @@ EulerParticleUpdater::~EulerParticleUpdater( void )
 
 void EulerParticleUpdater::configure( Node *node, ParticleData *particles )
 {
-	auto pAttribs = particles->getAttrib( ParticleAttribType::POSITION );
-	assert( pAttribs != nullptr );
-
-	_positions = pAttribs->getData< Vector3f >();
-	assert( _positions != nullptr );
-
-	auto vAttribs = particles->getAttrib( ParticleAttribType::VELOCITY );
-	assert( vAttribs != nullptr );
-
-	_velocities = vAttribs->getData< Vector3f >();
-	assert( _velocities != nullptr );
-
-	auto aAttribs = particles->getAttrib( ParticleAttribType::ACCELERATION );
-	assert( aAttribs != nullptr );
-
-	_accelerations = aAttribs->getData< Vector3f >();
-	assert( _accelerations != nullptr );
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
+	_velocities = particles->createAttribArray< Vector3f >( ParticleAttribType::VELOCITY );
+	_accelerations = particles->createAttribArray< Vector3f >( ParticleAttribType::ACCELERATION );
 }
 
 void EulerParticleUpdater::update( Node *node, crimild::Real64 dt, ParticleData *particles )
@@ -66,24 +52,28 @@ void EulerParticleUpdater::update( Node *node, crimild::Real64 dt, ParticleData 
 
 	const auto g = dt * _globalAcceleration;
 
+	auto as = _accelerations->getData< Vector3f >();
+	auto vs = _velocities->getData< Vector3f >();
+	auto ps = _positions->getData< Vector3f >();
+
 	// TODO: all the accelerations are the same value
 	// I think this could be optimized, but other
 	// updaters may need separated values
 	// Also, accelerations are handled in the same way
 	// regardless of the computation space (world or local)
 	for ( int i = 0; i < count; i++ ) {
-		_accelerations[ i ] += g;
+		as[ i ] += g;
 	}
 
 	// Velocities are handled in the same way
 	// regardless of the computation space (world or local)
 	for ( int i = 0; i < count; i++ ) {
-		_velocities[ i ] += dt * _accelerations[ i ];
+		vs[ i ] += dt * as[ i ];
 	}
 	
 	for ( int i = 0; i < count; i++ ) {
-		auto v = dt * _velocities[ i ];
-		_positions[ i ] += v;
+		auto v = dt * vs[ i ];
+		ps[ i ] += v;
 	}
 }
 

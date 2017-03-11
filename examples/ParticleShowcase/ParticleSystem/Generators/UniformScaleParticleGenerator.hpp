@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_GENERATOR_UNIFORM_SCALE_
 #define CRIMILD_PARTICLE_GENERATOR_UNIFORM_SCALE_
 
-#include "../ParticleEmitterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class UniformScaleParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+    class UniformScaleParticleGenerator : public ParticleSystemComponent::ParticleGenerator {
     public:
         UniformScaleParticleGenerator( void );
         virtual ~UniformScaleParticleGenerator( void );
@@ -50,7 +50,7 @@ namespace crimild {
 		crimild::Real32 _minScale;
 		crimild::Real32 _maxScale;
 
-		Real32 *_scales = nullptr;
+		ParticleAttribArray *_scales = nullptr;
     };
 
 }

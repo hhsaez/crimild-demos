@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_UPDATER_POSITION_COLOR_
 #define CRIMILD_PARTICLE_UPDATER_POSITION_COLOR_
 
-#include "../ParticleUpdaterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class PositionColorParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
+    class PositionColorParticleUpdater : public ParticleSystemComponent::ParticleUpdater {
     public:
         PositionColorParticleUpdater( void );
         virtual ~PositionColorParticleUpdater( void );

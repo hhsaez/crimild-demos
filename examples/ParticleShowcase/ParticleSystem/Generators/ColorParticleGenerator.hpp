@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_GENERATOR_COLOR_
 #define CRIMILD_PARTICLE_GENERATOR_COLOR_
 
-#include "../ParticleEmitterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class ColorParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+    class ColorParticleGenerator : public ParticleSystemComponent::ParticleGenerator {
     public:
         ColorParticleGenerator( void );
         virtual ~ColorParticleGenerator( void );
@@ -58,9 +58,9 @@ namespace crimild {
 		RGBAColorf _minEndColor;
 		RGBAColorf _maxEndColor;
 
-        RGBAColorf *_colors = nullptr;
-		RGBAColorf *_startColors = nullptr;
-		RGBAColorf *_endColors = nullptr;
+        ParticleAttribArray *_colors = nullptr;
+		ParticleAttribArray *_startColors = nullptr;
+		ParticleAttribArray *_endColors = nullptr;
     };
 
 }

@@ -41,16 +41,13 @@ SpherePositionParticleGenerator::~SpherePositionParticleGenerator( void )
 
 void SpherePositionParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-    auto pArray = particles->getAttrib( ParticleAttribType::POSITION );
-	if ( pArray == nullptr ) {
-		particles->setAttribs( ParticleAttribType::POSITION, crimild::alloc< Vector3fParticleAttribArray >() );
-		pArray = particles->getAttrib( ParticleAttribType::POSITION );
-	}
-    _positions = pArray->getData< Vector3f >();
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
 }
 
 void SpherePositionParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
+	auto ps = _positions->getData< Vector3f >();
+	
     const auto posMin = -Vector3f::ONE;
     const auto posMax = Vector3f::ONE;
 
@@ -58,9 +55,9 @@ void SpherePositionParticleGenerator::generate( Node *node, crimild::Real64 dt, 
         auto x = Random::generate< Real32 >( posMin.x(), posMax.x() );
         auto y = Random::generate< Real32 >( posMin.y(), posMax.y() );
         auto z = Random::generate< Real32 >( posMin.z(), posMax.z() );
-        _positions[ i ] = _origin + Vector3f( x, y, z ).getNormalized().times( _size );
+        ps[ i ] = _origin + Vector3f( x, y, z ).getNormalized().times( _size );
 		if ( particles->shouldComputeInWorldSpace() ) {
-			node->getWorld().applyToPoint( _positions[ i ], _positions[ i ] );
+			node->getWorld().applyToPoint( ps[ i ], ps[ i ] );
 		}
     }
 }

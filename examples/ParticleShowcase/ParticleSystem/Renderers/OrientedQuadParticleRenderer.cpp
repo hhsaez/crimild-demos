@@ -25,13 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "OrientedQuadParticleRendererComponent.hpp"
-
-#include "../ParticleSystemComponent.hpp"
+#include "OrientedQuadParticleRenderer.hpp"
 
 using namespace crimild;
 
-OrientedQuadParticleRendererComponent::OrientedQuadParticleRendererComponent( void )
+OrientedQuadParticleRenderer::OrientedQuadParticleRenderer( void )
 {
 	// create the material here so it can be modified later
 	_material = crimild::alloc< Material >();
@@ -40,41 +38,31 @@ OrientedQuadParticleRendererComponent::OrientedQuadParticleRendererComponent( vo
     _material->setProgram( program );
 }
 
-OrientedQuadParticleRendererComponent::~OrientedQuadParticleRendererComponent( void )
+OrientedQuadParticleRenderer::~OrientedQuadParticleRenderer( void )
 {
 
 }
 
-void OrientedQuadParticleRendererComponent::onAttach( void )
+void OrientedQuadParticleRenderer::configure( Node *node, ParticleData *particles ) 
 {
 	_geometry = crimild::alloc< Geometry >();
 	if ( _material != nullptr ) {
 		_geometry->getComponent< MaterialComponent >()->attachMaterial( _material );
 	}
 
-	getNode< Group >()->attachNode( _geometry );
-}
+	static_cast< Group * >( node )->attachNode( _geometry );
 
-void OrientedQuadParticleRendererComponent::onDetach( void )
-{
-
-}
-
-void OrientedQuadParticleRendererComponent::start( void )
-{
-	const auto ps = getComponent< ParticleSystemComponent >();
-	_particles = ps->getParticles();
-	_positions = _particles->getAttrib( ParticleAttribType::POSITION )->getData< Vector3f >();
-	_sizes = _particles->getAttrib( ParticleAttribType::UNIFORM_SCALE )->getData< crimild::Real32 >();
+	_positions = particles->getAttrib( ParticleAttribType::POSITION );
+	_sizes = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
 
     _primitive = crimild::alloc< Primitive >( Primitive::Type::TRIANGLES );
 
 	_geometry->attachPrimitive( _primitive );
 }
 
-void OrientedQuadParticleRendererComponent::update( const Clock &c )
+void OrientedQuadParticleRenderer::update( Node *node, crimild::Real64 dt, ParticleData *particles )
 {
-    const auto pCount = _particles->getAliveCount();
+    const auto pCount = particles->getAliveCount();
     if ( pCount == 0 ) {
         return;
     }
@@ -86,7 +74,6 @@ void OrientedQuadParticleRendererComponent::update( const Clock &c )
 	auto cameraUp = camera->getWorld().computeUp();
 	auto cameraRight = camera->getWorld().computeRight();
 
-	const auto node = getNode();
 	node->getWorld().applyInverseToVector( cameraUp, cameraUp );
 	node->getWorld().applyInverseToVector( cameraRight, cameraRight );
 
@@ -100,6 +87,8 @@ void OrientedQuadParticleRendererComponent::update( const Clock &c )
 	const auto uv2 = Vector2f( 1.0f, 1.0f );
 	const auto uv3 = Vector2f( 1.0f, 0.0f );
 
+	const auto ps = _positions->getData< Vector3f >();
+	const auto ss = _sizes->getData< crimild::Real32 >();
 
 	// Vertex data is interleaved, so it should be more efficient
 	// to set each vertex attribute per loop (as below) instead of
@@ -107,11 +96,12 @@ void OrientedQuadParticleRendererComponent::update( const Clock &c )
 	// TODO: I need to confirm this somehow
 	for ( auto i = 0; i < pCount; i++ ) {
 		auto idx = i * 4;
-		auto pos = _positions[ i ];
-		if ( _particles->shouldComputeInWorldSpace() ) {
+		auto pos = ps[ i ];
+		if ( particles->shouldComputeInWorldSpace() ) {
+			// TODO: cache inverse transform?
 			node->getWorld().applyInverseToPoint( pos, pos );
 		}
-		auto s = _sizes[ i ];
+		auto s = ss[ i ];
 		
 		vbo->setPositionAt( idx + 0, pos + s * offset0 );
 		vbo->setTextureCoordAt( idx + 0, uv0 );
@@ -137,10 +127,8 @@ void OrientedQuadParticleRendererComponent::update( const Clock &c )
 		ibo->setIndexAt( idx + 5, vdx + 3 );
 	}
 
-    crimild::concurrency::sync_frame( [this, vbo, ibo] {
-        _primitive->setVertexBuffer( vbo );
-        _primitive->setIndexBuffer( ibo );
-    });
+	_primitive->setVertexBuffer( vbo );
+	_primitive->setIndexBuffer( ibo );
 }
 
 

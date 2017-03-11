@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_UPDATER_UNIFORM_SCALE_
 #define CRIMILD_PARTICLE_UPDATER_UNIFORM_SCALE_
 
-#include "../ParticleUpdaterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class UniformScaleParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
+    class UniformScaleParticleUpdater : public ParticleSystemComponent::ParticleUpdater {
     public:
         UniformScaleParticleUpdater( void );
         virtual ~UniformScaleParticleUpdater( void );

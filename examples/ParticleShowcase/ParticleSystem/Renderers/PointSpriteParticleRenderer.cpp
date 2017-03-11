@@ -25,13 +25,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "PointSpriteParticleRendererComponent.hpp"
-
-#include "../ParticleSystemComponent.hpp"
+#include "PointSpriteParticleRenderer.hpp"
 
 using namespace crimild;
 
-PointSpriteParticleRendererComponent::PointSpriteParticleRendererComponent( void )
+PointSpriteParticleRenderer::PointSpriteParticleRenderer( void )
 {
 	// create the material here so it can be modified later
 	_material = crimild::alloc< Material >();
@@ -40,72 +38,64 @@ PointSpriteParticleRendererComponent::PointSpriteParticleRendererComponent( void
     _material->setProgram( program );
 }
 
-PointSpriteParticleRendererComponent::~PointSpriteParticleRendererComponent( void )
+PointSpriteParticleRenderer::~PointSpriteParticleRenderer( void )
 {
 
 }
 
-void PointSpriteParticleRendererComponent::onAttach( void )
+void PointSpriteParticleRenderer::configure( Node *node, ParticleData *particles ) 
 {
 	_geometry = crimild::alloc< Geometry >();
 	if ( _material != nullptr ) {
 		_geometry->getComponent< MaterialComponent >()->attachMaterial( _material );
 	}
 
-	getNode< Group >()->attachNode( _geometry );
-}
+	static_cast< Group * >( node )->attachNode( _geometry );
 
-void PointSpriteParticleRendererComponent::onDetach( void )
-{
-
-}
-
-void PointSpriteParticleRendererComponent::start( void )
-{
-	const auto ps = getComponent< ParticleSystemComponent >();
-	_particles = ps->getParticles();
-	_positions = _particles->getAttrib( ParticleAttribType::POSITION )->getData< Vector3f >();
-	_colors = _particles->getAttrib( ParticleAttribType::COLOR )->getData< RGBAColorf >();
-	_sizes = _particles->getAttrib( ParticleAttribType::UNIFORM_SCALE )->getData< crimild::Real32 >();
+	_positions = particles->getAttrib( ParticleAttribType::POSITION );
+	_colors = particles->getAttrib( ParticleAttribType::COLOR );
+	_sizes = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
 
     _primitive = crimild::alloc< Primitive >( Primitive::Type::POINTS );
 
 	_geometry->attachPrimitive( _primitive );
 }
 
-void PointSpriteParticleRendererComponent::update( const Clock &c )
+void PointSpriteParticleRenderer::update( Node *node, crimild::Real64 dt, ParticleData *particles )
 {
-	// TODO: sort particles back-to-front?
-
-    const auto pCount = _particles->getAliveCount();
+    const auto pCount = particles->getAliveCount();
     if ( pCount == 0 ) {
         return;
     }
     
     auto vbo = crimild::alloc< VertexBufferObject >( VertexFormat::VF_P3_C4_UV2, pCount );
-    
-    // traversing the arrays in separated loops seems to be more cache-friendly, right? right?
 
-	if ( _particles->shouldComputeInWorldSpace() ) {
-		auto node = getNode();
+	const auto ps = _positions->getData< Vector3f >();
+	const auto ss = _sizes->getData< crimild::Real32 >();
+	const auto cs = _colors->getData< RGBAColorf >();
+    
+    // TODO: should I traverse the arrays by grouping data in 4/8 byte touples?
+
+	if ( particles->shouldComputeInWorldSpace() ) {
 		for ( auto i = 0; i < pCount; i++ ) {
-			auto p = _positions[ i ];
+			auto p = ps[ i ];
+			// TODO: cache inverse transform?
 			node->getWorld().applyInverseToPoint( p, p );
 			vbo->setPositionAt( i, p );
 		}
 	}
 	else {
 		for ( auto i = 0; i < pCount; i++ ) {
-			vbo->setPositionAt( i, _positions[ i ] );
+			vbo->setPositionAt( i, ps[ i ] );
 		}
 	}
 
 	for ( auto i = 0; i < pCount; i++ ) {
-		vbo->setTextureCoordAt( i, Vector2f( _sizes[ i ], 0.0f ) );
+		vbo->setTextureCoordAt( i, Vector2f( ss[ i ], 0.0f ) );
 	}
 
 	for ( auto i = 0; i < pCount; i++ ) {
-		vbo->setRGBAColorAt( i, _colors[ i ] );
+		vbo->setRGBAColorAt( i, cs[ i ] );
 	}
 
     auto ibo = crimild::alloc< IndexBufferObject >( pCount );

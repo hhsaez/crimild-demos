@@ -120,6 +120,26 @@ namespace crimild {
 		std::vector< crimild::Bool > _alive; // replace this for a custom array
 
 		crimild::Bool _computeInWorldSpace = false;
+
+	public:
+		/**
+		   \brief Get the raw data for an attribute
+
+		   \remarks This method creates the ParticleAttribArray instance
+		   if none is found matching the given attribType
+		 */
+		template< typename T >
+		ParticleAttribArray *createAttribArray( ParticleAttribType attribType )
+		{
+			auto attribs = getAttrib( attribType );
+			if ( attribs == nullptr ) {
+				setAttribs( attribType, crimild::alloc< ParticleAttribArrayImpl< T >>() );
+				attribs = getAttrib( attribType );
+			}
+
+			assert( attribs != nullptr );
+			return attribs;
+		}
     };
 
 	using ParticleDataPtr = SharedPointer< ParticleData >;

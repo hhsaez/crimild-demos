@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_GENERATOR_VELOCITY_
 #define CRIMILD_PARTICLE_GENERATOR_VELOCITY_
 
-#include "../ParticleEmitterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class VelocityParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+    class VelocityParticleGenerator : public ParticleSystemComponent::ParticleGenerator {
     public:
         VelocityParticleGenerator( void );
         virtual ~VelocityParticleGenerator( void );
@@ -50,7 +50,7 @@ namespace crimild {
         Vector3f _minVelocity;
         Vector3f _maxVelocity;
 
-		Vector3f *_velocities = nullptr;
+		ParticleAttribArray *_velocities = nullptr;
     };
 
 }

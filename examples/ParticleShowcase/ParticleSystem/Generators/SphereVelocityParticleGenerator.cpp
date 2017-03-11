@@ -41,16 +41,13 @@ SphereVelocityParticleGenerator::~SphereVelocityParticleGenerator( void )
 
 void SphereVelocityParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-    auto vArray = particles->getAttrib( ParticleAttribType::VELOCITY );
-	if ( vArray == nullptr ) {
-		particles->setAttribs( ParticleAttribType::VELOCITY, crimild::alloc< Vector3fParticleAttribArray >() );
-		vArray = particles->getAttrib( ParticleAttribType::VELOCITY );
-	}
-    _velocities = vArray->getData< Vector3f >();
+	_velocities = particles->createAttribArray< Vector3f >( ParticleAttribType::VELOCITY );
 }
 
 void SphereVelocityParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
+	auto vs = _velocities->getData< Vector3f >();
+	
     const auto posMin = -Vector3f::ONE;
     const auto posMax = Vector3f::ONE;
 
@@ -58,7 +55,7 @@ void SphereVelocityParticleGenerator::generate( Node *node, crimild::Real64 dt, 
         auto x = Random::generate< Real32 >( posMin.x(), posMax.x() );
         auto y = Random::generate< Real32 >( posMin.y(), posMax.y() );
         auto z = Random::generate< Real32 >( posMin.z(), posMax.z() );		
-        _velocities[ i ] = Vector3f( x, y, z ).getNormalized().times( _magnitude );
+        vs[ i ] = Vector3f( x, y, z ).getNormalized().times( _magnitude );
     }
 }
 

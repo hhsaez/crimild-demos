@@ -29,8 +29,19 @@
 
 using namespace crimild;
 
+ParticleSystemComponent::ParticleSystemComponent( void )
+{
+
+}
+
 ParticleSystemComponent::ParticleSystemComponent( ParticleDataPtr const &particles )
 	: _particles( particles )
+{
+
+}
+
+ParticleSystemComponent::ParticleSystemComponent( crimild::Size maxParticles )
+	: _particles( crimild::alloc< ParticleData >( maxParticles ) )
 {
 
 }
@@ -40,13 +51,87 @@ ParticleSystemComponent::~ParticleSystemComponent( void )
 
 }
 
-void ParticleSystemComponent::onAttach( void )
+void ParticleSystemComponent::start( void )
 {
+	auto particles = getParticles();
+	assert( particles != nullptr );
+	
+	auto node = getNode();
+
+	configureGenerators( node, particles );
+	configureUpdaters( node, particles );
+	configureRenderers( node, particles );
+
 	_particles->generate();
 }
 
-void ParticleSystemComponent::onDetach( void )
+void ParticleSystemComponent::configureGenerators( Node *node, ParticleData *particles )
 {
-
+	auto gCount = _generators.getCount();
+    for ( int i = 0; i < gCount; i++ ) {
+		_generators[ i ]->configure( node, particles );
+	}
 }
+
+void ParticleSystemComponent::configureUpdaters( Node *node, ParticleData *particles )
+{
+	const auto uCount = _updaters.getCount();
+    for ( int i = 0; i < uCount; i++ ) {
+		_updaters[ i ]->configure( node, particles );
+	}
+}
+
+void ParticleSystemComponent::configureRenderers( Node *node, ParticleData *particles )
+{
+	const auto rCount = _renderers.getCount();
+    for ( int i = 0; i < rCount; i++ ) {
+		_renderers[ i ]->configure( node, particles );
+	}
+}
+
+void ParticleSystemComponent::update( const Clock &c )
+{
+    const auto dt = c.getDeltaTime();
+
+	auto node = getNode();
+	auto particles = getParticles();
+
+	updateGenerators( node, dt, particles );
+	updateUpdaters( node, dt, particles );
+	updateRenderers( node, dt, particles );
+}
+
+void ParticleSystemComponent::updateGenerators( Node *node, crimild::Real64 dt, ParticleData *particles )
+{
+    const ParticleId maxNewParticles = _burst ? _emitRate : Numeric< ParticleId >::max( 1, dt * _emitRate );
+    const ParticleId startId = particles->getAliveCount();            
+    const ParticleId endId = Numeric< ParticleId >::min( startId + maxNewParticles, particles->getParticleCount() - 1 );
+
+	const auto gCount = _generators.getCount();
+	for ( int i = 0; i < gCount; i++ ) {
+		_generators[ i ]->generate( node, dt, particles, startId, endId );
+	}
+
+    for ( ParticleId i = startId; i < endId; i++ ) {
+        particles->wake( i );
+    }
+}
+
+void ParticleSystemComponent::updateUpdaters( Node *node, crimild::Real64 dt, ParticleData *particles )
+{
+	const auto uCount = _updaters.getCount();
+	for ( int i = 0; i < uCount; i++ ) {
+		_updaters[ i ]->update( node, dt, particles );
+	}
+}
+
+void ParticleSystemComponent::updateRenderers( Node *node, crimild::Real64 dt, ParticleData *particles )
+{
+	const auto rCount = _renderers.getCount();
+	for ( int i = 0; i < rCount; i++ ) {
+		_renderers[ i ]->update( node, dt, particles );
+	}
+}
+
+
 

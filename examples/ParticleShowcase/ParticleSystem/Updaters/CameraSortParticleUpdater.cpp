@@ -41,11 +41,7 @@ CameraSortParticleUpdater::~CameraSortParticleUpdater( void )
 
 void CameraSortParticleUpdater::configure( Node *node, ParticleData *particles )
 {
-    auto pAttribs = particles->getAttrib( ParticleAttribType::POSITION );
-    assert( pAttribs != nullptr );
-    
-    _positions = pAttribs->getData< Vector3f >();
-    assert( _positions != nullptr );
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
 }
 
 void CameraSortParticleUpdater::update( Node *node, double dt, ParticleData *particles )
@@ -60,12 +56,13 @@ void CameraSortParticleUpdater::update( Node *node, double dt, ParticleData *par
 
 	const auto pCount = particles->getAliveCount();
 
+	const auto ps = _positions->getData< Vector3f >();
+
 	// TODO: I know, bubble sort is slow...
 	// TODO: Also, precompute distances?
 	for ( int i = 0; i < pCount; i++ ) {
-		auto pos = _positions[ i ];
 		for ( int j = i + 1; j < pCount; j++ ) {
-			if ( Distance::computeSquared( _positions[ j ], cameraPos ) > Distance::computeSquared( _positions[ i ], cameraPos ) ) {
+			if ( Distance::computeSquared( ps[ j ], cameraPos ) > Distance::computeSquared( ps[ i ], cameraPos ) ) {
 				particles->swap( i, j );
 			}
 		}

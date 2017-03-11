@@ -41,20 +41,18 @@ FloorParticleUpdater::~FloorParticleUpdater( void )
 
 void FloorParticleUpdater::configure( Node *node, ParticleData *particles )
 {
-    auto pAttribs = particles->getAttrib( ParticleAttribType::POSITION );
-    assert( pAttribs != nullptr );
-    
-    _positions = pAttribs->getData< Vector3f >();
-    assert( _positions != nullptr );
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
 }
 
 void FloorParticleUpdater::update( Node *node, double dt, ParticleData *particles )
 {
     const auto count = particles->getAliveCount();
 
+	auto ps = _positions->getData< Vector3f >();
+
     for ( int i = 0; i < count; i++ ) {
-        if ( _positions[ i ].y() < 0.0f ) {
-            _positions[ i ].y() = 0.0f;
+        if ( ps[ i ].y() < 0.0f ) {
+            ps[ i ].y() = 0.0f;
         }
     }
 }

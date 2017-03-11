@@ -25,36 +25,30 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CRIMILD_PARTICLE_RENDERER_POINT_SPRITE_
-#define CRIMILD_PARTICLE_RENDERER_POINT_SPRITE_
+#ifndef CRIMILD_PARTICLE_RENDERER_ORIENTED_QUAD_
+#define CRIMILD_PARTICLE_RENDERER_ORIENTED_QUAD_
 
-#include "../ParticleRendererComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class PointSpriteParticleRendererComponent : public ParticleRendererComponent {
+    class OrientedQuadParticleRenderer : public ParticleSystemComponent::ParticleRenderer {
     public:
-        PointSpriteParticleRendererComponent( void );
-        virtual ~PointSpriteParticleRendererComponent( void );
+        OrientedQuadParticleRenderer( void );
+        virtual ~OrientedQuadParticleRenderer( void );
 
         inline Material *getMaterial( void ) { return crimild::get_ptr( _material ); }
-
-		virtual void onAttach( void ) override;
-		virtual void onDetach( void ) override;
-
-		virtual void start( void ) override;
-		virtual void update( const Clock &c ) override;
+        
+		virtual void configure( Node *node, ParticleData *particles ) override;
+		virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
         
 	private:
 		MaterialPtr _material;
 		PrimitivePtr _primitive;
 		GeometryPtr _geometry;
 		
-		ParticleData *_particles = nullptr;
-
-		Vector3f *_positions = nullptr;
-		RGBAColorf *_colors = nullptr;
-		Real32 *_sizes = nullptr;
+		ParticleAttribArray *_positions = nullptr;
+		ParticleAttribArray *_sizes = nullptr;
     };
 
 }

@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_GENERATOR_POSITION_BOX_
 #define CRIMILD_PARTICLE_GENERATOR_POSITION_BOX_
 
-#include "../ParticleEmitterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class BoxPositionParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+    class BoxPositionParticleGenerator : public ParticleSystemComponent::ParticleGenerator {
     public:
         BoxPositionParticleGenerator( void );
         virtual ~BoxPositionParticleGenerator( void );
@@ -50,7 +50,7 @@ namespace crimild {
         Vector3f _origin;
         Vector3f _size;
 
-		Vector3f *_positions = nullptr;
+		ParticleAttribArray *_positions = nullptr;
     };
 
 }

@@ -25,51 +25,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "NodeParticleRendererComponent.hpp"
+#ifndef CRIMILD_PARTICLE_RENDERER_NODE_
+#define CRIMILD_PARTICLE_RENDERER_NODE_
 
 #include "../ParticleSystemComponent.hpp"
 
-using namespace crimild;
+namespace crimild {
 
-NodeParticleRendererComponent::NodeParticleRendererComponent( void )
-{
+	/**
+	   \brief Update child nodes based on particle positions
+	 */
+    class NodeParticleRenderer : public ParticleSystemComponent::ParticleRenderer {
+    public:
+        NodeParticleRenderer( void );
+        virtual ~NodeParticleRenderer( void );
 
-}
-
-NodeParticleRendererComponent::~NodeParticleRendererComponent( void )
-{
-
-}
-
-void NodeParticleRendererComponent::onAttach( void )
-{
-
-}
-
-void NodeParticleRendererComponent::onDetach( void )
-{
+		virtual void configure( Node *node, ParticleData *particles ) override;
+		virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
+        
+	private:
+		ParticleAttribArray *_positions = nullptr;
+    };
 
 }
 
-void NodeParticleRendererComponent::start( void )
-{
-	const auto ps = getComponent< ParticleSystemComponent >();
-	_particles = ps->getParticles();
-	_positions = _particles->getAttrib( ParticleAttribType::POSITION )->getData< Vector3f >();
-}
-
-void NodeParticleRendererComponent::update( const Clock &c )
-{
-    const auto pCount = _particles->getAliveCount();
-    if ( pCount == 0 ) {
-        return;
-    }
-    
-	auto group = getNode< Group >();
-
-	for ( int i = 0; i < pCount; i++ ) {
-		group->getNodeAt( i )->local().setTranslate( _positions[ i ] );
-	}
-}
-
+#endif
 

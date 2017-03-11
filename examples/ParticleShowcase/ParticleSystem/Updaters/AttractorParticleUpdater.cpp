@@ -43,17 +43,8 @@ AttractorParticleUpdater::~AttractorParticleUpdater( void )
 
 void AttractorParticleUpdater::configure( Node *node, ParticleData *particles )
 {
-	auto pAttribs = particles->getAttrib( ParticleAttribType::POSITION );
-	assert( pAttribs != nullptr );
-
-	_positions = pAttribs->getData< Vector3f >();
-	assert( _positions != nullptr );
-
-	auto aAttribs = particles->getAttrib( ParticleAttribType::ACCELERATION );
-	assert( aAttribs != nullptr );
-
-	_accelerations = aAttribs->getData< Vector3f >();
-	assert( _accelerations != nullptr );
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
+	_accelerations = particles->createAttribArray< Vector3f >( ParticleAttribType::ACCELERATION );
 }
 
 void AttractorParticleUpdater::update( Node *node, crimild::Real64 dt, ParticleData *particles )
@@ -61,9 +52,12 @@ void AttractorParticleUpdater::update( Node *node, crimild::Real64 dt, ParticleD
 	const auto center = _attractor.getCenter();
 	const auto radius = _attractor.getRadius();
 	const auto count = particles->getAliveCount();
+
+	const auto ps = _positions->getData< Vector3f >();
+	auto as = _accelerations->getData< Vector3f >();
 	
 	for ( crimild::Size i = 0; i < count; i++ ) {
-		const auto p = _positions[ i ];
+		const auto p = ps[ i ];
 
 		auto direction = center - p;
 		auto d = direction.getMagnitude();
@@ -71,7 +65,7 @@ void AttractorParticleUpdater::update( Node *node, crimild::Real64 dt, ParticleD
 			direction /= d;
 			const auto pct = 1.0 - ( d / radius );
 			
-			_accelerations[ i ] += dt * pct * _strength * direction;
+			as[ i ] += dt * pct * _strength * direction;
 		}
 	}
 }

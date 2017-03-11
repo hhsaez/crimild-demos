@@ -25,45 +25,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CRIMILD_PARTICLE_UPDATER_COMPONENT_
-#define CRIMILD_PARTICLE_UPDATER_COMPONENT_
+#ifndef CRIMILD_PARTICLE_RENDERER_POINT_SPRITE_
+#define CRIMILD_PARTICLE_RENDERER_POINT_SPRITE_
 
-#include "ParticleData.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    /**
-        \brief Updates the particles of a particle system
-    */
-    class ParticleUpdaterComponent : public NodeComponent {
-        CRIMILD_IMPLEMENT_RTTI( crimild::ParticleUpdaterComponent )
-
+    class PointSpriteParticleRenderer : public ParticleSystemComponent::ParticleRenderer {
     public:
-        class ParticleUpdater {
-        public:
-            virtual ~ParticleUpdater( void ) { }
+        PointSpriteParticleRenderer( void );
+        virtual ~PointSpriteParticleRenderer( void );
 
-			virtual void configure( Node *node, ParticleData *particles ) = 0;
-            virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) = 0;
-        };
+        inline Material *getMaterial( void ) { return crimild::get_ptr( _material ); }
 
-        using ParticleUpdaterPtr =  SharedPointer< ParticleUpdater >;
-
-    public:
-        ParticleUpdaterComponent( void );
-        virtual ~ParticleUpdaterComponent( void );
-
-        inline void addUpdater( ParticleUpdaterPtr const &updater )
-		{
-			_updaters.add( updater );
-		}
-
-		virtual void start( void ) override;
-        virtual void update( const Clock &c ) override;
-
-    private:
-        ThreadSafeArray< ParticleUpdaterPtr > _updaters;
-		ParticleData *_particles = nullptr;
+		virtual void configure( Node *node, ParticleData *particles ) override;
+		virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
+        
+	private:
+		MaterialPtr _material;
+		PrimitivePtr _primitive;
+		GeometryPtr _geometry;
+		
+		ParticleAttribArray *_positions = nullptr;
+		ParticleAttribArray *_colors = nullptr;
+		ParticleAttribArray *_sizes = nullptr;
     };
 
 }

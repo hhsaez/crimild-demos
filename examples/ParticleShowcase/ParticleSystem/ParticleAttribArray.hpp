@@ -34,7 +34,7 @@ namespace crimild {
 
     using ParticleId = crimild::Size;
 
-    enum class ParticleAttribType {
+    enum class ParticleAttribType : crimild::Int16 {
 		POSITION,
 		VELOCITY,
 		ACCELERATION,
@@ -44,7 +44,7 @@ namespace crimild {
 		UNIFORM_SCALE,
 		TIME,
 		LIFE_TIME,
-		USER_DEFINED,
+		USER_DEFINED = 1000,
 		USER_DEFINED_MAX,
     };
 

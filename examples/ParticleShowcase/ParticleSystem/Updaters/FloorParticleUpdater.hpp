@@ -28,7 +28,7 @@
 #ifndef CRIMILD_PARTICLE_UPDATER_FLOOR_
 #define CRIMILD_PARTICLE_UPDATER_FLOOR_
 
-#include "../ParticleUpdaterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
@@ -37,7 +37,7 @@ namespace crimild {
 
 	   \remarks Use it after a position updater
 	 */
-    class FloorParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
+    class FloorParticleUpdater : public ParticleSystemComponent::ParticleUpdater {
     public:
         FloorParticleUpdater( void );
         virtual ~FloorParticleUpdater( void );
@@ -46,7 +46,7 @@ namespace crimild {
         virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
         
     private:
-        Vector3f *_positions;
+        ParticleAttribArray *_positions = nullptr;
     };
 
 }

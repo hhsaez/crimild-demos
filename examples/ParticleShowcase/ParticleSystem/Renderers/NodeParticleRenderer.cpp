@@ -25,46 +25,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ParticleUpdaterComponent.hpp"
-#include "ParticleSystemComponent.hpp"
+#include "NodeParticleRenderer.hpp"
 
 using namespace crimild;
 
-ParticleUpdaterComponent::ParticleUpdaterComponent( void )
+NodeParticleRenderer::NodeParticleRenderer( void )
 {
 
 }
 
-ParticleUpdaterComponent::~ParticleUpdaterComponent( void )
+NodeParticleRenderer::~NodeParticleRenderer( void )
 {
 
 }
 
-void ParticleUpdaterComponent::start( void )
+void NodeParticleRenderer::configure( Node *node, ParticleData *particles ) 
 {
-    auto ps = getComponent< ParticleSystemComponent >();
-	assert( ps != nullptr );
-	
-    _particles = ps->getParticles();
-	assert( _particles != nullptr );
+	_positions = particles->getAttrib( ParticleAttribType::POSITION );
+}
 
-	auto node = getNode();
+void NodeParticleRenderer::update( Node *node, crimild::Real64 dt, ParticleData *particles )
+{
+    const auto pCount = particles->getAliveCount();
+    if ( pCount == 0 ) {
+        return;
+    }
+    
+	auto group = static_cast< Group * >( node );
 
-	const auto uCount = _updaters.getCount();
-    for ( int i = 0; i < uCount; i++ ) {
-		_updaters[ i ]->configure( node, _particles );
+	const auto ps = _positions->getData< Vector3f >();
+
+	for ( int i = 0; i < pCount; i++ ) {
+		group->getNodeAt( i )->local().setTranslate( ps[ i ] );
 	}
 }
 
-void ParticleUpdaterComponent::update( const Clock &c )
-{
-    const auto dt = c.getDeltaTime();
-
-	auto node = getNode();
-
-	const auto uCount = _updaters.getCount();
-	for ( int i = 0; i < uCount; i++ ) {
-		_updaters[ i ]->update( node, dt, _particles );
-	}
-}
 

@@ -41,20 +41,18 @@ TimeParticleUpdater::~TimeParticleUpdater( void )
 
 void TimeParticleUpdater::configure( Node *node, ParticleData *particles )
 {
-    auto tAttribs = particles->getAttrib( ParticleAttribType::TIME );
-	assert( tAttribs != nullptr );
-	
-    _times = tAttribs->getData< crimild::Real32 >();
-	assert( _times != nullptr );
+	_times = particles->createAttribArray< crimild::Real32 >( ParticleAttribType::TIME );
 }
 
 void TimeParticleUpdater::update( Node *node, double dt, ParticleData *particles )
 {
 	const auto count = particles->getAliveCount();
 
+	auto ts = _times->getData< crimild::Real32 >();
+
 	for ( int i = 0; i < count; i++ ) {
-		_times[ i ] -= dt;
-		if ( _times[ i ] <= 0.0f ) {
+		ts[ i ] -= dt;
+		if ( ts[ i ] <= 0.0f ) {
 			particles->kill( i );
 		}
 	}

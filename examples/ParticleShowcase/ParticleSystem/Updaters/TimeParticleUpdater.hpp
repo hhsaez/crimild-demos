@@ -28,14 +28,14 @@
 #ifndef CRIMILD_PARTICLE_UPDATER_TIME_
 #define CRIMILD_PARTICLE_UPDATER_TIME_
 
-#include "../ParticleUpdaterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
 	/**
 	   Updates the time of particle. Kills it if it's time is over
 	 */
-    class TimeParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
+    class TimeParticleUpdater : public ParticleSystemComponent::ParticleUpdater {
     public:
         TimeParticleUpdater( void );
         virtual ~TimeParticleUpdater( void );
@@ -44,7 +44,7 @@ namespace crimild {
         virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
 
 	private:
-		Real32 *_times = nullptr;
+		ParticleAttribArray *_times = nullptr;
     };
 
 }

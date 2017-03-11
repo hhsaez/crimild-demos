@@ -50,16 +50,133 @@ namespace crimild {
 		/**
 		   \brief Deafult constructor
 		 */
-        ParticleSystemComponent( ParticleDataPtr const &particles );
+		ParticleSystemComponent( void );
+        explicit ParticleSystemComponent( ParticleDataPtr const &particles );
+		explicit ParticleSystemComponent( crimild::Size maxParticles );
         virtual ~ParticleSystemComponent( void );
 
         inline ParticleData *getParticles( void ) { return crimild::get_ptr( _particles ); }
 
-		virtual void onAttach( void ) override;
-		virtual void onDetach( void ) override;		
+		virtual void start( void ) override;
+		virtual void update( const Clock & ) override;
 
     private:
         SharedPointer< ParticleData > _particles;
+
+		/**
+		   \name Generators
+		*/
+		//@{
+		
+	public:
+		/**
+		   \brief A generator for particle attributes
+		 */
+        class ParticleGenerator {
+        public:
+            virtual ~ParticleGenerator( void ) { }
+
+			/**
+			   \brief Configures the particle generator
+
+			   This method is invoked in ParticleEmitterComponent::start()
+			 */
+			virtual void configure( Node *node, ParticleData *particles ) = 0;
+
+			/**
+			   \brief Generates data for one or more attributes
+			 */
+            virtual void generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) = 0;
+        };
+
+        using ParticleGeneratorPtr =  SharedPointer< ParticleGenerator >;
+
+
+		inline void setEmitRate( crimild::Size value ) { _emitRate = value; }
+		inline crimild::Size getEmitRate( void ) const { return _emitRate; }
+
+		inline void addGenerator( ParticleGeneratorPtr const &gen )
+		{
+			_generators.add( gen );
+		}
+
+		inline void setBurst( bool value ) { _burst = value; }
+		inline crimild::Bool isBurst( void ) const { return _burst; }
+
+	private:
+		void configureGenerators( Node *node, ParticleData *particles );
+		void updateGenerators( Node *node, crimild::Real64 dt, ParticleData *particles );
+
+    private:
+        crimild::Size _emitRate;
+        ThreadSafeArray< ParticleGeneratorPtr > _generators;
+		crimild::Bool _burst = false;
+		
+		//@}
+
+		/**
+		   \name Updaters
+		*/
+		//@{
+	public:
+		/**
+		   \brief Updates the particles of a particle system
+		*/
+        class ParticleUpdater {
+        public:
+            virtual ~ParticleUpdater( void ) { }
+
+			virtual void configure( Node *node, ParticleData *particles ) = 0;
+            virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) = 0;
+        };
+
+        using ParticleUpdaterPtr =  SharedPointer< ParticleUpdater >;
+
+        inline void addUpdater( ParticleUpdaterPtr const &updater )
+		{
+			_updaters.add( updater );
+		}
+
+	private:
+		void configureUpdaters( Node *node, ParticleData *particles );
+		void updateUpdaters( Node *node, crimild::Real64 dt, ParticleData *particles );
+		
+    private:
+        ThreadSafeArray< ParticleUpdaterPtr > _updaters;
+
+		//@}
+
+		/**
+		   \name Renderers
+		*/
+		//@{
+	public:
+		/**
+		   \brief Generate renderables for a particle system
+		*/
+        class ParticleRenderer {
+        public:
+            virtual ~ParticleRenderer( void ) { }
+
+			virtual void configure( Node *node, ParticleData *particles ) = 0;
+            virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) = 0;
+        };
+
+        using ParticleRendererPtr =  SharedPointer< ParticleRenderer >;
+
+        inline void addRenderer( ParticleRendererPtr const &renderer )
+		{
+			_renderers.add( renderer );
+		}
+
+	private:
+		void configureRenderers( Node *node, ParticleData *particles );
+		void updateRenderers( Node *node, crimild::Real64 dt, ParticleData *particles );
+		
+    private:
+        ThreadSafeArray< ParticleRendererPtr > _renderers;
+
+		//@}
     };
 
 }

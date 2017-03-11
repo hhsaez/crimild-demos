@@ -28,7 +28,7 @@
 #ifndef CRIMILD_PARTICLE_UPDATER_ATTRACTOR_
 #define CRIMILD_PARTICLE_UPDATER_ATTRACTOR_
 
-#include "../ParticleUpdaterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
@@ -37,7 +37,7 @@ namespace crimild {
 
 	   \remarks Use it before a position updater
 	 */
-    class AttractorParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
+    class AttractorParticleUpdater : public ParticleSystemComponent::ParticleUpdater {
     public:
         AttractorParticleUpdater( void );
         virtual ~AttractorParticleUpdater( void );
@@ -55,8 +55,8 @@ namespace crimild {
 		Sphere3f _attractor;
 		crimild::Real32 _strength;
 		
-		Vector3f *_positions = nullptr;
-		Vector3f *_accelerations = nullptr;
+		ParticleAttribArray *_positions = nullptr;
+		ParticleAttribArray *_accelerations = nullptr;
     };
 
 }

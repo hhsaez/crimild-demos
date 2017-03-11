@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_UPDATER_COLOR_
 #define CRIMILD_PARTICLE_UPDATER_COLOR_
 
-#include "../ParticleUpdaterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class ColorParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
+    class ColorParticleUpdater : public ParticleSystemComponent::ParticleUpdater {
     public:
         ColorParticleUpdater( void );
         virtual ~ColorParticleUpdater( void );

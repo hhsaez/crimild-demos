@@ -28,7 +28,7 @@
 #ifndef CRIMILD_PARTICLE_UPDATER_CAMERA_SORT_
 #define CRIMILD_PARTICLE_UPDATER_CAMERA_SORT_
 
-#include "../ParticleUpdaterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
@@ -40,7 +40,7 @@ namespace crimild {
 
 	   \remarks Use it after a position updater
 	 */
-    class CameraSortParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
+    class CameraSortParticleUpdater : public ParticleSystemComponent::ParticleUpdater {
     public:
         CameraSortParticleUpdater( void );
         virtual ~CameraSortParticleUpdater( void );
@@ -49,7 +49,7 @@ namespace crimild {
         virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override;
         
     private:
-        Vector3f *_positions;
+        ParticleAttribArray *_positions = nullptr;
     };
 
 }

@@ -25,59 +25,62 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CRIMILD_PARTICLE_UPDATER_SET_ATTRIB_VALUE_
-#define CRIMILD_PARTICLE_UPDATER_SET_ATTRIB_VALUE_
+#ifndef CRIMILD_PARTICLE_GENERATOR_RANDOM_
+#define CRIMILD_PARTICLE_GENERATOR_RANDOM_
 
 #include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-	/**
-	   \brief Set a constant value for an attribute whenver its updated
-
-	   \remarks Useful for reseting values
-	 */
 	template< typename T >
-    class SetAttribValueParticleUpdater : public ParticleSystemComponent::ParticleUpdater {
+    class RandomAttribParticleGenerator : public ParticleSystemComponent::ParticleGenerator {
     public:
-        SetAttribValueParticleUpdater( void )
+        RandomAttribParticleGenerator( void )
 		{
-			
+
 		}
 		
-        virtual ~SetAttribValueParticleUpdater( void )
+        virtual ~RandomAttribParticleGenerator( void )
 		{
 
 		}
 
-		inline void setAttribType( const ParticleAttribType &type ) { _attribType = type; }
-		inline const ParticleAttribType &getAttribType( void ) { return _attribType; }
+		inline void setParticleAttribType( const ParticleAttribType &type ) { _attribType = type; }
+		inline const ParticleAttribType &ParticleAttribType( void ) const { return _attribType; }
 
-		inline void setValue( const T &value ) { _value = value; }
-		inline const T &getValue( void ) const { return _value; }
+        inline void setMinValue( const Vector3f &value ) { _minValue = value; }
+        inline const Vector3f &getMinValue( void ) const { return _minValue; }
+
+        inline void setMaxValue( const Vector3f &value ) { _maxValue = value; }
+        inline const Vector3f &getMaxValue( void ) const { return _maxValue; }
 
 		virtual void configure( Node *node, ParticleData *particles ) override
 		{
-			_attribData = particles->createAttribArray< T >( _attribType );
+			auto attribs = particles->getAttrib( _attribType );
+			if ( attribs == nullptr ) {
+				particles->setAttribs( _attribType, crimild::alloc< template ParticleAttribArray< T >>() );
+				attribs = particles->getAttrib( _attribType );
+			}
+			_attribData = attribs->template getData< T >();
 		}
-		
-        virtual void update( Node *node, crimild::Real64 dt, ParticleData *particles ) override
+
+        virtual void generate( Node *node, crimild::Real32 dt, ParticleData *particles, ParticleId startId, ParticleId endId ) override
 		{
-			const auto count = particles->getAliveCount();
-
-			auto as = _attribData->getData< T >();
-
-			for ( int i = 0; i < count; i++ ) {
-				as[ i ] = _value;
+			for ( ParticleId i = startId; i < endId; i++ ) {
+				_attribData[ i ] = template RandomGenerate< T >( _minValue, _maxValue );
 			}
 		}
 
-	private:
+    private:
 		ParticleAttribType _attribType;
-		T _value;
-		
-		ParticleAttribArray *_attribData = nullptr;
+        T _minValue;
+        T _maxValue;
+
+		Vector3f *_attribData = nullptr;
     };
+
+	using RandomVector3fParticleGenerator = RandomAttribParticleGenerator< Vector3f >;
+	using RandomReal32ParticleGenerator = RandomAttribParticleGenerator< crimild::Real32 >();
 
 }
 

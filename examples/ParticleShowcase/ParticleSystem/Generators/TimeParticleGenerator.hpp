@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_GENERATOR_TIME_
 #define CRIMILD_PARTICLE_GENERATOR_TIME_
 
-#include "../ParticleEmitterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class TimeParticleGenerator : public ParticleEmitterComponent::ParticleGenerator {
+    class TimeParticleGenerator : public ParticleSystemComponent::ParticleGenerator {
     public:
         TimeParticleGenerator( void );
         virtual ~TimeParticleGenerator( void );
@@ -50,8 +50,8 @@ namespace crimild {
 		crimild::Real32 _minTime;
 		crimild::Real32 _maxTime;
 
-		Real32 *_times = nullptr;
-		Real32 *_lifeTimes = nullptr;
+		ParticleAttribArray *_times = nullptr;
+		ParticleAttribArray *_lifeTimes = nullptr;
     };
 
 }

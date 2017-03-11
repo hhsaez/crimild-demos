@@ -28,11 +28,11 @@
 #ifndef CRIMILD_PARTICLE_UPDATER_VELOCITY_COLOR_
 #define CRIMILD_PARTICLE_UPDATER_VELOCITY_COLOR_
 
-#include "../ParticleUpdaterComponent.hpp"
+#include "../ParticleSystemComponent.hpp"
 
 namespace crimild {
 
-    class VelocityColorParticleUpdater : public ParticleUpdaterComponent::ParticleUpdater {
+    class VelocityColorParticleUpdater : public ParticleSystemComponent::ParticleUpdater {
     public:
         VelocityColorParticleUpdater( void );
         virtual ~VelocityColorParticleUpdater( void );

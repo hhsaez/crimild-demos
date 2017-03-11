@@ -41,21 +41,18 @@ VelocityParticleGenerator::~VelocityParticleGenerator( void )
 
 void VelocityParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-    auto vAttribs = particles->getAttrib( ParticleAttribType::VELOCITY );
-	if ( vAttribs == nullptr ) {
-		particles->setAttribs( ParticleAttribType::VELOCITY, crimild::alloc< Vector3fParticleAttribArray >() );
-		vAttribs = particles->getAttrib( ParticleAttribType::VELOCITY );
-	}
-	_velocities = vAttribs->getData< Vector3f >();
+	_velocities = particles->createAttribArray< Vector3f >( ParticleAttribType::VELOCITY );
 }
 
 void VelocityParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
 {
+	auto vs = _velocities->getData< Vector3f >();
+	
     for ( ParticleId i = startId; i < endId; i++ ) {
         auto x = Random::generate< Real32 >( _minVelocity.x(), _maxVelocity.x() );
         auto y = Random::generate< Real32 >( _minVelocity.y(), _maxVelocity.y() );
         auto z = Random::generate< Real32 >( _minVelocity.z(), _maxVelocity.z() );
-        _velocities[ i ] = Vector3f( x, y, z );
+        vs[ i ] = Vector3f( x, y, z );
     }
 }
 
