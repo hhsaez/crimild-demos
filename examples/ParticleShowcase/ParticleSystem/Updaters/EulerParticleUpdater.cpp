@@ -30,6 +30,7 @@
 using namespace crimild;
 
 EulerParticleUpdater::EulerParticleUpdater( void )
+	: _globalAcceleration( Vector3f::ZERO )
 {
 
 }

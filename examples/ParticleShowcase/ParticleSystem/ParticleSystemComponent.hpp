@@ -64,6 +64,27 @@ namespace crimild {
         SharedPointer< ParticleData > _particles;
 
 		/**
+		   \name Pre-Warming
+		*/
+		//@{
+
+	public:
+		inline void setPreWarmTime( crimild::Real64 time ) { _preWarmTime = time; }
+		inline crimild::Real64 getPreWarmTime( void ) const { return _preWarmTime; }
+
+	private:
+		/**
+		   \brief Indicates if particles should be pre-computed
+
+		   If greater than 0 (zero), this variable tells how many seconds
+		   should be pre-simulated when the particle system is being
+		   generated
+		 */
+		crimild::Real64 _preWarmTime = 0;
+
+		//@}
+
+		/**
 		   \name Generators
 		*/
 		//@{

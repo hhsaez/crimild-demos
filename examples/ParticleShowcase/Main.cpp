@@ -184,13 +184,13 @@ SharedPointer< Group > loadModel( std::string filename )
 
 SharedPointer< Node > fire( const Vector3f &position )
 {
-    const crimild::Size MAX_PARTICLES = 200;
+    const crimild::Size MAX_PARTICLES = 300;
     
     auto psNode = crimild::alloc< crimild::Group >();
     
     auto ps = psNode->attachComponent< ParticleSystemComponent >( MAX_PARTICLES );
-    
     ps->setEmitRate( 0.75f * MAX_PARTICLES );
+	ps->setPreWarmTime( 1.0f );
     
     auto posGen = crimild::alloc< BoxPositionParticleGenerator >();
     posGen->setOrigin( Vector3f::ZERO );
@@ -477,8 +477,8 @@ SharedPointer< Node > fountain( const Vector3f &position )
     
     auto particles = crimild::alloc< ParticleData >( MAX_PARTICLES );
     auto ps = psNode->attachComponent< ParticleSystemComponent >( particles );
-    
     ps->setEmitRate( 0.75f * MAX_PARTICLES );
+	ps->setPreWarmTime( 2.5f );
     
     auto posGen = crimild::alloc< BoxPositionParticleGenerator >();
     posGen->setOrigin( Vector3f::ZERO );
@@ -649,9 +649,9 @@ SharedPointer< Node > attractors( const Vector3f &position )
     auto particles = crimild::alloc< ParticleData >( MAX_PARTICLES );
 	particles->setComputeInWorldSpace( true );
     auto ps = psNode->attachComponent< ParticleSystemComponent >( particles );
-    
     ps->setEmitRate( MAX_PARTICLES );
 	ps->setBurst( true );
+	ps->setPreWarmTime( 10.0f );
     
     auto posGen = crimild::alloc< SpherePositionParticleGenerator >();
     posGen->setOrigin( Vector3f::ZERO );

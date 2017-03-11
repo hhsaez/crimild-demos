@@ -63,6 +63,13 @@ void ParticleSystemComponent::start( void )
 	configureRenderers( node, particles );
 
 	_particles->generate();
+
+	auto warmUp = _preWarmTime;
+	while ( warmUp > 0.0 ) {
+		updateGenerators( node, Clock::DEFAULT_TICK_TIME, particles );
+		updateUpdaters( node, Clock::DEFAULT_TICK_TIME, particles );
+		warmUp -= Clock::DEFAULT_TICK_TIME;
+	}
 }
 
 void ParticleSystemComponent::configureGenerators( Node *node, ParticleData *particles )
