@@ -40,6 +40,8 @@
 #include "ParticleSystem/Generators/UniformScaleParticleGenerator.hpp"
 #include "ParticleSystem/Generators/TimeParticleGenerator.hpp"
 #include "ParticleSystem/Generators/NodePositionParticleGenerator.hpp"
+#include "ParticleSystem/Generators/RandomValueParticleGenerator.hpp"
+#include "ParticleSystem/Generators/DefaultValueParticleGenerator.hpp"
 
 #include "ParticleSystem/Updaters/EulerParticleUpdater.hpp"
 #include "ParticleSystem/Updaters/TimeParticleUpdater.hpp"
@@ -194,31 +196,32 @@ SharedPointer< Node > fire( const Vector3f &position )
     posGen->setOrigin( Vector3f::ZERO );
     posGen->setSize( Vector3f( 2.0f, 0.25f, 2.0f ) );
     ps->addGenerator( posGen );
-    
-    auto velGen = crimild::alloc< VelocityParticleGenerator >();
-    velGen->setMinVelocity( Vector3f( 0.0f, 1.0f, 0.0f ) );
-    velGen->setMaxVelocity( Vector3f( 0.0f, 5.0f, 0.0f ) );
-    ps->addGenerator( velGen );
-    
-    auto accGen = crimild::alloc< AccelerationParticleGenerator >();
-    ps->addGenerator( accGen );
-    
+
+	ps->addGenerator( crimild::alloc< RandomVector3fParticleGenerator >(
+		ParticleAttribType::VELOCITY,
+		Vector3f( 0.0f, 1.0f, 0.0f ),
+		Vector3f( 0.0f, 5.0f, 0.0f ) ) );
+
+	ps->addGenerator( crimild::alloc< DefaultVector3fParticleGenerator >(
+		ParticleAttribType::ACCELERATION,
+		Vector3f::ZERO ) );
+
     auto colorGen = crimild::alloc< ColorParticleGenerator >();
     colorGen->setMinStartColor( RGBAColorf( 1.0, 0.0, 0.0, 1.0 ) );
     colorGen->setMaxStartColor( RGBAColorf( 1.0, 1.0, 0.0, 1.0 ) );
     colorGen->setMinEndColor( RGBAColorf( 1.0, 1.0, 1.0, 0.0 ) );
     colorGen->setMaxEndColor( RGBAColorf( 1.0, 1.0, 1.0, 0.0 ) );
     ps->addGenerator( colorGen );
-    
-    auto scaleGen = crimild::alloc< UniformScaleParticleGenerator >();
-    scaleGen->setMinScale( 50.0f );
-    scaleGen->setMaxScale( 200.0f );
-    ps->addGenerator( scaleGen );
-    
+
+	ps->addGenerator( crimild::alloc< RandomReal32ParticleGenerator >(
+		ParticleAttribType::UNIFORM_SCALE,
+		50.0f,
+		200.0f ) );
+
     auto timeGen = crimild::alloc< TimeParticleGenerator >();
     timeGen->setMinTime( 1.0f );
     timeGen->setMaxTime( 2.0f );
-    ps->addGenerator( timeGen );
+	ps->addGenerator( timeGen );
     
     ps->addUpdater( crimild::alloc< EulerParticleUpdater >() );
     ps->addUpdater( crimild::alloc< TimeParticleUpdater >() );

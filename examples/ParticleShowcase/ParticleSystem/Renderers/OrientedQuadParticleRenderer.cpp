@@ -127,8 +127,10 @@ void OrientedQuadParticleRenderer::update( Node *node, crimild::Real64 dt, Parti
 		ibo->setIndexAt( idx + 5, vdx + 3 );
 	}
 
-	_primitive->setVertexBuffer( vbo );
-	_primitive->setIndexBuffer( ibo );
+    crimild::concurrency::sync_frame( [this, vbo, ibo] {
+        _primitive->setVertexBuffer( vbo );
+        _primitive->setIndexBuffer( ibo );
+    });
 }
 
 

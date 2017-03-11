@@ -27,6 +27,22 @@
 
 #include "SphereVelocityParticleGenerator.hpp"
 
+namespace crimild {
+
+#if 0
+	template<>
+	inline Vector< 3, float > Random::generate< Vector< 3, float >>( const Vector< 3, float > &min, const Vector< 3, float > &max )
+	{
+		auto x = Random::generate< float >( min.x(), max.x() );
+		auto y = Random::generate< float >( min.y(), max.y() );
+		auto z = Random::generate< float >( min.z(), max.z() );
+		Vector< 3, float > result( x, y, z );
+		return result;
+	}
+#endif
+
+}
+
 using namespace crimild;
 
 SphereVelocityParticleGenerator::SphereVelocityParticleGenerator( void )
@@ -52,10 +68,7 @@ void SphereVelocityParticleGenerator::generate( Node *node, crimild::Real64 dt, 
     const auto posMax = Vector3f::ONE;
 
     for ( ParticleId i = startId; i < endId; i++ ) {
-        auto x = Random::generate< Real32 >( posMin.x(), posMax.x() );
-        auto y = Random::generate< Real32 >( posMin.y(), posMax.y() );
-        auto z = Random::generate< Real32 >( posMin.z(), posMax.z() );		
-        vs[ i ] = Vector3f( x, y, z ).getNormalized().times( _magnitude );
+        vs[ i ] = Random::generate< Vector3f >( posMin, posMax ).getNormalized().times( _magnitude );
     }
 }
 
