@@ -198,12 +198,12 @@ SharedPointer< Node > fire( const Vector3f &position )
     ps->addGenerator( posGen );
 
 	ps->addGenerator( crimild::alloc< RandomVector3fParticleGenerator >(
-		ParticleAttribType::VELOCITY,
+		ParticleAttrib::VELOCITY,
 		Vector3f( 0.0f, 1.0f, 0.0f ),
 		Vector3f( 0.0f, 5.0f, 0.0f ) ) );
 
 	ps->addGenerator( crimild::alloc< DefaultVector3fParticleGenerator >(
-		ParticleAttribType::ACCELERATION,
+		ParticleAttrib::ACCELERATION,
 		Vector3f::ZERO ) );
 
     auto colorGen = crimild::alloc< ColorParticleGenerator >();
@@ -214,7 +214,7 @@ SharedPointer< Node > fire( const Vector3f &position )
     ps->addGenerator( colorGen );
 
 	ps->addGenerator( crimild::alloc< RandomReal32ParticleGenerator >(
-		ParticleAttribType::UNIFORM_SCALE,
+		ParticleAttrib::UNIFORM_SCALE,
 		50.0f,
 		200.0f ) );
 
@@ -685,7 +685,7 @@ SharedPointer< Node > attractors( const Vector3f &position )
     ps->addGenerator( timeGen );
     
 	auto resetAccelerations = crimild::alloc< SetAttribValueParticleUpdater< Vector3f >>();
-	resetAccelerations->setAttribType( ParticleAttribType::ACCELERATION );
+	resetAccelerations->setAttribType( ParticleAttrib::ACCELERATION );
 	resetAccelerations->setValue( Vector3f::ZERO );
 	ps->addUpdater( resetAccelerations );
 	auto attractor = crimild::alloc< AttractorParticleUpdater >();
@@ -727,13 +727,7 @@ SharedPointer< Node > walkers( const Vector3f &position )
 	}
     
     auto particles = crimild::alloc< ParticleData >( MAX_PARTICLES );
-    particles->setAttribs( ParticleAttribType::POSITION, crimild::alloc< Vector3fParticleAttribArray >() );
-    particles->setAttribs( ParticleAttribType::VELOCITY, crimild::alloc< Vector3fParticleAttribArray >() );
-    particles->setAttribs( ParticleAttribType::ACCELERATION, crimild::alloc< Vector3fParticleAttribArray >() );
-    particles->setAttribs( ParticleAttribType::TIME, crimild::alloc< Real32ParticleAttribArray >() );
-    particles->setAttribs( ParticleAttribType::LIFE_TIME, crimild::alloc< Real32ParticleAttribArray >() );
     auto ps = psNode->attachComponent< ParticleSystemComponent >( particles );
-    
     ps->setEmitRate( 0.75f * MAX_PARTICLES );
     
     auto posGen = crimild::alloc< BoxPositionParticleGenerator >();

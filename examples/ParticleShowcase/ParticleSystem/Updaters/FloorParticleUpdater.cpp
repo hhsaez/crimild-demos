@@ -41,7 +41,7 @@ FloorParticleUpdater::~FloorParticleUpdater( void )
 
 void FloorParticleUpdater::configure( Node *node, ParticleData *particles )
 {
-	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttrib::POSITION );
 }
 
 void FloorParticleUpdater::update( Node *node, double dt, ParticleData *particles )

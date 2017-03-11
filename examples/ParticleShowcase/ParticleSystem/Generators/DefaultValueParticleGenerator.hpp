@@ -75,7 +75,7 @@ namespace crimild {
 		}
 
     private:
-		enum ParticleAttribType _attribType;
+		crimild::ParticleAttribType _attribType;
 		T _value;
 
 		ParticleAttribArray *_attribs;

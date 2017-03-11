@@ -43,8 +43,8 @@ AttractorParticleUpdater::~AttractorParticleUpdater( void )
 
 void AttractorParticleUpdater::configure( Node *node, ParticleData *particles )
 {
-	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
-	_accelerations = particles->createAttribArray< Vector3f >( ParticleAttribType::ACCELERATION );
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttrib::POSITION );
+	_accelerations = particles->createAttribArray< Vector3f >( ParticleAttrib::ACCELERATION );
 }
 
 void AttractorParticleUpdater::update( Node *node, crimild::Real64 dt, ParticleData *particles )

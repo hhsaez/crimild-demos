@@ -34,19 +34,30 @@ namespace crimild {
 
     using ParticleId = crimild::Size;
 
-    enum class ParticleAttribType : crimild::Int16 {
-		POSITION,
-		VELOCITY,
-		ACCELERATION,
-		START_COLOR,
-		END_COLOR,
-		COLOR,
-		UNIFORM_SCALE,
-		TIME,
-		LIFE_TIME,
-		USER_DEFINED = 1000,
-		USER_DEFINED_MAX,
+	/**
+	   \brief Default attrib types
+
+	   This is kept as a standar enum so it can be easily
+	   custumized by adding new types
+	 */
+    class ParticleAttrib {
+	public:
+		enum {
+			POSITION,
+			VELOCITY,
+			ACCELERATION,
+			START_COLOR,
+			END_COLOR,
+			COLOR,
+			UNIFORM_SCALE,
+			TIME,
+			LIFE_TIME,
+			USER_DEFINED = 1000,
+			USER_DEFINED_MAX,
+		};
     };
+
+	using ParticleAttribType = crimild::UInt16;
 
 	/**
 	   \brief Interface for all particle attributes

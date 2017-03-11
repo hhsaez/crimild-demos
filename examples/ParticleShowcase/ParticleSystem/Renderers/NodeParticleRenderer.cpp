@@ -41,7 +41,7 @@ NodeParticleRenderer::~NodeParticleRenderer( void )
 
 void NodeParticleRenderer::configure( Node *node, ParticleData *particles ) 
 {
-	_positions = particles->getAttrib( ParticleAttribType::POSITION );
+	_positions = particles->getAttrib( ParticleAttrib::POSITION );
 }
 
 void NodeParticleRenderer::update( Node *node, crimild::Real64 dt, ParticleData *particles )

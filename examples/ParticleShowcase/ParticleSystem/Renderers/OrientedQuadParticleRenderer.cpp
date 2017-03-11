@@ -52,8 +52,8 @@ void OrientedQuadParticleRenderer::configure( Node *node, ParticleData *particle
 
 	static_cast< Group * >( node )->attachNode( _geometry );
 
-	_positions = particles->getAttrib( ParticleAttribType::POSITION );
-	_sizes = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
+	_positions = particles->getAttrib( ParticleAttrib::POSITION );
+	_sizes = particles->getAttrib( ParticleAttrib::UNIFORM_SCALE );
 
     _primitive = crimild::alloc< Primitive >( Primitive::Type::TRIANGLES );
 

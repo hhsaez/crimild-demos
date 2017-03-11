@@ -43,7 +43,7 @@ BoxPositionParticleGenerator::~BoxPositionParticleGenerator( void )
 
 void BoxPositionParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttrib::POSITION );
 	assert( _positions != nullptr );
 }
 

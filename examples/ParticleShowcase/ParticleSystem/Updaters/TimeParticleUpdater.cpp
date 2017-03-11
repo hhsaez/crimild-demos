@@ -41,7 +41,7 @@ TimeParticleUpdater::~TimeParticleUpdater( void )
 
 void TimeParticleUpdater::configure( Node *node, ParticleData *particles )
 {
-	_times = particles->createAttribArray< crimild::Real32 >( ParticleAttribType::TIME );
+	_times = particles->createAttribArray< crimild::Real32 >( ParticleAttrib::TIME );
 }
 
 void TimeParticleUpdater::update( Node *node, double dt, ParticleData *particles )

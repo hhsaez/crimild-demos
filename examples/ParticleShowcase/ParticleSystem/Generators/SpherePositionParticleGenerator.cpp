@@ -41,7 +41,7 @@ SpherePositionParticleGenerator::~SpherePositionParticleGenerator( void )
 
 void SpherePositionParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttrib::POSITION );
 }
 
 void SpherePositionParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )

@@ -57,7 +57,7 @@ SphereVelocityParticleGenerator::~SphereVelocityParticleGenerator( void )
 
 void SphereVelocityParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-	_velocities = particles->createAttribArray< Vector3f >( ParticleAttribType::VELOCITY );
+	_velocities = particles->createAttribArray< Vector3f >( ParticleAttrib::VELOCITY );
 }
 
 void SphereVelocityParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )

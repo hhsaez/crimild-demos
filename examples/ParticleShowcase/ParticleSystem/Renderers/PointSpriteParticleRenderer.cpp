@@ -52,9 +52,9 @@ void PointSpriteParticleRenderer::configure( Node *node, ParticleData *particles
 
 	static_cast< Group * >( node )->attachNode( _geometry );
 
-	_positions = particles->getAttrib( ParticleAttribType::POSITION );
-	_colors = particles->getAttrib( ParticleAttribType::COLOR );
-	_sizes = particles->getAttrib( ParticleAttribType::UNIFORM_SCALE );
+	_positions = particles->getAttrib( ParticleAttrib::POSITION );
+	_colors = particles->getAttrib( ParticleAttrib::COLOR );
+	_sizes = particles->getAttrib( ParticleAttrib::UNIFORM_SCALE );
 
     _primitive = crimild::alloc< Primitive >( Primitive::Type::POINTS );
 

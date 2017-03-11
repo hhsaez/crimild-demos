@@ -77,7 +77,7 @@ namespace crimild {
 		}
 
     private:
-		enum ParticleAttribType _attribType;
+		::crimild::ParticleAttribType _attribType;
         T _minValue;
         T _maxValue;
 

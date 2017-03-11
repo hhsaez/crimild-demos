@@ -41,8 +41,8 @@ TimeParticleGenerator::~TimeParticleGenerator( void )
 
 void TimeParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-	_times = particles->createAttribArray< crimild::Real32 >( ParticleAttribType::TIME );
-	_lifeTimes = particles->createAttribArray< crimild::Real32 >( ParticleAttribType::LIFE_TIME );
+	_times = particles->createAttribArray< crimild::Real32 >( ParticleAttrib::TIME );
+	_lifeTimes = particles->createAttribArray< crimild::Real32 >( ParticleAttrib::LIFE_TIME );
 }
 
 void TimeParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )

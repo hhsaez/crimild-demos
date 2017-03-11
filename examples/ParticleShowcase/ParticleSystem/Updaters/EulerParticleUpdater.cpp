@@ -42,9 +42,9 @@ EulerParticleUpdater::~EulerParticleUpdater( void )
 
 void EulerParticleUpdater::configure( Node *node, ParticleData *particles )
 {
-	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
-	_velocities = particles->createAttribArray< Vector3f >( ParticleAttribType::VELOCITY );
-	_accelerations = particles->createAttribArray< Vector3f >( ParticleAttribType::ACCELERATION );
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttrib::POSITION );
+	_velocities = particles->createAttribArray< Vector3f >( ParticleAttrib::VELOCITY );
+	_accelerations = particles->createAttribArray< Vector3f >( ParticleAttrib::ACCELERATION );
 }
 
 void EulerParticleUpdater::update( Node *node, crimild::Real64 dt, ParticleData *particles )

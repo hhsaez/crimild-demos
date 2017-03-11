@@ -41,7 +41,7 @@ CameraSortParticleUpdater::~CameraSortParticleUpdater( void )
 
 void CameraSortParticleUpdater::configure( Node *node, ParticleData *particles )
 {
-	_positions = particles->createAttribArray< Vector3f >( ParticleAttribType::POSITION );
+	_positions = particles->createAttribArray< Vector3f >( ParticleAttrib::POSITION );
 }
 
 void CameraSortParticleUpdater::update( Node *node, double dt, ParticleData *particles )

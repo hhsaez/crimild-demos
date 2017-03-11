@@ -41,9 +41,9 @@ ColorParticleGenerator::~ColorParticleGenerator( void )
 
 void ColorParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-	_colors = particles->createAttribArray< RGBAColorf >( ParticleAttribType::COLOR );
-	_startColors = particles->createAttribArray< RGBAColorf >( ParticleAttribType::START_COLOR );
-	_endColors = particles->createAttribArray< RGBAColorf >( ParticleAttribType::END_COLOR );
+	_colors = particles->createAttribArray< RGBAColorf >( ParticleAttrib::COLOR );
+	_startColors = particles->createAttribArray< RGBAColorf >( ParticleAttrib::START_COLOR );
+	_endColors = particles->createAttribArray< RGBAColorf >( ParticleAttrib::END_COLOR );
 }
 
 void ColorParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )

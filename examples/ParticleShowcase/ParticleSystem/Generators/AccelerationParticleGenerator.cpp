@@ -43,7 +43,7 @@ AccelerationParticleGenerator::~AccelerationParticleGenerator( void )
 
 void AccelerationParticleGenerator::configure( Node *node, ParticleData *particles )
 {
-	_accelerations = particles->createAttribArray< Vector3f >( ParticleAttribType::ACCELERATION );
+	_accelerations = particles->createAttribArray< Vector3f >( ParticleAttrib::ACCELERATION );
 }
 
 void AccelerationParticleGenerator::generate( Node *node, crimild::Real64 dt, ParticleData *particles, ParticleId startId, ParticleId endId )
