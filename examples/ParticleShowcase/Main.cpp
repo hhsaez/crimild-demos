@@ -27,6 +27,7 @@
 
 #include <Crimild.hpp>
 #include <Crimild_GLFW.hpp>
+#include <Crimild_Scripting.hpp>
 
 using namespace crimild;
 
@@ -739,6 +740,7 @@ int main( int argc, char **argv )
 {
     auto sim = crimild::alloc< GLSimulation >( "Particle Showcase", crimild::alloc< Settings >( argc, argv ) );
 
+#if 0
     auto scene = crimild::alloc< Group >();
 
 	scene->attachNode( room() );
@@ -764,6 +766,10 @@ int main( int argc, char **argv )
     scene->attachNode( camera );
     
     sim->setScene( scene );
+
+#else
+	sim->loadScene( "assets/scenes/main.lua", crimild::alloc< crimild::scripting::LuaSceneBuilder >() );
+#endif
 	
 	return sim->run();
 }
