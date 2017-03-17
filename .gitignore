@@ -68,3 +68,4 @@ examples/Raytracing/test.sh
 examples/RenderOrder/RenderOrder
 examples/RenderToTexture/RenderToTexture
 examples/TextureFilters/TextureFilters
+examples/RocketLaunch/RocketLaunch

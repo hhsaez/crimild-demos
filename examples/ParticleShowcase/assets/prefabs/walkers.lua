@@ -1,5 +1,19 @@
-function fire( x, y, z )
-	local MAX_PARTICLES = 300
+function walkers( x, y, z )
+
+	local MAX_PARTICLES = 10
+
+	local nodes = {}
+	for i = 1, MAX_PARTICLES do
+		table.insert(
+			nodes,
+			{
+				filename = 'assets/models/astroboy.crimild',
+				transformation = {
+					scale = 15.0,
+				},
+			}
+		)
+	end
 	
 	return {
 		type = 'crimild::Group',
@@ -8,18 +22,17 @@ function fire( x, y, z )
 				type = 'crimild::ParticleSystemComponent',
 				maxParticles = MAX_PARTICLES,
 				emitRate = 0.75 * MAX_PARTICLES,
-				preWarmTime = 1.0,
 				generators = {
 					{
 						type = 'crimild::BoxPositionParticleGenerator',
 						origin = { 0.0, 0.0, 0.0 },
-						size = { 2.0, 0.25, 2.0 },
+						size = { 5.0, 0.0, 5.0 },
 					},
 					{
 						type = 'crimild::RandomVector3fParticleGenerator',
 						attrib = 'velocity',
-						minValue = { 0.0, 1.0, 0.0 },
-						maxValue = { 0.0, 5.0, 0.0 },
+						minValue = { -2.0, 0.0, -2.0 },
+						maxValue = { 2.0, 0.0, 2.0 },
 					},
 					{
 						type = 'crimild::DefaultVector3fParticleGenerator',
@@ -27,22 +40,9 @@ function fire( x, y, z )
 						value = { 0.0, 0.0, 0.0 },
 					},
 					{
-						type = 'crimild::ColorParticleGenerator',
-						minStartColor = { 1.0, 0.0, 0.0, 1.0 },
-						maxStartColor = { 1.0, 1.0, 0.0, 1.0 },
-						minEndColor = { 1.0, 1.0, 1.0, 0.0 },
-						maxEndColor = { 1.0, 1.0, 1.0, 0.0 },
-					},
-					{
-						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
-						minValue = 50.0,
-						maxValue = 200.0,
-					},
-					{
 						type = 'crimild::TimeParticleGenerator',
-						minTime = 1.0,
-						maxTime = 2.0,
+						minTime = 10.0,
+						maxTime = 15.0,
 					},
 				},
 				updaters = {
@@ -55,11 +55,7 @@ function fire( x, y, z )
 				},
 				renderers = {
 					{
-						type = 'crimild::PointSpriteParticleRenderer',
-						texture = 'assets/textures/fire.tga',
-						blendMode = 'additive',
-						cullFaceEnabled = false,
-						depthStateEnabled = false,
+						type = 'crimild::NodeParticleRenderer',
 					},
 				},
 			},
@@ -67,6 +63,7 @@ function fire( x, y, z )
 		transformation = {
 			translate = { x, y, z },
 		},
+		nodes = nodes,
 	}
 end
 

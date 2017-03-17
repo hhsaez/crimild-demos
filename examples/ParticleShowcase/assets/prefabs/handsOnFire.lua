@@ -1,25 +1,33 @@
-function fire( x, y, z )
-	local MAX_PARTICLES = 300
-	
-	return {
+function handsOnFire( x, y, z )
+
+	local MAX_PARTICLES = 200
+
+	local astroboy = {
+		filename = 'assets/models/astroboy.crimild',
+		transformation = {
+			scale = 70.0,
+		},
+	}
+
+	local ps = {
 		type = 'crimild::Group',
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
 				maxParticles = MAX_PARTICLES,
-				emitRate = 0.75 * MAX_PARTICLES,
-				preWarmTime = 1.0,
+				emitRate = 0.25 * MAX_PARTICLES,
+				computeInWorldSpace = true,
 				generators = {
 					{
-						type = 'crimild::BoxPositionParticleGenerator',
-						origin = { 0.0, 0.0, 0.0 },
-						size = { 2.0, 0.25, 2.0 },
+						type = 'crimild::NodePositionParticleGenerator',
+						node = 'R_middle_01',
+						size = { 0.25, 0.25, 0.25 },
 					},
 					{
 						type = 'crimild::RandomVector3fParticleGenerator',
 						attrib = 'velocity',
 						minValue = { 0.0, 1.0, 0.0 },
-						maxValue = { 0.0, 5.0, 0.0 },
+						maxValue = { 0.0, 2.5, 0.0 },
 					},
 					{
 						type = 'crimild::DefaultVector3fParticleGenerator',
@@ -27,22 +35,15 @@ function fire( x, y, z )
 						value = { 0.0, 0.0, 0.0 },
 					},
 					{
-						type = 'crimild::ColorParticleGenerator',
-						minStartColor = { 1.0, 0.0, 0.0, 1.0 },
-						maxStartColor = { 1.0, 1.0, 0.0, 1.0 },
-						minEndColor = { 1.0, 1.0, 1.0, 0.0 },
-						maxEndColor = { 1.0, 1.0, 1.0, 0.0 },
-					},
-					{
 						type = 'crimild::RandomReal32ParticleGenerator',
 						attrib = 'uniform_scale',
-						minValue = 50.0,
-						maxValue = 200.0,
+						minValue = 0.25,
+						maxValue = 0.75,
 					},
 					{
 						type = 'crimild::TimeParticleGenerator',
-						minTime = 1.0,
-						maxTime = 2.0,
+						minTime = 0.25,
+						maxTime = 0.75,
 					},
 				},
 				updaters = {
@@ -55,7 +56,7 @@ function fire( x, y, z )
 				},
 				renderers = {
 					{
-						type = 'crimild::PointSpriteParticleRenderer',
+						type = 'crimild::OrientedQuadParticleRenderer',
 						texture = 'assets/textures/fire.tga',
 						blendMode = 'additive',
 						cullFaceEnabled = false,
@@ -64,10 +65,17 @@ function fire( x, y, z )
 				},
 			},
 		},
+	}
+
+	return {
+		type = 'crimild::Group',
+		nodes = {
+			astroboy,
+			ps,
+		},
 		transformation = {
 			translate = { x, y, z },
 		},
 	}
 end
-
 

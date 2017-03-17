@@ -1,5 +1,6 @@
-function fire( x, y, z )
-	local MAX_PARTICLES = 300
+function sparkles( x, y, z )
+	
+	local MAX_PARTICLES = 500
 	
 	return {
 		type = 'crimild::Group',
@@ -7,19 +8,19 @@ function fire( x, y, z )
 			{
 				type = 'crimild::ParticleSystemComponent',
 				maxParticles = MAX_PARTICLES,
-				emitRate = 0.75 * MAX_PARTICLES,
-				preWarmTime = 1.0,
+				emitRate = 0.25 * MAX_PARTICLES,
+				computeInWorldSpace = true,
 				generators = {
 					{
 						type = 'crimild::BoxPositionParticleGenerator',
 						origin = { 0.0, 0.0, 0.0 },
-						size = { 2.0, 0.25, 2.0 },
+						size = { 0.5, 0.5, 0.5 },
 					},
 					{
 						type = 'crimild::RandomVector3fParticleGenerator',
 						attrib = 'velocity',
-						minValue = { 0.0, 1.0, 0.0 },
-						maxValue = { 0.0, 5.0, 0.0 },
+						minValue = { 0.0, 5.0, -8.0 },
+						maxValue = { 0.0, 8.0, 8.0 },
 					},
 					{
 						type = 'crimild::DefaultVector3fParticleGenerator',
@@ -29,25 +30,26 @@ function fire( x, y, z )
 					{
 						type = 'crimild::ColorParticleGenerator',
 						minStartColor = { 1.0, 0.0, 0.0, 1.0 },
-						maxStartColor = { 1.0, 1.0, 0.0, 1.0 },
-						minEndColor = { 1.0, 1.0, 1.0, 0.0 },
-						maxEndColor = { 1.0, 1.0, 1.0, 0.0 },
+						maxStartColor = { 1.0, 1.0, 1.0, 1.0 },
+						minEndColor = { 0.75, 0.0, 0.0, 0.0 },
+						maxEndColor = { 0.9, 0.5, 0.0, 0.0 },
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
 						attrib = 'uniform_scale',
-						minValue = 50.0,
-						maxValue = 200.0,
+						minValue = 20.0,
+						maxValue = 50.0,
 					},
 					{
 						type = 'crimild::TimeParticleGenerator',
 						minTime = 1.0,
-						maxTime = 2.0,
+						maxTime = 3.0,
 					},
 				},
 				updaters = {
 					{
 						type = 'crimild::EulerParticleUpdater',
+						globalAcceleration = { 0.0, -10.0, 0.0 },
 					},
 					{
 						type = 'crimild::TimeParticleUpdater',
@@ -56,10 +58,6 @@ function fire( x, y, z )
 				renderers = {
 					{
 						type = 'crimild::PointSpriteParticleRenderer',
-						texture = 'assets/textures/fire.tga',
-						blendMode = 'additive',
-						cullFaceEnabled = false,
-						depthStateEnabled = false,
 					},
 				},
 			},

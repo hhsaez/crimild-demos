@@ -1,4 +1,5 @@
 function explosion( x, y, z )
+	
 	local MAX_PARTICLES = 500
 	
 	return {
@@ -34,8 +35,8 @@ function explosion( x, y, z )
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
 						attrib = 'uniform_scale',
-						min = 5.0,
-						max = 50.0,
+						minValue = 5.0,
+						maxValue = 50.0,
 					},
 					{
 						type = 'crimild::TimeParticleGenerator',
