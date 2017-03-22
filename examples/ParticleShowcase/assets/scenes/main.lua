@@ -1,4 +1,6 @@
 require 'assets/prefabs/fire'
+require 'assets/prefabs/animated_fire'
+require 'assets/prefabs/animated_smoke'
 require 'assets/prefabs/sprinklers'
 require 'assets/prefabs/explosion'
 require 'assets/prefabs/fountain'
@@ -32,12 +34,14 @@ scene = {
 		environment,
 		camera,
 
+		animated_fire( -10.0, 0.5, 0.0 ),
 		fire( -10.0, 0.5, -10.0 ),
 		flowers( -10.0, 1.0, -20.0 ),
 		sprinklers( -10.0, 2.0, -20.0 ),
 		explosion( -10.0, 0.0, -60.0 ),
 		attractors( -10.0, 5.0, -40.0 ),
 
+		animated_smoke( 10.0, 0.5, 0.0 ),
 		fountain( 10.0, 0.5, -10.0 ),
 		smoke( 5.0, 5.0, -50.0, false ),
 		smoke( 15.0, 5.0, -50.0, true ),

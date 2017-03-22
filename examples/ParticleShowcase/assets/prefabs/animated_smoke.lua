@@ -1,5 +1,4 @@
-function buildFireExhaustFX( transformation )
-	
+function animated_smoke( x, y, z )
 	local MAX_PARTICLES = 300
 	
 	return {
@@ -8,19 +7,18 @@ function buildFireExhaustFX( transformation )
 			{
 				type = 'crimild::ParticleSystemComponent',
 				maxParticles = MAX_PARTICLES,
-				emitRate = 0.5 * MAX_PARTICLES,
-				computeInWorldSpace = true,
+				emitRate = 0.25 * MAX_PARTICLES,
 				generators = {
 					{
 						type = 'crimild::BoxPositionParticleGenerator',
 						origin = { 0.0, 0.0, 0.0 },
-						size = { 0.5, 0.0, 0.5 },
+						size = { 2.0, 0.25, 2.0 },
 					},
 					{
 						type = 'crimild::RandomVector3fParticleGenerator',
 						attrib = 'velocity',
-						minValue = { 0.0, -3.0, 0.0 },
-						maxValue = { 2.0, -1.0, 2.0 },
+						minValue = { 0.0, 1.0, 0.0 },
+						maxValue = { 0.0, 5.0, 0.0 },
 					},
 					{
 						type = 'crimild::DefaultVector3fParticleGenerator',
@@ -31,19 +29,19 @@ function buildFireExhaustFX( transformation )
 						type = 'crimild::ColorParticleGenerator',
 						minStartColor = { 1.0, 1.0, 1.0, 1.0 },
 						maxStartColor = { 1.0, 1.0, 1.0, 1.0 },
-						minEndColor = { 1.0, 0.0, 0.0, 0.0 },
-						maxEndColor = { 1.0, 0.0, 0.0, 0.0 },
+						minEndColor = { 1.0, 1.0, 1.0, 0.0 },
+						maxEndColor = { 1.0, 1.0, 1.0, 0.0 },
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
 						attrib = 'uniform_scale',
-						minValue = 0.1,
-						maxValue = 1.0,
+						minValue = 1.0,
+						maxValue = 2.0,
 					},
 					{
 						type = 'crimild::TimeParticleGenerator',
-						minTime = 1.0,
-						maxTime = 1.5,
+						minTime = 5.0,
+						maxTime = 10.0,
 					},
 				},
 				updaters = {
@@ -54,28 +52,24 @@ function buildFireExhaustFX( transformation )
 						type = 'crimild::TimeParticleUpdater',
 					},
 					{
-						type = 'crimild::FloorParticleUpdater',
-					},
-					{
 						type = 'crimild::CameraSortParticleUpdater',
-					},
-					{
-						type = 'crimild::ColorParticleUpdater',
 					},
 				},
 				renderers = {
 					{
 						type = 'crimild::AnimatedSpriteParticleRenderer',
-						texture = 'assets/textures/flames.tga',
+						texture = 'assets/textures/animated_smoke_2.tga',
 						spriteSheetSize = { 4.0, 4.0 },
-						blendMode = 'additive',
+						blendMode = 'color',
 						cullFaceEnabled = false,
 						depthStateEnabled = false,
 					},
 				},
 			},
 		},
-		transformation = transformation,
+		transformation = {
+			translate = { x, y, z },
+		},
 	}
 end
 

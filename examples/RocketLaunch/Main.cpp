@@ -164,7 +164,95 @@ namespace crimild {
 			Array< Line > _lines;
 		};
 
-	}	
+		class TextProfilerOutputHandler : public NodeComponent {
+			CRIMILD_IMPLEMENT_RTTI( crimild::demos::TextProfilerOutputHandler )
+
+		private:
+			class HandlerImpl : public ProfilerOutputHandler {
+			public:
+				HandlerImpl( Text *node ) : _node( node ) { }
+				virtual ~HandlerImpl( void ) { }
+
+				virtual void beginOutput( crimild::Size fps, crimild::Real64 avgFrameTime, crimild::Real64 minFrameTime, crimild::Real64 maxFrameTime ) override
+				{
+					_line.str( "" );
+
+					_line << std::setiosflags( std::ios::fixed )
+						  << std::setprecision( 3 )
+						  << "FPS: " << std::setw( 10 ) << fps
+						  << "MIN: " << std::setw( 10 ) << minFrameTime
+						  << "AVG: " << std::setw( 10 ) << avgFrameTime
+						  << "MAX: " << std::setw( 10 ) << maxFrameTime
+						  << "\n--------------------------------------------------------------------------------------------"
+						  << "\n";
+					
+					_line << std::setiosflags( std::ios::fixed )
+						  << std::setprecision( 3 )
+						  << std::setw( 15 ) << std::right << "MIN | "
+						  << std::setw( 15 ) << std::right << "AVG | "
+						  << std::setw( 15 ) << std::right << "MAX | "
+						  << std::setw( 15 ) << std::right << "TIME | "
+						  << std::setw( 15 ) << std::right << "COUNT | "
+						  << std::left << "NAME"
+						  << "\n--------------------------------------------------------------------------------------------"
+						  << "\n";
+				}
+				
+				virtual void sample( float minPc, float avgPc, float maxPc, unsigned int totalTime, unsigned int callCount, std::string name, unsigned int parentCount ) override
+				{
+					std::stringstream spaces;
+					for ( int i = 0; i < parentCount; i++ ) {
+						spaces << " ";
+					}
+					
+					_line << std::setiosflags( std::ios::fixed | std::ios::showpoint )
+						  << std::setprecision( 3 )
+						  << std::setw( 12 ) << std::right << minPc << " | "
+						  << std::setw( 12 ) << std::right << avgPc << " | "
+						  << std::setw( 12 ) << std::right << maxPc << " | "
+						  << std::setw( 12 ) << std::right << totalTime << " | "
+						  << std::setw( 12 ) << std::right << callCount << " | "
+						  << std::left << spaces.str() << name
+						  << "\n";
+				}
+				
+				virtual void endOutput( void ) override
+				{
+					_line << "\n";
+					
+					_node->setText( _line.str() );
+				}
+				
+			private:
+				Text *_node = nullptr;
+				std::stringstream _line;
+			};
+
+			
+		public:
+			TextProfilerOutputHandler( scripting::ScriptEvaluator &eval )
+			{
+				
+			}
+			
+			virtual ~TextProfilerOutputHandler( void )
+			{
+				
+			}
+
+			virtual void onAttach( void ) override
+			{
+				Profiler::getInstance()->setOutputHandler( crimild::alloc< HandlerImpl >( getNode< Text >() ) );
+			}
+
+			virtual void onDetach( void ) override
+			{
+				//Profiler::getInstance()->setOutputHandler( nullptr );
+			}
+
+		};
+		
+	}
 
 }
 
@@ -192,10 +280,13 @@ int main( int argc, char **argv )
 {
 	CRIMILD_SCRIPTING_REGISTER_BUILDER( crimild::demos::RocketController )	
 	CRIMILD_SCRIPTING_REGISTER_BUILDER( crimild::demos::CaptionsController )
+	CRIMILD_SCRIPTING_REGISTER_BUILDER( crimild::demos::TextProfilerOutputHandler )
 	
     auto sim = crimild::alloc< GLSimulation >(
 		"Rocket Launch",
 		crimild::alloc< Settings >( argc, argv ) );
+
+	//Profiler::getInstance()->setOutputHandler( crimild::alloc< ProfilerConsoleOutputHandler >() );
 
 	sim->getRenderer()->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.55f, 1.0f, 1.0f ) );
 

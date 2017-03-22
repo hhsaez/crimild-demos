@@ -1,6 +1,6 @@
 function buildVaporFX( transformation )
 	
-	local MAX_PARTICLES = 1000
+	local MAX_PARTICLES = 2000
 	
 	return {
 		type = 'crimild::Group',
@@ -19,8 +19,8 @@ function buildVaporFX( transformation )
 					{
 						type = 'crimild::RandomVector3fParticleGenerator',
 						attrib = 'velocity',
-						minValue = { -2.0, -2.0, -2.0 },
-						maxValue = { 2.0, 0.5, 2.0 },
+						minValue = { -2.0, -2.0, -0.1 },
+						maxValue = { 2.0, 0.5, 0.1 },
 					},
 					{
 						type = 'crimild::RandomVector3fParticleGenerator',
@@ -38,22 +38,27 @@ function buildVaporFX( transformation )
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
 						attrib = 'uniform_scale_start',
-						minValue = 1.0,
-						maxValue = 50.0,
+						minValue = 0.1,
+						maxValue = 1.0,
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
 						attrib = 'uniform_scale_end',
-						minValue = 100.0,
-						maxValue = 300.0,
+						minValue = 1.0,
+						maxValue = 8.0,
 					},
 					{
 						type = 'crimild::TimeParticleGenerator',
-						minTime = 1.0,
+						minTime = 5.0,
 						maxTime = 20.0,
 					},
 				},
 				updaters = {
+					{
+						type = 'crimild::SetVector3fValueParticleUpdater',
+						attrib = 'acceleration',
+						value = { 0.0, 0.0, 0.0 },
+					},
 					{
 						type = 'crimild::EulerParticleUpdater',
 					},
@@ -69,12 +74,25 @@ function buildVaporFX( transformation )
 					{
 						type = 'crimild::ColorParticleUpdater',
 					},
+					{
+						type = 'crimild::AttractorParticleUpdater',
+						origin = { 10.0, 3.0, -30.0 },
+						radius = 20.0,
+						strength = 5000.0,
+					},
+					{
+						type = 'crimild::AttractorParticleUpdater',
+						origin = { -10.0, 3.0, -30.0 },
+						radius = 20.0,
+						strength = 5000.0,
+					},
 				},
 				renderers = {
 					{
-						type = 'crimild::PointSpriteParticleRenderer',
-						texture = 'assets/textures/smoke.tga',
-						blendMode = 'additive',
+						type = 'crimild::AnimatedSpriteParticleRenderer',
+						texture = 'assets/textures/animated_smoke_2.tga',
+						spriteSheetSize = { 4.0, 4.0 },
+						blendMode = 'color',
 						cullFaceEnabled = false,
 						depthStateEnabled = false,
 					},

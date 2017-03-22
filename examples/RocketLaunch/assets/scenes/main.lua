@@ -32,6 +32,23 @@ local captions = {
 	},
 }
 
+local profilerOutput = {
+	type = 'crimild::Text',
+	font = 'assets/fonts/Courier New',
+	textSize = 0.015,
+	text = ' ',
+	textColor = { 1.0, 1.0, 1.0, 1.0 },
+	enableDepthTest = false,
+	transformation = {
+		translate = { -0.5, 0.35, 0.0 },
+	},
+	components = {
+		{
+			type = 'crimild::demos::TextProfilerOutputHandler',
+		},
+	},
+}
+
 local camera = {
 	type = 'crimild::Camera',
 	enableCulling = false,
@@ -44,6 +61,7 @@ local camera = {
 			type = 'crimild::Group',
 			nodes = {
 				captions,
+				profilerOutput,
 			},
 			transformation = {
 				translate = { 0.0, 0.0, -1.0 },
