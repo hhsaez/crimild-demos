@@ -36,91 +36,39 @@
 using namespace crimild;
 using namespace crimild::al;
 
-class DroneComponent : public NodeComponent {
-public:
-	DroneComponent( void ) { }
-	virtual ~DroneComponent( void ) { }
 
-	virtual void onAttach( void ) override
-	{
-		getNode()->local().setTranslate( 0.0f, 10.0f, -80.0f );
-	}
-
-	virtual void update( const Clock &t ) override
-	{
-		_accumTime += t.getDeltaTime();
-
-		float z = -50.0f + 50.0f * Numericf::sin( _accumTime );
-		float y = 5.0f + 1.0f * Numericf::sin( 2.0f * _accumTime );
-
-		getNode()->local().setTranslate( 0.0f, y, z );
-
-		float pitchAngle = -0.15f * Numericf::sin( 0.5f * _accumTime ) * Numericf::cos( 0.5f * _accumTime );
-		float rollAngle = 0.025f * Numericf::sin( 4.0f * _accumTime );
-		Quaternion4f pitch, roll, yaw;
-		pitch.fromAxisAngle( Vector3f( 1.0f, 0.0f, 0.0f ), pitchAngle );
-		roll.fromAxisAngle( Vector3f( 0.0f, 0.0f, 1.0f ), rollAngle );
-		yaw.fromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0f ), -Numericf::HALF_PI );
-		getNode()->local().setRotate( roll * pitch * yaw );
-	}
-
-    private:
-	float _accumTime = 0.0f;
-};
-
-SharedPointer< Node > loadDrone( void )
+SharedPointer< Node > loadScene( void )
 {
-    auto drone = crimild::alloc< Group >( "drone" );
+    auto drone = crimild::alloc< Group >( "scene" );
     
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/MQ-27b.obj" ) );
+	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/scene.obj" ) );
 	auto droneModel = loader.load();
 	if ( droneModel != nullptr ) {
 		drone->attachNode( droneModel );
-        
-		auto droneComponent = crimild::alloc< DroneComponent >();
-		drone->attachComponent( droneComponent );
-        
-		auto audioClip = crimild::alloc< WavAudioClip >( FileSystem::getInstance().pathForResource( "drone_mono.wav" ) );
-		auto audioComponent = crimild::alloc< AudioComponent >( audioClip );
-		drone->attachComponent( audioComponent );
-		audioComponent->play( true );
+		drone->attachComponent( crimild::alloc< RotationComponent >( Vector3f::UNIT_Y, 0.1f ) );
 	}
     
     return drone;
 }
 
-SharedPointer< Node > makeGround( void )
-{
-	auto primitive = crimild::alloc< QuadPrimitive >( 200.0f, 200.0f );
-	auto geometry = crimild::alloc< Geometry >();
-	geometry->attachPrimitive( primitive );
-	geometry->local().setRotate( Vector3f( 1.0f, 0.0f, 0.0f ), -Numericf::HALF_PI );
-    geometry->local().setTranslate( 0.0f, 0.0f, -30.0f );
-	
-	return geometry;
-}
-
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Drone", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< GLSimulation >( "Shadows", crimild::alloc< Settings >( argc, argv ) );
 
 	auto scene = crimild::alloc< Group >();
-    scene->attachNode( loadDrone() );
-	scene->attachNode( makeGround() );
-
-	AudioManager::getInstance().setGeneralGain( 80.0f );
+    scene->attachNode( loadScene() );
 
 	auto light = crimild::alloc< Light >();
 	light->local().setTranslate( 10.0f, 25.0f, 20.0f );
-    light->local().lookAt( Vector3f( 0.0f, 0.0f, -8.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
+    light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
     light->setCastShadows( true );
     light->setShadowNearCoeff( 1.0f );
     light->setShadowFarCoeff( 100.0f );
 	scene->attachNode( light );
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
-	camera->local().setTranslate( 1.0f, 6.0f, 15.0f );
-    camera->local().lookAt( Vector3f( 0.0f, 1.0f, 0.0 ), Vector3f( 0.0f, 1.0f, 0.0f ) );
+	camera->local().setTranslate( 1.0f, 25.0f, 25.0f );
+    camera->local().lookAt( Vector3f( 0.0f, 5.0f, 0.0 ), Vector3f( 0.0f, 1.0f, 0.0f ) );
 	scene->attachNode( camera );
 
 	sim->setScene( scene );

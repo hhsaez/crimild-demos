@@ -27,39 +27,36 @@
 
 #include <Crimild.hpp>
 #include <Crimild_GLFW.hpp>
+#include <Crimild_Scripting.hpp>
 
 using namespace crimild;
 
+SharedPointer< Node > room( void )
+{
+	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/room.obj" ) );
+	auto model = loader.load();
+	return model;
+}
+
+SharedPointer< Group > loadModel( std::string filename )
+{
+	SharedPointer< Group > model;
+	auto modelPath = FileSystem::getInstance().pathForResource( filename );
+	FileStream is( modelPath, FileStream::OpenMode::READ );
+	is.load();
+	if ( is.getObjectCount() > 0 ) {
+		model = is.getObjectAt< Group >( 0 );
+	}
+	
+	return model;
+}
+
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Triangle", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< GLSimulation >( "Particle Showcase", crimild::alloc< Settings >( argc, argv ) );
 
-    auto scene = crimild::alloc< Group >();
-
-    auto ps = crimild::alloc< ParticleSystem >();
-    ps->setMaxParticles( 200 );
-    ps->setParticleLifetime( 2.0f );
-    ps->setParticleSpeed( 0.75f );
-    ps->setParticleStartSize( 75.0f );
-    ps->setParticleEndSize( 15.0f );
-    ps->setParticleStartColor( RGBAColorf( 1.0f, 0.9f, 0.1f, 0.9f ) );
-    ps->setParticleEndColor( RGBAColorf( 1.0f, 0.0f, 0.0f, 0.5f ) );
-    auto psEmitter = crimild::alloc< CylinderParticleEmitter >( 0.1f, 0.2f );
-    ps->setEmitter( psEmitter );
-    ps->setPreComputeParticles( true );
-    ps->setTexture( crimild::retain( AssetManager::getInstance()->get< Texture >( "fire.tga" ) ) );
-    ps->generate();
-
-    auto g = crimild::alloc< Group >();
-    g->attachNode( ps );
-    g->local().setTranslate( 0.0f, -1.0f, 0.0f );
-    scene->attachNode( g );
-
-    auto camera = crimild::alloc< Camera >();
-    camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 5.0f ) );
-    scene->attachNode( camera );
-    
-    sim->setScene( scene );
+	sim->loadScene( "assets/scenes/main.lua", crimild::alloc< crimild::scripting::LuaSceneBuilder >() );
+	
 	return sim->run();
 }
 
