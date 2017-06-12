@@ -219,13 +219,32 @@ int main( int argc, char **argv )
     auto scene = crimild::alloc< Group >();
 
     auto camera = crimild::alloc< Camera >();
+    auto renderPass = crimild::alloc< CompositeRenderPass >();
+    renderPass->attachRenderPass( crimild::alloc< ShadowRenderPass >() );
+    renderPass->attachRenderPass( crimild::alloc< StandardRenderPass >() );
+    camera->setRenderPass( renderPass );
     // camera->setRenderPass( crimild::alloc< BasicRenderPass >() );
     scene->attachNode( camera );
 
-    auto light = crimild::alloc< Light >();
+    auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+    light->local().setTranslate( -1.0f, 0.0f, 5.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
+    light->setColor( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ) );
     light->attachComponent< LightControls >();
-    camera->attachNode( light );
+    // camera->attachNode( light );
+
+    auto light1 = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+    light1->local().setTranslate( 1.0f, -1.0f, 5.0f );
+    light1->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
+    light1->setColor( RGBAColorf( 0.75f, 1.0f, 0.5f, 1.0f ) );
+    light1->setShadowMap( crimild::alloc< ShadowMap >() );
+    camera->attachNode( light1 );
+
+    auto light2 = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+    light2->local().setTranslate( 10.0f, 25.0f, -5.0f );
+    light2->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
+    light2->setColor( RGBAColorf( 0.75f, 0.75f, 1.0f, 1.0f ) );
+    // scene->attachNode( light2 );
 
     std::string modelPath = sim->getSettings()->get< std::string >( "file", "assets/models/ironman/Iron_Man.obj" );
 
