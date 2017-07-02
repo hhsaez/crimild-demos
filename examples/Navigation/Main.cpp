@@ -35,7 +35,7 @@ SharedPointer< Node > createEnvironment( void )
 {
 	auto group = crimild::alloc< Group >();
 
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/scene2.obj" ) );
+	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/level.obj" ) );
 	auto node = loader.load();
 	if ( node != nullptr ) {
 		group->attachNode( node );
@@ -94,23 +94,23 @@ int main( int argc, char **argv )
     sim->getRenderer()->getScreenBuffer()->setClearColor( RGBAColorf( 0.25f, 0.25f, 0.25f, 1.0f ) );
 
 	sim->registerMessageHandler< crimild::messaging::KeyPressed >( []( crimild::messaging::KeyPressed const &msg ) {
-		float horiAxisCoeff = 1.0f;
+		const float speedCoeff = Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_LEFT_SHIFT ) ? 3.0f : 1.0f;
 
 		switch ( msg.key ) {
 			case CRIMILD_INPUT_KEY_LEFT:
-				Input::getInstance()->setAxis( Input::AXIS_HORIZONTAL, -horiAxisCoeff );
+				Input::getInstance()->setAxis( Input::AXIS_HORIZONTAL, -speedCoeff );
 				break;
 
 			case CRIMILD_INPUT_KEY_RIGHT:
-				Input::getInstance()->setAxis( Input::AXIS_HORIZONTAL, +horiAxisCoeff );
+				Input::getInstance()->setAxis( Input::AXIS_HORIZONTAL, +speedCoeff );
 				break;
 
 			case CRIMILD_INPUT_KEY_UP:
-				Input::getInstance()->setAxis( Input::AXIS_VERTICAL, +1.0f );
+				Input::getInstance()->setAxis( Input::AXIS_VERTICAL, +speedCoeff );
 				break;
 
 			case CRIMILD_INPUT_KEY_DOWN:
-				Input::getInstance()->setAxis( Input::AXIS_VERTICAL, -1.0f );
+				Input::getInstance()->setAxis( Input::AXIS_VERTICAL, -speedCoeff );
 				break;
 
 			default:
@@ -141,7 +141,7 @@ int main( int argc, char **argv )
 
     auto scene = crimild::alloc< Group >();
 
-	auto navigationMesh = crimild::alloc< NavigationMeshOBJ >( FileSystem::getInstance().pathForResource( "assets/models/navmesh2.obj" ) );
+	auto navigationMesh = crimild::alloc< NavigationMeshOBJ >( FileSystem::getInstance().pathForResource( "assets/models/level_navmesh.obj" ) );
 
 	auto environment = createEnvironment();
 	environment->attachComponent< NavigationMeshContainer >( navigationMesh );
@@ -152,7 +152,7 @@ int main( int argc, char **argv )
 	scene->attachNode( character );
 
     auto camera = crimild::alloc< Camera >();
-    camera->local().setTranslate( Vector3f( 0.0f, 8.0f, 8.0f ) );
+    camera->local().setTranslate( Vector3f( 0.0f, 15.0f, 15.0f ) );
 	camera->local().lookAt( Vector3f::ZERO, Vector3f::UNIT_Y );
     auto renderPass = crimild::alloc< CompositeRenderPass >();
     renderPass->attachRenderPass( crimild::alloc< ShadowRenderPass >() );
