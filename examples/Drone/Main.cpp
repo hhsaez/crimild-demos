@@ -110,17 +110,19 @@ int main( int argc, char **argv )
 
 	AudioManager::getInstance().setGeneralGain( 80.0f );
 
-	auto light = crimild::alloc< Light >();
+	auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
 	light->local().setTranslate( 10.0f, 25.0f, 20.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, -8.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
-    light->setCastShadows( true );
-    light->setShadowNearCoeff( 1.0f );
-    light->setShadowFarCoeff( 100.0f );
+    light->setShadowMap( crimild::alloc< ShadowMap >() );
 	scene->attachNode( light );
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 1.0f, 6.0f, 15.0f );
     camera->local().lookAt( Vector3f( 0.0f, 1.0f, 0.0 ), Vector3f( 0.0f, 1.0f, 0.0f ) );
+    auto renderPass = crimild::alloc< CompositeRenderPass >();
+    renderPass->attachRenderPass( crimild::alloc< ShadowRenderPass >() );
+    renderPass->attachRenderPass( crimild::alloc< StandardRenderPass >() );
+    camera->setRenderPass( renderPass );
 	scene->attachNode( camera );
 
 	sim->setScene( scene );

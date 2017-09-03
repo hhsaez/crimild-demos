@@ -46,9 +46,9 @@ int main( int argc, char **argv )
         auto light1 = crimild::alloc< Light >();
         light1->local().setTranslate( -9.0f, 5.0f, 0.0f );
         light1->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
-        light1->setCastShadows( true );
-        light1->setShadowNearCoeff( 0.1f );
-        light1->setShadowFarCoeff( 20.0f );
+        //light1->setCastShadows( true );
+        //light1->setShadowNearCoeff( 0.1f );
+        //light1->setShadowFarCoeff( 20.0f );
         light1->setAttenuation( Vector3f( .1f, 0.0f, 0.005f ) );
         model->attachNode( light1 );
         

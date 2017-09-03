@@ -47,9 +47,9 @@ int main( int argc, char **argv )
 	auto light = crimild::alloc< Light >();
 	light->local().setTranslate( 5.0f, 4.0f, 10.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
-    light->setCastShadows( true );
-    light->setShadowNearCoeff( 1.0f );
-    light->setShadowFarCoeff( 50.0f );
+    //light->setCastShadows( true );
+    //light->setShadowNearCoeff( 1.0f );
+    //light->setShadowFarCoeff( 50.0f );
 	scene->attachNode( light );
 
 	auto camera = crimild::alloc< Camera >();

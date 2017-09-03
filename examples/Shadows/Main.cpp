@@ -39,16 +39,16 @@ using namespace crimild::al;
 
 SharedPointer< Node > loadScene( void )
 {
-    auto drone = crimild::alloc< Group >( "scene" );
+    auto scene = crimild::alloc< Group >( "scene" );
     
 	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/scene.obj" ) );
-	auto droneModel = loader.load();
-	if ( droneModel != nullptr ) {
-		drone->attachNode( droneModel );
-		drone->attachComponent( crimild::alloc< RotationComponent >( Vector3f::UNIT_Y, 0.1f ) );
+	auto model = loader.load();
+	if ( model != nullptr ) {
+		scene->attachNode( model );
+		scene->attachComponent( crimild::alloc< RotationComponent >( Vector3f::UNIT_Y, 0.1f ) );
 	}
     
-    return drone;
+    return scene;
 }
 
 int main( int argc, char **argv )
@@ -58,17 +58,19 @@ int main( int argc, char **argv )
 	auto scene = crimild::alloc< Group >();
     scene->attachNode( loadScene() );
 
-	auto light = crimild::alloc< Light >();
+	auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
 	light->local().setTranslate( 10.0f, 25.0f, 20.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
-    light->setCastShadows( true );
-    light->setShadowNearCoeff( 1.0f );
-    light->setShadowFarCoeff( 100.0f );
+    light->setShadowMap( crimild::alloc< ShadowMap >() );
 	scene->attachNode( light );
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 1.0f, 25.0f, 25.0f );
     camera->local().lookAt( Vector3f( 0.0f, 5.0f, 0.0 ), Vector3f( 0.0f, 1.0f, 0.0f ) );
+    auto renderPass = crimild::alloc< CompositeRenderPass >();
+    renderPass->attachRenderPass( crimild::alloc< ShadowRenderPass >() );
+    renderPass->attachRenderPass( crimild::alloc< StandardRenderPass >() );
+    camera->setRenderPass( renderPass );
 	scene->attachNode( camera );
 
 	sim->setScene( scene );

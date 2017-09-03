@@ -185,6 +185,8 @@ public:
         if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_RIGHT ) ) {
             getNode()->local().translate() += speed * Vector3f( 1.0f, 0.0f, 0.0f );
         }
+
+        getNode()->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
     }
 };
 
@@ -219,11 +221,18 @@ int main( int argc, char **argv )
     auto scene = crimild::alloc< Group >();
 
     auto camera = crimild::alloc< Camera >();
+    auto renderPass = crimild::alloc< CompositeRenderPass >();
+    renderPass->attachRenderPass( crimild::alloc< ShadowRenderPass >() );
+    renderPass->attachRenderPass( crimild::alloc< StandardRenderPass >() );
+    camera->setRenderPass( renderPass );
     // camera->setRenderPass( crimild::alloc< BasicRenderPass >() );
     scene->attachNode( camera );
 
-    auto light = crimild::alloc< Light >();
+    auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+    light->local().setTranslate( 1.0f, 1.0f, 1.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0f ) );
+    // light->setAttenuation( Vector3f( 0.0f, 0.0f, 1.0f ) );
+    // light->setShadowMap( crimild::alloc< ShadowMap >() );
     light->attachComponent< LightControls >();
     camera->attachNode( light );
 

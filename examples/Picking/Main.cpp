@@ -30,49 +30,6 @@
 
 using namespace crimild;
 
-class PickingComponent : public NodeComponent {
-	CRIMILD_IMPLEMENT_RTTI( PickingComponent )
-public:
-	PickingComponent( void )
-	{
-
-	}
-
-	virtual ~PickingComponent( void )
-	{
-
-	}
-
-	virtual void update( const Clock &t ) override 
-	{
-		if ( Input::getInstance()->isMouseButtonDown( 0 ) ) {
-			Camera *camera = getNode< Camera >();
-
-			Ray3f ray;
-			Vector2f mousePos = Input::getInstance()->getNormalizedMousePosition();
-			if ( camera->getPickRay( mousePos[ 0 ], mousePos[ 1 ], ray ) ) {
-				SelectNodes selectNodes( [&]( Node *node ) {
-					MaterialComponent *materials = node->getComponent< MaterialComponent >();
-					if ( materials ) {
-						if ( node->getWorldBound()->testIntersection( ray ) ) {
-							materials->forEachMaterial( []( Material *material ) {
-								float r = rand() % 255 / 255.0f;
-								float g = rand() % 255 / 255.0f;
-								float b = rand() % 255 / 255.0f;
-								material->setDiffuse( RGBAColorf( r, g, b, 1.0f ) );
-							});
-						}
-					}
-
-					return false;
-				});
-
-				getNode()->getParent()->perform( selectNodes );
-			}
-		}
-	}
-};
-
 SharedPointer< Node > makeSphere( float x, float y, float z )
 {
 	auto primitive = crimild::alloc< ParametricSpherePrimitive >( Primitive::Type::TRIANGLES, 1.0f );
@@ -82,6 +39,18 @@ SharedPointer< Node > makeSphere( float x, float y, float z )
 	auto material = crimild::alloc< Material >();
 	material->setDiffuse( RGBAColorf( 0.75f, 0.75f, 0.75f, 1.0f ) );
 	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+	geometry->attachComponent< UIResponder >( []( Node *node ) {
+		MaterialComponent *materials = node->getComponent< MaterialComponent >();
+		if ( materials ) {
+			materials->forEachMaterial( []( Material *material ) {
+				float r = rand() % 255 / 255.0f;
+				float g = rand() % 255 / 255.0f;
+				float b = rand() % 255 / 255.0f;
+				material->setDiffuse( RGBAColorf( r, g, b, 1.0f ) );
+			});
+		}
+		return true;
+	});
 
 	geometry->local().setTranslate( x, y, z );
 
@@ -93,6 +62,7 @@ SharedPointer< Node > makeSphere( float x, float y, float z )
 int main( int argc, char **argv )
 {
 	auto sim = crimild::alloc< GLSimulation >( "Selecting objects with the mouse", crimild::alloc< Settings >( argc, argv ) );
+	sim->addSystem( crimild::alloc< UISystem >() );
 
 	auto scene = crimild::alloc< Group >();
 
@@ -107,8 +77,6 @@ int main( int argc, char **argv )
 	scene->attachNode( spheres );
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
-	auto pickingComponent = crimild::alloc< PickingComponent >();
-	camera->attachComponent( pickingComponent );
 	camera->local().setTranslate( 10.0f, 15.0f, 50.0f );
 	camera->local().setRotate( Vector3f( -1.0f, 0.5f, 0.0f ).getNormalized(), 0.1 * Numericf::PI );
 	scene->attachNode( camera );
