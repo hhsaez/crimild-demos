@@ -46,7 +46,15 @@ namespace crimild {
 
             }
 
-            virtual void update( const Clock & ) override 
+            virtual void start( void ) override
+            {
+                auto source = getComponent< AudioSourceComponent >()->getAudioSource();
+                source->setLoop( true );
+                source->setVolume( 0.0f );
+                source->play();
+            }
+
+            virtual void update( const Clock &c ) override 
             {
                 auto camera = Camera::getMainCamera();
 
@@ -54,18 +62,10 @@ namespace crimild {
 
                 auto d = Distance::compute( camera->getWorld().getTranslate(), getNode()->getWorld().getTranslate() );
                 if ( d <= _minDistance ) {
-                    if ( source != nullptr && source->getStatus() != audio::AudioSource::Status::PLAYING ) {
-                        bool shouldSkipFirstSecond = source->getStatus() == audio::AudioSource::Status::STOPPED;
-                        source->play();
-                        if ( shouldSkipFirstSecond ) {
-                            source->setPlayingOffset( 1.5f );
-                        }
-                    }
+                    source->setVolume( Numericf::min( 1.0f, source->getVolume() + c.getDeltaTime() ) );
                 }
-                else if ( d > _minDistance ) {
-                    if ( source != nullptr && source->getStatus() == audio::AudioSource::Status::PLAYING ) {
-                        source->pause();
-                    }
+                else {
+                    source->setVolume( Numericf::max( 0.0f, source->getVolume() - c.getDeltaTime() ) );   
                 }
             }
 
