@@ -14,6 +14,7 @@ PROJECT( CRIMILD_EXAMPLES )
 
 SET( CRIMILD_ENABLE_SCRIPTING ON CACHE BOOL "Enable scripting module for Crimild" )
 SET( CRIMILD_ENABLE_IMPORT ON CACHE BOOL "Enable import module for Crimild" )
+SET( CRIMILD_ENABLE_SFML ON CACHE BOOL "Enable sfml module for Crimild" )
 SET( CRIMILD_ENABLE_GLFW ON CACHE BOOL "Enable glfw module for Crimild" )
 SET( CRIMILD_SCRIPTING_LOG_VERBOSE ON CACHE BOOL "Enable verbose logging for Crimild" )
 
