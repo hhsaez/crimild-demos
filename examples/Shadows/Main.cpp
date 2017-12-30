@@ -27,15 +27,12 @@
 
 #include <Crimild.hpp>
 #include <Crimild_GLFW.hpp>
-#include <Crimild_AL.hpp>
 
 #include <fstream>
 #include <string>
 #include <vector>
 
 using namespace crimild;
-using namespace crimild::al;
-
 
 SharedPointer< Node > loadScene( void )
 {

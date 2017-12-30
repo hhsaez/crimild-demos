@@ -27,14 +27,13 @@
 
 #include <Crimild.hpp>
 #include <Crimild_GLFW.hpp>
-#include <Crimild_AL.hpp>
 
 #include <fstream>
 #include <string>
 #include <vector>
 
 using namespace crimild;
-using namespace crimild::al;
+using namespace crimild::audio;
 
 class DroneComponent : public NodeComponent {
 public:
@@ -43,47 +42,54 @@ public:
 
 	virtual void onAttach( void ) override
 	{
-		getNode()->local().setTranslate( 0.0f, 10.0f, -80.0f );
+		_height = Random::generate< crimild::Real32 >( 1.0f, 16.0f );
+
+		getNode()->local().setTranslate( getRandomPosition() );
+
+		_target = getRandomPosition();
 	}
 
-	virtual void update( const Clock &t ) override
+	virtual void update( const Clock &c ) override
 	{
-		_accumTime += t.getDeltaTime();
+		auto d = Distance::compute( getNode()->getWorld().getTranslate(), _target );
+		if ( d < 1.0f ) {
+			_target = getRandomPosition();
+		}
 
-		float z = -50.0f + 50.0f * Numericf::sin( _accumTime );
-		float y = 5.0f + 1.0f * Numericf::sin( 2.0f * _accumTime );
-
-		getNode()->local().setTranslate( 0.0f, y, z );
-
-		float pitchAngle = -0.15f * Numericf::sin( 0.5f * _accumTime ) * Numericf::cos( 0.5f * _accumTime );
-		float rollAngle = 0.025f * Numericf::sin( 4.0f * _accumTime );
-		Quaternion4f pitch, roll, yaw;
-		pitch.fromAxisAngle( Vector3f( 1.0f, 0.0f, 0.0f ), pitchAngle );
-		roll.fromAxisAngle( Vector3f( 0.0f, 0.0f, 1.0f ), rollAngle );
-		yaw.fromAxisAngle( Vector3f( 0.0f, 1.0f, 0.0f ), -Numericf::HALF_PI );
-		getNode()->local().setRotate( roll * pitch * yaw );
+		getNode()->local().lookAt( _target );
+		getNode()->local().translate() += 10.0f * c.getDeltaTime() * getNode()->local().computeDirection();
 	}
 
-    private:
-	float _accumTime = 0.0f;
+private:
+	Vector3f getRandomPosition( void ) const 
+	{
+		return Random::generate< Vector3f >( Vector3f( -18.0f, _height, 0.0f ), Vector3f( 18.0f, _height, -50.0f ) );	
+	}
+
+private:	
+	Vector3f _target;
+	crimild::Real32 _height = 10.0f;
 };
 
 SharedPointer< Node > loadDrone( void )
 {
     auto drone = crimild::alloc< Group >( "drone" );
     
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/MQ-27b.obj" ) );
+	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/drone/MQ-27b.obj" ) );
 	auto droneModel = loader.load();
 	if ( droneModel != nullptr ) {
+		droneModel->local().rotate().fromEulerAngles( 0.0f, -Numericf::HALF_PI, 0.0f );
 		drone->attachNode( droneModel );
         
 		auto droneComponent = crimild::alloc< DroneComponent >();
 		drone->attachComponent( droneComponent );
         
-		auto audioClip = crimild::alloc< WavAudioClip >( FileSystem::getInstance().pathForResource( "drone_mono.wav" ) );
-		auto audioComponent = crimild::alloc< AudioComponent >( audioClip );
-		drone->attachComponent( audioComponent );
-		audioComponent->play( true );
+		auto audioSource = AudioManager::getInstance()->createAudioSource( FileSystem::getInstance().pathForResource( "assets/audio/drone_mono.wav" ), false );
+		audioSource->setLoop( true );
+		audioSource->setAutoplay( true );
+		audioSource->enableSpatialization( true );
+		audioSource->setMinDistance( 5.0f );
+		drone->attachComponent< AudioSourceComponent >( audioSource );
 	}
     
     return drone;
@@ -100,25 +106,33 @@ SharedPointer< Node > makeGround( void )
 	return geometry;
 }
 
+SharedPointer< Node > loadRoom( void )
+{
+	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/room/room.obj" ) );
+	auto model = loader.load();
+	return model;
+}
+
 int main( int argc, char **argv )
 {
 	auto sim = crimild::alloc< GLSimulation >( "Drone", crimild::alloc< Settings >( argc, argv ) );
 
 	auto scene = crimild::alloc< Group >();
-    scene->attachNode( loadDrone() );
-	scene->attachNode( makeGround() );
+	for ( int i = 0; i < 3; i++ ) {
+    	scene->attachNode( loadDrone() );
+    }
+	scene->attachNode( loadRoom() );
 
-	AudioManager::getInstance().setGeneralGain( 80.0f );
-
-	auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-	light->local().setTranslate( 10.0f, 25.0f, 20.0f );
-    light->local().lookAt( Vector3f( 0.0f, 0.0f, -8.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
-    light->setShadowMap( crimild::alloc< ShadowMap >() );
+	auto light = crimild::alloc< Light >( Light::Type::POINT );
+	light->local().setTranslate( 0.0f, 10.0f, -20.0f );
+    // light->local().lookAt( Vector3f( 0.0f, 0.0f, -8.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
+    // light->setShadowMap( crimild::alloc< ShadowMap >() );
 	scene->attachNode( light );
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
-	camera->local().setTranslate( 1.0f, 6.0f, 15.0f );
-    camera->local().lookAt( Vector3f( 0.0f, 1.0f, 0.0 ), Vector3f( 0.0f, 1.0f, 0.0f ) );
+	camera->attachComponent< AudioListenerComponent >();
+	camera->attachComponent< FreeLookCameraComponent >();
+	camera->local().setTranslate( 0.0f, 6.0f, 15.0f );
     auto renderPass = crimild::alloc< CompositeRenderPass >();
     renderPass->attachRenderPass( crimild::alloc< ShadowRenderPass >() );
     renderPass->attachRenderPass( crimild::alloc< StandardRenderPass >() );

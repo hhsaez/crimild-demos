@@ -78,10 +78,9 @@ SharedPointer< Node > createCharacter( void )
 
 		auto nav = node->getComponent< NavigationController >();
 		if ( nav != nullptr ) {
-			pos = nav->move( node->getLocal().getTranslate(), pos );
+			nav->move( pos );
 		}
 
-		node->local().setTranslate( pos );
 		node->local().rotate().fromEulerAngles( 0.0f, angle, 0.0f );
 	});
 	
