@@ -6,7 +6,10 @@ function animated_smoke( x, y, z )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+				},
 				emitRate = 0.25 * MAX_PARTICLES,
 				generators = {
 					{
@@ -34,7 +37,7 @@ function animated_smoke( x, y, z )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
+						attrib = 'uniformScale',
 						minValue = 1.0,
 						maxValue = 2.0,
 					},
@@ -58,11 +61,20 @@ function animated_smoke( x, y, z )
 				renderers = {
 					{
 						type = 'crimild::AnimatedSpriteParticleRenderer',
-						texture = 'assets/textures/animated_smoke_2.tga',
 						spriteSheetSize = { 4.0, 4.0 },
-						blendMode = 'color',
-						cullFaceEnabled = false,
-						depthStateEnabled = false,
+						material = {
+							type = 'crimild::Material',
+							colorMap = {
+								type = 'crimild::Texture',
+								image = {
+									type = 'crimild::ImageTGA',
+									imageFileName = 'assets/textures/animated_smoke_2.tga',
+								},
+							},
+							blendMode = 'color',
+							cullFaceEnabled = false,
+							depthStateEnabled = false,
+						},
 					},
 				},
 			},

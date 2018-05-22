@@ -7,9 +7,12 @@ function buildFireExhaustFX( transformation )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+					computeInWorldSpace = true,
+				},
 				emitRate = 0.5 * MAX_PARTICLES,
-				computeInWorldSpace = true,
 				generators = {
 					{
 						type = 'crimild::BoxPositionParticleGenerator',
@@ -36,7 +39,7 @@ function buildFireExhaustFX( transformation )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
+						attrib = 'uniformScale',
 						minValue = 0.1,
 						maxValue = 1.0,
 					},
@@ -66,11 +69,20 @@ function buildFireExhaustFX( transformation )
 				renderers = {
 					{
 						type = 'crimild::AnimatedSpriteParticleRenderer',
-						texture = 'assets/textures/flames.tga',
 						spriteSheetSize = { 4.0, 4.0 },
-						blendMode = 'additive',
-						cullFaceEnabled = false,
-						depthStateEnabled = false,
+						material = {
+							type = 'crimild::Material',
+							colorMap = {
+								type = 'crimild::Texture',
+								image = {
+									type = 'crimild::ImageTGA',
+									imageFileName = 'assets/textures/flames.tga',
+								},
+							},
+							blendMode = 'additive',
+							cullFaceEnabled = false,
+							depthStateEnabled = false,
+						},
 					},
 				},
 			},

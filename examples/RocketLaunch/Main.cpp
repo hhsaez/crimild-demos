@@ -39,6 +39,8 @@ namespace crimild {
 			CRIMILD_IMPLEMENT_RTTI( crimild::demos::RocketController )
 			
 		public:
+			RocketController( void ) { }
+			
 			RocketController( scripting::ScriptEvaluator &eval )
 			{
 				eval.getPropValue( "countdown", _countdown );
@@ -79,6 +81,16 @@ namespace crimild {
 				}
 			}
 
+			virtual void decode( crimild::coding::Decoder &decoder ) override
+			{
+				NodeComponent::decode( decoder );
+
+				decoder.decode( "countdown", _countdown );
+				decoder.decode( "ignition", _ignition );
+				decoder.decode( "launch", _launch );
+				decoder.decode( "speed", _speed );
+			}
+
 		private:
 			crimild::Real32 _countdown = 10.0f;
 			crimild::Real32 _ignition = 15.0;
@@ -88,7 +100,24 @@ namespace crimild {
 		};
 
 		class CaptionsController : public NodeComponent {
+			CRIMILD_IMPLEMENT_RTTI( crimild::demos::CaptionsController )
+			
 		public:
+			CaptionsController( void )
+			{
+				_lines.add( Line { 1.0, 1.75, "10" } );
+				_lines.add( Line { 2.0, 2.75, "9" } );
+				_lines.add( Line { 3.0, 3.75, "8" } );
+				_lines.add( Line { 4.0, 4.75, "7" } );
+				_lines.add( Line { 5.0, 5.75, "6" } );
+				_lines.add( Line { 6.0, 6.75, "5" } );
+				_lines.add( Line { 7.0, 7.75, "4" } );
+				_lines.add( Line { 8.0, 8.75, "3" } );
+				_lines.add( Line { 9.0, 9.75, "2" } );
+				_lines.add( Line { 10.0, 10.75, "1" } );
+				_lines.add( Line { 11.0, 11.75, "LAUNCH" } );
+			}
+			
 			CaptionsController( scripting::ScriptEvaluator &eval )
 			{
 				eval.foreach( "lines", [ this ]( scripting::ScriptEvaluator &lEval, int ) {
@@ -140,23 +169,7 @@ namespace crimild {
 					return;
 				}
 
-				{
-					// reset position
-					auto min = text->getLocalBound()->getMin();
-					auto max = text->getLocalBound()->getMax();
-					auto diff = max - min;
-					text->local().translate() -= Vector3f( -0.5f * diff[ 0 ], 0.0f, 0.0f );
-				}
-
 				text->setText( textStr );
-                text->updateModelBounds();
-
-				{
-					auto min = text->getLocalBound()->getMin();
-					auto max = text->getLocalBound()->getMax();
-					auto diff = max - min;
-					text->local().translate() += Vector3f( -0.5f * diff[ 0 ], 0.0f, 0.0f );
-				}
 			}
 
 		private:
@@ -230,6 +243,11 @@ namespace crimild {
 
 			
 		public:
+			TextProfilerOutputHandler( void )
+			{
+				
+			}
+			
 			TextProfilerOutputHandler( scripting::ScriptEvaluator &eval )
 			{
 				
@@ -278,9 +296,11 @@ SharedPointer< Group > loadModel( std::string filename )
 
 int main( int argc, char **argv )
 {
-	CRIMILD_SCRIPTING_REGISTER_BUILDER( crimild::demos::RocketController )	
-	CRIMILD_SCRIPTING_REGISTER_BUILDER( crimild::demos::CaptionsController )
-	CRIMILD_SCRIPTING_REGISTER_BUILDER( crimild::demos::TextProfilerOutputHandler )
+	crimild::init();
+
+	CRIMILD_REGISTER_OBJECT_BUILDER( crimild::demos::RocketController )
+	CRIMILD_REGISTER_OBJECT_BUILDER( crimild::demos::CaptionsController )
+	CRIMILD_REGISTER_OBJECT_BUILDER( crimild::demos::TextProfilerOutputHandler )
 	
     auto sim = crimild::alloc< GLSimulation >(
 		"Rocket Launch",
@@ -290,9 +310,7 @@ int main( int argc, char **argv )
 
 	sim->getRenderer()->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.55f, 1.0f, 1.0f ) );
 
-	sim->loadScene(
-		"assets/scenes/main.lua",
-		crimild::alloc< crimild::scripting::LuaSceneBuilder >() );
+	sim->loadScene( FileSystem::getInstance().pathForResource( "assets/scenes/main.lua" ) );
 	
 	return sim->run();
 }

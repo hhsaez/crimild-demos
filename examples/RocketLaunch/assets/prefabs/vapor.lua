@@ -7,9 +7,12 @@ function buildVaporFX( transformation )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+					computeInWorldSpace = true,
+				},
 				emitRate = 0.1 * MAX_PARTICLES,
-				computeInWorldSpace = true,
 				generators = {
 					{
 						type = 'crimild::BoxPositionParticleGenerator',
@@ -37,13 +40,13 @@ function buildVaporFX( transformation )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale_start',
+						attrib = 'uniformScaleStart',
 						minValue = 0.1,
 						maxValue = 1.0,
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale_end',
+						attrib = 'uniformScaleEnd',
 						minValue = 1.0,
 						maxValue = 8.0,
 					},
@@ -90,11 +93,20 @@ function buildVaporFX( transformation )
 				renderers = {
 					{
 						type = 'crimild::AnimatedSpriteParticleRenderer',
-						texture = 'assets/textures/animated_smoke_2.tga',
 						spriteSheetSize = { 4.0, 4.0 },
-						blendMode = 'color',
-						cullFaceEnabled = false,
-						depthStateEnabled = false,
+						material = {
+							type = 'crimild::Material',
+							colorMap = {
+								type = 'crimild::Texture',
+								image = {
+									type = 'crimild::ImageTGA',
+									imageFileName = 'assets/textures/animated_smoke_2.tga',
+								},
+							},
+							blendMode = 'color',
+							cullFaceEnabled = false,
+							depthStateEnabled = false,
+						},
 					},
 				},
 			},

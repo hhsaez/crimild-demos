@@ -74,3 +74,5 @@ examples/Navigation/Navigation
 examples/AudioRoom/AudioRoom
 
 examples/RocketLaunch/RocketLaunch
+examples/RocketLaunch/RocketLunch
+.vscode

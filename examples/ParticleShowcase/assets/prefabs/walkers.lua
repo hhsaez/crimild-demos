@@ -7,7 +7,7 @@ function walkers( x, y, z )
 		table.insert(
 			nodes,
 			{
-				filename = 'assets/models/astroboy.crimild',
+				sceneFileName = 'assets/models/astroboy/astroBoy_walk_Max.dae',
 				transformation = {
 					scale = 15.0,
 				},
@@ -20,7 +20,10 @@ function walkers( x, y, z )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+				},
 				emitRate = 0.75 * MAX_PARTICLES,
 				generators = {
 					{

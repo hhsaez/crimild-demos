@@ -7,7 +7,10 @@ function fountain( x, y, z )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+				},
 				emitRate = 0.75 * MAX_PARTICLES,
 				preWarmTime = 2.5,
 				generators = {
@@ -36,7 +39,7 @@ function fountain( x, y, z )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
+						attrib = 'uniformScale',
 						minValue = 5.0,
 						maxValue = 50.0,
 					},

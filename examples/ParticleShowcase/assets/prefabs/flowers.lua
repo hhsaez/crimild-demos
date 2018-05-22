@@ -7,9 +7,12 @@ function flowers( x, y, z )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+				},
 				emitRate = MAX_PARTICLES,
-				--burst = true,
+				burst = true,
 				generators = {
 					{
 						type = 'crimild::BoxPositionParticleGenerator',
@@ -25,7 +28,7 @@ function flowers( x, y, z )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
+						attrib = 'uniformScale',
 						minValue = 1.0,
 						maxValue = 3.0,
 					},
@@ -38,9 +41,18 @@ function flowers( x, y, z )
 				renderers = {
 					{
 						type = 'crimild::OrientedQuadParticleRenderer',
-						texture = 'assets/textures/jasmine.tga',
-						blendMode = 'default',
-						cullFaceEnabled = false,
+						material = {
+							type = 'crimild::Material',
+							colorMap = {
+								type = 'crimild::Texture',
+								image = {
+									type = 'crimild::ImageTGA',
+									imageFileName = 'assets/textures/jasmine.tga',
+								},
+							},
+							blendMode = 'default',
+							cullFaceEnabled = false,
+						},
 					},
 				},
 			},

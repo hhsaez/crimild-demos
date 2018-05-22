@@ -3,7 +3,7 @@ function handsOnFire( x, y, z )
 	local MAX_PARTICLES = 200
 
 	local astroboy = {
-		filename = 'assets/models/astroboy.crimild',
+		sceneFileName = 'assets/models/astroboy/astroBoy_walk_Max.dae',
 		transformation = {
 			scale = 70.0,
 		},
@@ -14,9 +14,12 @@ function handsOnFire( x, y, z )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+					computeInWorldSpace = true,
+				},
 				emitRate = 0.25 * MAX_PARTICLES,
-				computeInWorldSpace = true,
 				generators = {
 					{
 						type = 'crimild::NodePositionParticleGenerator',
@@ -36,7 +39,7 @@ function handsOnFire( x, y, z )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
+						attrib = 'uniformScale',
 						minValue = 0.25,
 						maxValue = 0.75,
 					},
@@ -57,10 +60,19 @@ function handsOnFire( x, y, z )
 				renderers = {
 					{
 						type = 'crimild::OrientedQuadParticleRenderer',
-						texture = 'assets/textures/fire.tga',
-						blendMode = 'additive',
-						cullFaceEnabled = false,
-						depthStateEnabled = false,
+						material = {
+							type = 'crimild::Material',
+							colorMap = {
+								type = 'crimild::Texture',
+								image = {
+									type = 'crimild::ImageTGA',
+									imageFileName = 'assets/textures/fire.tga',
+								},
+							},
+							blendMode = 'additive',
+							cullFaceEnabled = false,
+							depthStateEnabled = false,
+						},
 					},
 				},
 			},

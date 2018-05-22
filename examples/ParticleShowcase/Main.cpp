@@ -53,9 +53,11 @@ SharedPointer< Group > loadModel( std::string filename )
 
 int main( int argc, char **argv )
 {
+	crimild::init();
+	
     auto sim = crimild::alloc< GLSimulation >( "Particle Showcase", crimild::alloc< Settings >( argc, argv ) );
 
-	sim->loadScene( "assets/scenes/main.lua", crimild::alloc< crimild::scripting::LuaSceneBuilder >() );
+	sim->loadScene( FileSystem::getInstance().pathForResource( "assets/scenes/main.lua" ) );
 	
 	return sim->run();
 }

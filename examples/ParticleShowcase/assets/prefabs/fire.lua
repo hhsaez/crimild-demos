@@ -6,7 +6,10 @@ function fire( x, y, z )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+				},
 				emitRate = 0.75 * MAX_PARTICLES,
 				preWarmTime = 1.0,
 				generators = {
@@ -35,7 +38,7 @@ function fire( x, y, z )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
+						attrib = 'uniformScale',
 						minValue = 50.0,
 						maxValue = 200.0,
 					},
@@ -56,10 +59,19 @@ function fire( x, y, z )
 				renderers = {
 					{
 						type = 'crimild::PointSpriteParticleRenderer',
-						texture = 'assets/textures/fire.tga',
-						blendMode = 'additive',
-						cullFaceEnabled = false,
-						depthStateEnabled = false,
+						material = {
+							type = 'crimild::Material',
+							colorMap = {
+								type = 'crimild::Texture',
+								image = {
+									type = 'crimild::ImageTGA',
+									imageFileName = 'assets/textures/fire.tga',
+								},
+							},
+							blendMode = 'additive',
+							cullFaceEnabled = false,
+							depthStateEnabled = false,
+						},
 					},
 				},
 			},

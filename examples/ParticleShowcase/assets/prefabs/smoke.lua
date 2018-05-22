@@ -7,9 +7,12 @@ function smoke( x, y, z, computeInWorldSpace )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+					computeInWorldSpace = computeInWorldSpace,
+				},
 				emitRate = 0.25 * MAX_PARTICLES,
-				computeInWorldSpace = computeInWorldSpace,
 				generators = {
 					{
 						type = 'crimild::BoxPositionParticleGenerator',
@@ -36,9 +39,9 @@ function smoke( x, y, z, computeInWorldSpace )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
-						minValue = 50.0,
-						maxValue = 200.0,
+						attrib = 'uniformScale',
+						minValue = 20.0,
+						maxValue = 100.0,
 					},
 					{
 						type = 'crimild::TimeParticleGenerator',
@@ -57,10 +60,19 @@ function smoke( x, y, z, computeInWorldSpace )
 				renderers = {
 					{
 						type = 'crimild::PointSpriteParticleRenderer',
-						texture = 'assets/textures/smoke.tga',
-						blendMode = 'additive',
-						cullFaceEnabled = false,
-						depthStateEnabled = false,
+						material = {
+							type = 'crimild::Material',
+							colorMap = {
+								type = 'crimild::Texture',
+								image = {
+									type = 'crimild::ImageTGA',
+									imageFileName = 'assets/textures/smoke.tga',
+								},
+							},
+							blendMode = 'additive',
+							cullFaceEnabled = false,
+							depthStateEnabled = false,
+						},
 					},
 				},
 			},
