@@ -228,34 +228,36 @@ SharedPointer< Node > convert( std::string file )
     Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Loading raw model: ", c.getDeltaTime(), "s" );
 
     {
-        FileStream os( FileSystem::getInstance().pathForResource( "assets/model.crimild" ), FileStream::OpenMode::WRITE );
-        os.addObject( model );
-        if ( !os.flush() ) {
-            return nullptr;
-        }
+        coding::FileEncoder encoder;
+		encoder.encode( model );
+		if ( !encoder.write( FileSystem::getInstance().pathForResource( "assets/model.crimild" ) ) ) {
+			return nullptr;
+		}
     }
+	
     c.tick();
     Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Saving stream: ", c.getDeltaTime(), "s" );
 
-    FileStream is( FileSystem::getInstance().pathForResource( "assets/model.crimild" ), FileStream::OpenMode::READ );
-    if ( !is.load() ) {
-        Log::error( "Load failed" );
-        return nullptr;
-    }
+    coding::FileDecoder decoder;
+	if ( !decoder.read( FileSystem::getInstance().pathForResource( "assets/model.crimild" ) ) ) {
+		return nullptr;
+	}
 
     c.tick();
     Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Loading stream: ", c.getDeltaTime(), "s" );
 
-    if ( is.getObjectCount() == 0 ) {
+    if ( decoder.getObjectCount() == 0 ) {
         Log::error( "File is empty?" );
         return nullptr;
     }
 
-    return is.getObjectAt< Node >( 0 );   
+    return decoder.getObjectAt< Group >( 0 );   
 }
 
 int main( int argc, char **argv )
 {
+    crimild::init();
+    
     auto sim = crimild::alloc< GLSimulation >( "Crimild Model Converter", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
