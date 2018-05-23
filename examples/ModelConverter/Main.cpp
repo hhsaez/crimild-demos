@@ -259,6 +259,8 @@ int main( int argc, char **argv )
     crimild::init();
     
     auto sim = crimild::alloc< GLSimulation >( "Crimild Model Converter", crimild::alloc< Settings >( argc, argv ) );
+	auto renderer = sim->getRenderer();
+	renderer->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.5f, 0.5f, 0.0f ) );
 
     auto scene = crimild::alloc< Group >();
 
