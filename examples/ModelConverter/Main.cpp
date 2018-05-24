@@ -28,6 +28,7 @@
 #include <Crimild.hpp>
 #include <Crimild_GLFW.hpp>
 #include <Crimild_Import.hpp>
+#include <Crimild_Scripting.hpp>
 
 using namespace crimild;
 using namespace crimild::messaging;
@@ -212,6 +213,24 @@ public:
     }
 };
 
+class DebugGeometryInfo : public NodeComponent {
+public:
+	DebugGeometryInfo( void ) { }
+	virtual ~DebugGeometryInfo( void ) { }
+
+	virtual void renderDebugInfo( Renderer *renderer, Camera *camera ) override
+	{
+		getNode()->perform( ApplyToGeometries( [ renderer, camera ]( Geometry *geometry ) {
+			auto bounds = geometry->getWorldBound();
+			auto center = bounds->getCenter();
+			auto size = bounds->getMax() - bounds->getMin();
+
+			DebugRenderHelper::renderBox( renderer, camera, center, size, RGBAColorf( 1.0f, 0.0f, 1.0f, 0.25f ) );
+			DebugRenderHelper::renderSphere( renderer, camera, center, 0.1f, RGBAColorf( 1.0f, 1.0f, 0.0f, 0.5f ) );
+		}));
+	}
+};
+
 SharedPointer< Node > convert( std::string file )
 {
     Clock c;
@@ -225,7 +244,36 @@ SharedPointer< Node > convert( std::string file )
     }
 
     c.tick();
-    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Loading raw model: ", c.getDeltaTime(), "s" );
+    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Loaded raw model: ", c.getDeltaTime(), "s" );
+
+	{
+        FileStream os( FileSystem::getInstance().pathForResource( "assets/model.crimild4" ), FileStream::OpenMode::WRITE );
+        os.addObject( model );
+        if ( !os.flush() ) {
+            return nullptr;
+        }
+    }
+	
+    c.tick();
+    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Saved to stream: ", c.getDeltaTime(), "s" );
+
+	{
+		FileStream is( FileSystem::getInstance().pathForResource( "assets/model.crimild4" ), FileStream::OpenMode::READ );
+		if ( !is.load() ) {
+			Log::error( "Load failed" );
+			return nullptr;
+		}
+		
+		if ( is.getObjectCount() == 0 ) {
+			Log::error( "File is empty?" );
+			return nullptr;
+		}
+
+		model = is.getObjectAt< Group >( 0 );
+	}
+
+	c.tick();
+    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Loaded from stream: ", c.getDeltaTime(), "s" );
 
     {
         coding::FileEncoder encoder;
@@ -236,22 +284,28 @@ SharedPointer< Node > convert( std::string file )
     }
 	
     c.tick();
-    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Saving stream: ", c.getDeltaTime(), "s" );
+    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Encoded to file: ", c.getDeltaTime(), "s" );
 
-    coding::FileDecoder decoder;
-	if ( !decoder.read( FileSystem::getInstance().pathForResource( "assets/model.crimild" ) ) ) {
-		return nullptr;
+	{
+		coding::FileDecoder decoder;
+		if ( !decoder.read( FileSystem::getInstance().pathForResource( "assets/model.crimild" ) ) ) {
+			return nullptr;
+		}
+		
+		if ( decoder.getObjectCount() == 0 ) {
+			Log::error( "File is empty?" );
+			return nullptr;
+		}
+		
+		model = decoder.getObjectAt< Group >( 0 );
 	}
 
-    c.tick();
-    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Loading stream: ", c.getDeltaTime(), "s" );
+	c.tick();
+	Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Decoded from file: ", c.getDeltaTime(), "s" );
 
-    if ( decoder.getObjectCount() == 0 ) {
-        Log::error( "File is empty?" );
-        return nullptr;
-    }
-
-    return decoder.getObjectAt< Group >( 0 );   
+	model->attachComponent< DebugGeometryInfo >();
+	
+    return model;
 }
 
 int main( int argc, char **argv )
@@ -304,6 +358,17 @@ int main( int argc, char **argv )
     }
 
     scene->attachComponent< SceneControls >();
+
+	sim->registerMessageHandler< crimild::messaging::KeyReleased >( []( crimild::messaging::KeyReleased const &msg ) {
+		switch ( msg.key ) {
+			case 'K':
+				Simulation::getInstance()->broadcastMessage( crimild::messaging::DebugModeEnabled { } );
+				break;
+			case 'L':
+				Simulation::getInstance()->broadcastMessage( crimild::messaging::DebugModeDisabled { } );
+				break;
+		}
+	});
 
     sim->setScene( scene );
 	return sim->run();
