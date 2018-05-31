@@ -278,6 +278,7 @@ SharedPointer< Node > convert( std::string file )
     {
         coding::FileEncoder encoder;
 		encoder.encode( model );
+		
 		if ( !encoder.write( FileSystem::getInstance().pathForResource( "assets/model.crimild" ) ) ) {
 			return nullptr;
 		}
@@ -296,7 +297,7 @@ SharedPointer< Node > convert( std::string file )
 			Log::error( "File is empty?" );
 			return nullptr;
 		}
-		
+
 		model = decoder.getObjectAt< Group >( 0 );
 	}
 
