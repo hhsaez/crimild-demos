@@ -6,7 +6,10 @@ function animated_fire( x, y, z )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+				},
 				emitRate = 0.75 * MAX_PARTICLES,
 				preWarmTime = 1.0,
 				generators = {
@@ -35,7 +38,7 @@ function animated_fire( x, y, z )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
+						attrib = 'uniformScale',
 						minValue = 1.0,
 						maxValue = 2.0,
 					},
@@ -59,11 +62,20 @@ function animated_fire( x, y, z )
 				renderers = {
 					{
 						type = 'crimild::AnimatedSpriteParticleRenderer',
-						texture = 'assets/textures/flames.tga',
-						spriteSheetSize = { 4.0, 4.0 },
+						material = {
+							type = 'crimild::Material',
+							colorMap = {
+								type = 'crimild::Texture',
+								image = {
+									type = 'crimild::ImageTGA',
+									imageFileName = 'assets/textures/flames.tga',
+								},
+							},
+						},
 						blendMode = 'additive',
 						cullFaceEnabled = false,
 						depthStateEnabled = false,
+						spriteSheetSize = { 4.0, 4.0 },
 					},
 				},
 			},

@@ -1,14 +1,4 @@
-CMAKE_MINIMUM_REQUIRED( VERSION 2.8.10 FATAL_ERROR )
-
-IF ( APPLE )
-	# Enable C++11 features
-	SET( CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++ -U__STRICT_ANSI__" )
-
-	set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++0x")
-	set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
-ELSE ( APPLE )
-	SET( CMAKE_CXX_FLAGS "-std=c++11 -static-libgcc -static-libstdc++ -static -U__STRICT_ANSI__" )
-ENDIF ( APPLE )
+CMAKE_MINIMUM_REQUIRED( VERSION 3.1.0 FATAL_ERROR )
 
 PROJECT( CRIMILD_EXAMPLES )
 
@@ -22,7 +12,7 @@ IF ( APPLE )
 	SET( CRIMILD_ENABLE_AL ON CACHE BOOL "Enable al module for Crimild" )
 	SET( CRIMILD_BUILD_TOOLS ON CACHE BOOL "Enable tools for Crimild" )
 	SET( CRIMILD_ENABLE_TESTS ON CACHE BOOL "Enable testing module for Crimild" )
-	SET( CRIMILD_ENABLE_PHYSICS ON CACHE BOOL "Enable physics module for Crimild" )
+	#SET( CRIMILD_ENABLE_PHYSICS ON CACHE BOOL "Enable physics module for Crimild" )
 ENDIF ()
 
 ADD_SUBDIRECTORY( crimild )

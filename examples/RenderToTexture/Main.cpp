@@ -45,6 +45,8 @@ CRIMILD_REGISTER_STREAM_OBJECT_BUILDER( crimild::SkinnedMeshComponent );
  */
 int main( int argc, char **argv )
 {
+    crimild::init();
+    
     auto sim = crimild::alloc< GLSimulation >( "RenderToTexture", crimild::alloc< Settings >( argc, argv ) );
 	sim->getRenderer()->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.5f, 0.5f, 1.0f ) );
 
@@ -53,11 +55,11 @@ int main( int argc, char **argv )
 	auto offscreenScene = crimild::alloc< Group >();
 	offscreenScene->local().setTranslate( 9999.0f, 9999.0f, 9999.0f ); // send it away
 	scene->attachNode( offscreenScene );
-
-    FileStream is( FileSystem::getInstance().pathForResource( "model.crimild" ), FileStream::OpenMode::READ );
-    if ( is.load() ) {
-        if ( is.getObjectCount() > 0 ) {
-            auto model = is.getObjectAt< Node >( 0 );
+    
+    coding::FileDecoder decoder;
+    if ( decoder.read( FileSystem::getInstance().pathForResource( "model.crimild" ) ) ) {
+        if ( decoder.getObjectCount() > 0 ) {
+            auto model = decoder.getObjectAt< Node >( 0 );
             model->perform( UpdateWorldState() );
             model->local().setScale( 1.0f / model->getWorldBound()->getRadius() );
             model->local().setTranslate( 0.0f, -0.5f, 0.0f ); // center model

@@ -7,9 +7,12 @@ function sparkles( x, y, z )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+					computeInWorldSpace = true,
+				},
 				emitRate = 0.25 * MAX_PARTICLES,
-				computeInWorldSpace = true,
 				generators = {
 					{
 						type = 'crimild::BoxPositionParticleGenerator',
@@ -36,7 +39,7 @@ function sparkles( x, y, z )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
+						attrib = 'uniformScale',
 						minValue = 20.0,
 						maxValue = 50.0,
 					},

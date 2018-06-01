@@ -25,7 +25,7 @@ local camera = {
 }
 
 local environment = {
-	filename = 'assets/models/room.obj',
+	sceneFileName = 'assets/models/room.obj',
 }
 
 scene = {

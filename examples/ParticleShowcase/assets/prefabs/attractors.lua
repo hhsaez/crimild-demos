@@ -6,9 +6,12 @@ function attractors( x, y, z )
 		components = {
 			{
 				type = 'crimild::ParticleSystemComponent',
-				maxParticles = MAX_PARTICLES,
+				particles = {
+					type = 'crimild::ParticleData',
+					maxParticles = MAX_PARTICLES,
+					computeInWorldSpace = true,
+				},
 				emitRate = MAX_PARTICLES,
-				computeInWorldSpace = true,
 				preWarmTime = 10.0,
 				burst = true,
 				generators = {
@@ -36,7 +39,7 @@ function attractors( x, y, z )
 					},
 					{
 						type = 'crimild::RandomReal32ParticleGenerator',
-						attrib = 'uniform_scale',
+						attrib = 'uniformScale',
 						minValue = 10.0,
 						maxValue = 20.0,
 					},

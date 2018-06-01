@@ -76,15 +76,13 @@ local camera = {
 }
 
 local environment = {
-	filename = 'assets/models/room.obj',
+	sceneFileName = 'assets/models/room.obj',
 }
 
 local rocket = {
 	type = 'crimild::Group',
 	nodes = {
-		{
-			filename = 'assets/models/rocket.obj',
-		},
+		{ sceneFileName = 'assets/models/rocket.obj', },
 		buildVaporFX( { translate = { 0.0, -2.0, 0.0 } } ),
 		
 		buildFireExhaustFX( { translate = { 0.0, -0.85, 0.0 } } ),
