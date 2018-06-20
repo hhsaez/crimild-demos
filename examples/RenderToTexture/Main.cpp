@@ -85,7 +85,7 @@ int main( int argc, char **argv )
     quadMaterial->getCullFaceState()->setEnabled( false );
     quadMaterial->getAlphaState()->setEnabled( true );
     quadMaterial->setProgram( Renderer::getInstance()->getShaderProgram( Renderer::SHADER_PROGRAM_UNLIT_TEXTURE ) );
-	auto texture = offscreenFBO->getRenderTargets().get( RenderTarget::RENDER_TARGET_NAME_COLOR )->getTexture();
+	auto texture = offscreenFBO->getRenderTargets()[ RenderTarget::RENDER_TARGET_NAME_COLOR ]->getTexture();
 	quadMaterial->setColorMap( texture );
     
     VertexPrecision quadVertices[] = {

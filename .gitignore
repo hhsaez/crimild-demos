@@ -76,3 +76,7 @@ examples/AudioRoom/AudioRoom
 examples/RocketLaunch/RocketLaunch
 examples/RocketLaunch/RocketLunch
 .vscode
+examples/Animations/Animations
+examples/AnimationBlending/AnimationBlending
+examples/SkinnedMesh/SkinnedMesh
+examples/SkinnedMeshAdditiveBlending/SkinnedMeshAdditiveBlending
