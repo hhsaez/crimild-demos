@@ -117,13 +117,13 @@ SharedPointer< Node > createTriangle( void )
 
 		auto xLeft = Numericf::clamp( 2.0f * mousePos.x(), 0.0f, 1.0f );
 		auto xRight = Numericf::clamp( 2.0f * ( mousePos.x() - 0.5f ), 0.0f, 1.0f );
-		leftAnim->update( c )->lerp( centerAnim->update( c ), xLeft )->lerp( rightAnim->update( c ), xRight );
+		leftAnim->update( c )->lerp( centerAnim, xLeft )->lerp( rightAnim, xRight );
 
 		auto yUp = Numericf::clamp( 2.0f * mousePos.y(), 0.0f, 1.0f );
 		auto yDown = Numericf::clamp( 2.0f * ( mousePos.y() - 0.5f ), 0.0f, 1.0f );
-		upAnim->update( c )->lerp( centerAnim->update( c ), yUp )->lerp( downAnim->update( c ), yDown );
+		upAnim->update( c )->lerp( centerAnim, yUp )->lerp( downAnim, yDown );
 
-		leftAnim->lerp( crimild::get_ptr( upAnim ), 0.5f )->getValue( "rotation", node->local().rotate() );
+		leftAnim->lerp( upAnim, 0.5f, false )->getValue( "rotation", node->local().rotate() );
 
 	});
 

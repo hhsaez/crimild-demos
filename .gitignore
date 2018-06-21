@@ -80,3 +80,4 @@ examples/Animations/Animations
 examples/AnimationBlending/AnimationBlending
 examples/SkinnedMesh/SkinnedMesh
 examples/SkinnedMeshAdditiveBlending/SkinnedMeshAdditiveBlending
+examples/SkinnedMeshBlending/SkinnedMeshBlending

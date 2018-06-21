@@ -29,11 +29,6 @@
 #include <Crimild_GLFW.hpp>
 #include <Crimild_Import.hpp>
 
-#include "Animation/Clip.hpp"
-#include "Animation/Skeleton.hpp"
-#include "Animation/Animation.hpp"
-#include "Animation/ChannelImpl.hpp"
-
 using namespace crimild;
 using namespace crimild::animation;
 using namespace crimild::messaging;

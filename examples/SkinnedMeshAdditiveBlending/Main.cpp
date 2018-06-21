@@ -126,16 +126,16 @@ int main( int argc, char **argv )
 
 					auto xLeft = Numericf::clamp( 2.0f * mousePos.x(), 0.0f, 1.0f );
 					auto xRight = Numericf::clamp( 2.0f * ( mousePos.x() - 0.5f ), 0.0f, 1.0f );
-					leftAnim->update( c )->lerp( centerAnim->update( c ), xLeft )->lerp( rightAnim->update( c ), xRight );
+					leftAnim->update( c )->lerp( centerAnim, xLeft )->lerp( rightAnim, xRight );
 
 					auto yUp = Numericf::clamp( mousePos.y() / 0.3f, 0.0f, 1.0f );
 					auto yDown = Numericf::clamp( ( mousePos.y() - 0.3f ) / 0.7f, 0.0f, 1.0f );
-					upAnim->update( c )->lerp( centerAnim->update( c ), yUp )->lerp( downAnim->update( c ), yDown );
+					upAnim->update( c )->lerp( centerAnim, yUp )->lerp( downAnim, yDown );
 					
-					leftAnim->lerp( crimild::get_ptr( upAnim ), 0.5f );
+					leftAnim->lerp( upAnim, 0.5f, false );
 
 					
-					animation->update( c )->add( crimild::get_ptr( leftAnim ), 1.0f );
+					animation->update( c )->add( leftAnim, 1.0f );
 					skeleton->animate( crimild::get_ptr( animation ) );
 					node->perform( UpdateWorldState() );
 				});
