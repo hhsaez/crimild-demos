@@ -152,8 +152,21 @@ private:
 
 SharedPointer< Node > loadWolf( void )
 {
-	SceneImporter importer;
-	return importer.import( FileSystem::getInstance().pathForResource( "assets/models/wolf/Wolf.fbx" ) );
+	auto fileName = std::string( "assets/models/wolf/Wolf.fbx" );
+	
+	if ( AssetManager::getInstance()->get< Group >( fileName ) == nullptr ) {
+		SceneImporter importer;
+		auto model = importer.import( FileSystem::getInstance().pathForResource( "assets/models/wolf/Wolf.fbx" ) );
+		AssetManager::getInstance()->set( fileName, model );
+	}
+
+	auto model = AssetManager::getInstance()->get< Group >( fileName );
+
+	ShallowCopy copy;
+	model->perform( copy );
+	auto wolf = copy.getResult< Group >();
+	
+	return wolf;
 }
 
 int main( int argc, char **argv )
