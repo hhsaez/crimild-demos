@@ -28,6 +28,7 @@
 #include <Crimild.hpp>
 #include <Crimild_OpenGL.hpp>
 #include <Crimild_GLFW.hpp>
+#include <Crimild_Import.hpp>
 
 #include "Foundation/Containers/List.hpp"
 
@@ -37,67 +38,117 @@
 #include "Rendering/ShaderGraph/Nodes/FragmentShaderInput.hpp"
 #include "Rendering/ShaderGraph/Nodes/FragmentShaderOutput.hpp"
 #include "Rendering/ShaderGraph/Nodes/Multiply.hpp"
+#include "Rendering/ShaderGraph/Nodes/Dot.hpp"
 #include "Rendering/ShaderGraph/Nodes/Vector.hpp"
+#include "Rendering/ShaderGraph/Nodes/Scalar.hpp"
 #include "Rendering/ShaderGraph/ShaderBuilder.hpp"
 #include "Rendering/ShaderGraph/OpenGLShaderBuilder.hpp"
 
 using namespace crimild;
+using namespace crimild::import;
 using namespace crimild::shadergraph;
 using namespace crimild::shadergraph::nodes;
 
-int main( int argc, char **argv )
+SharedPointer< ShaderGraph > createVertexShaderGraph( void )
 {
-   auto sim = crimild::alloc< GLSimulation >( "Shader Graph", crimild::alloc< Settings >( argc, argv ) );
-   sim->getRenderer()->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.5f, 0.5f, 1.0f ) );
-
-    auto scene = crimild::alloc< Group >();
-
-    float vertices[] = {
-        -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
-        0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f
-    };
-
-    unsigned short indices[] = {
-        0, 1, 2
-    };
-
-    auto primitive = crimild::alloc< Primitive >();
-    primitive->setVertexBuffer( crimild::alloc< VertexBufferObject >( VertexFormat::VF_P3_C4, 3, vertices ) );
-    primitive->setIndexBuffer( crimild::alloc< IndexBufferObject >( 3, indices ) );
-
-    auto geometry = crimild::alloc< Geometry >();
-    geometry->attachPrimitive( primitive );
-    auto material = crimild::alloc< Material >();
-    material->getCullFaceState()->setEnabled( false );
-    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
-    geometry->attachComponent< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f * Numericf::HALF_PI );
-    scene->attachNode( geometry );
-
 	// vertex shader graph	
 	auto vsGraph = crimild::alloc< ShaderGraph >();	
 	auto vsInputs = vsGraph->createNode< nodes::VertexShaderInput >();
-	auto position = vsGraph->createNode< nodes::Vector >();
-	vsGraph->connect( vsInputs->getPosition(), position->getInputXYZ() );
+
+	// constants
+	auto kZero = vsGraph->createNode< nodes::Scalar >( 0.0f );
+	auto kOne = vsGraph->createNode< nodes::Scalar >( 1.0f );
+	auto kDirection = vsGraph->createNode< nodes::Vector >( Vector4f( 0.0f, 0.0f, -1.0f, 0.0f ) );
+
+	// compute model-space position
+	auto modelPosition = vsGraph->createNode< nodes::Vector >();
+	vsGraph->connect( vsInputs->getPosition(), modelPosition->getInputXYZ() );
+	vsGraph->connect( kOne->getOutputValue(), modelPosition->getInputW() );
+
+	// compute world-space position
 	auto worldPosition= vsGraph->createNode< nodes::Multiply >( Outlet::Type::VECTOR_4 );
 	vsGraph->connect( vsInputs->getMMatrix(), worldPosition->getA() );
-	vsGraph->connect( position->getOutputXYZW(), worldPosition->getB() );
+	vsGraph->connect( modelPosition->getOutputXYZW(), worldPosition->getB() );
+
+	// compute view-space position
 	auto viewPosition = vsGraph->createNode< nodes::Multiply >( Outlet::Type::VECTOR_4 );
 	vsGraph->connect( vsInputs->getVMatrix(), viewPosition->getA() );
 	vsGraph->connect( worldPosition->getOutput(), viewPosition->getB() );
+
+	// compute screen-space position
 	auto screenPosition = vsGraph->createNode< nodes::Multiply >( Outlet::Type::VECTOR_4 );
 	vsGraph->connect( vsInputs->getPMatrix(), screenPosition->getA() );
 	vsGraph->connect( viewPosition->getOutput(), screenPosition->getB() );
+
+	// compute model-space normal
+	auto modelNormal = vsGraph->createNode< nodes::Vector >();
+	vsGraph->connect( vsInputs->getNormal(), modelNormal->getInputXYZ() );
+	vsGraph->connect( kZero->getOutputValue(), modelNormal->getInputW() );
+
+	// compute world-space normal
+	auto worldNormal = vsGraph->createNode< nodes::Multiply >( Outlet::Type::VECTOR_4 );
+	vsGraph->connect( vsInputs->getMMatrix(), worldNormal->getA() );
+	vsGraph->connect( modelNormal->getOutputXYZW(), worldNormal->getB() );
+	auto worldNormalXYZ = vsGraph->createNode< nodes::Vector >();
+	vsGraph->connect( worldNormal->getOutput(), worldNormalXYZ->getInputXYZW() );
+	
+	// connect outputs
 	auto vsOutputs = vsGraph->createNode< nodes::VertexShaderOutput >();
 	vsGraph->connect( screenPosition->getOutput(), vsOutputs->getScreenPosition() );
-    vsGraph->connect( vsInputs->getColor(), vsOutputs->getColor() );
+    vsGraph->connect( worldNormalXYZ->getOutputXYZ(), vsOutputs->getWorldNormal() );
 
+	return vsGraph;
+}
+
+SharedPointer< ShaderGraph > createFragmentShaderGraph( void )
+{
 	// fragment shader graph
 	auto fsGraph = crimild::alloc< ShaderGraph >();
 	auto fsInput = fsGraph->createNode< FragmentShaderInput >();
 	auto fsOutput = fsGraph->createNode< FragmentShaderOutput >();
-    fsGraph->connect( fsInput->getColor(), fsOutput->getFragColor() );
 
+	// constants
+	auto kAlpha = fsGraph->createNode< nodes::Scalar >( 1.0f );
+
+	// frag color
+	auto fragColor = fsGraph->createNode< nodes::Vector >();
+	fsGraph->connect( fsInput->getWorldNormal(), fragColor->getInputXYZ() );
+	fsGraph->connect( kAlpha->getOutputValue(), fragColor->getInputW() );
+
+	// connect outputs
+    fsGraph->connect( fragColor->getOutputXYZW(), fsOutput->getFragColor() );
+
+	return fsGraph;
+}
+
+int main( int argc, char **argv )
+{
+	auto sim = crimild::alloc< GLSimulation >( "Shader Graph", crimild::alloc< Settings >( argc, argv ) );
+	sim->getRenderer()->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.5f, 0.5f, 1.0f ) );
+
+    auto scene = crimild::alloc< Group >();
+
+	auto model = SceneImporter::importScene( FileSystem::getInstance().pathForResource( "assets/models/monkey.obj" ) );
+	if ( model == nullptr ) {
+		return -1;
+	}
+	
+	model->perform( UpdateWorldState() );
+	model->local().setScale( 1.0f / model->getWorldBound()->getRadius() );
+    //model->attachComponent< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f * Numericf::HALF_PI );
+	scene->attachNode( model );
+
+	Material *material = nullptr;
+	model->perform( Apply( [ &material ]( crimild::Node *node ) {
+		if ( auto ms = node->getComponent< MaterialComponent >() ) {
+			if ( auto m = ms->first() ) {
+				material = m;
+			}
+		}
+	}));
+
+	auto vsGraph = createVertexShaderGraph();
+	auto fsGraph = createFragmentShaderGraph();
 	auto shaderBuilder = crimild::alloc< OpenGLShaderBuilder >();
 	auto program = shaderBuilder->build( vsGraph, fsGraph );
 	
