@@ -40,9 +40,7 @@ class AnimateWithBlending : public NodeComponent {
 public:
 	AnimateWithBlending( void ) { }
 	virtual ~AnimateWithBlending( void ) { }
-
 	
-
 	virtual void start( void ) override
 	{
 		auto skeleton = getComponent< Skeleton >();

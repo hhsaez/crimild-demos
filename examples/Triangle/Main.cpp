@@ -26,13 +26,13 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
 
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Triangle", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< sdl::SDLSimulation >( "Triangle", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
 

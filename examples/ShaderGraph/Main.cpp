@@ -168,11 +168,9 @@ SharedPointer< ShaderGraph > createFragmentShaderGraph( void )
 int main( int argc, char **argv )
 {
 	auto sim = crimild::alloc< GLSimulation >( "Shader Graph", crimild::alloc< Settings >( argc, argv ) );
-	//sim->getRenderer()->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.5f, 0.5f, 1.0f ) );
 
     auto scene = crimild::alloc< Group >();
 
-#if 1
 	auto model = SceneImporter::importScene( FileSystem::getInstance().pathForResource( "assets/models/monkey.obj" ) );
 	if ( model == nullptr ) {
 		return -1;
@@ -191,14 +189,6 @@ int main( int argc, char **argv )
 			}
 		}
 	}));
-#else
-	auto primitive = crimild::alloc< SpherePrimitive >( 1.0f );
-	auto geometry = crimild::alloc< Geometry >();
-	geometry->attachPrimitive( primitive );
-	auto material = crimild::alloc< Material >();
-	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
-	scene->attachNode( geometry );
-#endif
 	
 	auto vsGraph = createVertexShaderGraph();
 	auto fsGraph = createFragmentShaderGraph();

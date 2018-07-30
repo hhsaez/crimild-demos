@@ -26,7 +26,7 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
 using namespace crimild::navigation;
@@ -89,8 +89,11 @@ SharedPointer< Node > createCharacter( void )
 
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Navigation", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< sdl::SDLSimulation >( "Navigation", crimild::alloc< Settings >( argc, argv ) );
     sim->getRenderer()->getScreenBuffer()->setClearColor( RGBAColorf( 0.25f, 0.25f, 0.25f, 1.0f ) );
+
+	AssetManager::getInstance()->loadFont( AssetManager::FONT_SYSTEM, "assets/fonts/Courier New.txt" );
+	Profiler::getInstance()->setOutputHandler( crimild::alloc< ProfilerScreenOutputHandler >() );
 
 	sim->registerMessageHandler< crimild::messaging::KeyPressed >( []( crimild::messaging::KeyPressed const &msg ) {
 		const float speedCoeff = Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_LEFT_SHIFT ) ? 3.0f : 1.0f;
@@ -119,8 +122,12 @@ int main( int argc, char **argv )
 
 	sim->registerMessageHandler< crimild::messaging::KeyReleased >( []( crimild::messaging::KeyReleased const &msg ) {
 		switch ( msg.key ) {
-			case 'K':
+			case CRIMILD_INPUT_KEY_K:
 				Simulation::getInstance()->broadcastMessage( crimild::messaging::ToggleDebugInfo { } );
+				break;
+
+			case CRIMILD_INPUT_KEY_L:
+				Simulation::getInstance()->broadcastMessage( crimild::messaging::ToggleProfilerInfo { } );
 				break;
 				
 			case CRIMILD_INPUT_KEY_LEFT:

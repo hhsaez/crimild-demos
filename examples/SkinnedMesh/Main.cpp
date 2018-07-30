@@ -26,17 +26,18 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 #include <Crimild_Import.hpp>
 
 using namespace crimild;
 using namespace crimild::animation;
 using namespace crimild::messaging;
 using namespace crimild::import;
+using namespace crimild::sdl;
 
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Sninned Mesh", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "Sninned Mesh", crimild::alloc< Settings >( argc, argv ) );
 	sim->getRenderer()->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.5f, 0.5f, 0.0f ) );
 
     auto scene = crimild::alloc< Group >();

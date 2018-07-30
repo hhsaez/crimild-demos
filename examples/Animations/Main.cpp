@@ -31,8 +31,6 @@
 using namespace crimild;
 using namespace crimild::animation;
 
-using UpdateCallback = LambdaComponent;
-
 SharedPointer< Node > createTriangle( void )
 {
 	float vertices[] = {

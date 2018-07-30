@@ -82,3 +82,5 @@ examples/SkinnedMesh/SkinnedMesh
 examples/SkinnedMeshAdditiveBlending/SkinnedMeshAdditiveBlending
 examples/SkinnedMeshBlending/SkinnedMeshBlending
 examples/ShaderGraph/ShaderGraph
+examples/**/*.app
+SDL2ConfigVersion.cmake
