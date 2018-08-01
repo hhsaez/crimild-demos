@@ -84,3 +84,8 @@ examples/SkinnedMeshBlending/SkinnedMeshBlending
 examples/ShaderGraph/ShaderGraph
 examples/**/*.app
 SDL2ConfigVersion.cmake
+*.vcxproj
+*.vcxproj.*
+*.sln
+Win32
+.vs
