@@ -26,7 +26,7 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 #include <Crimild_Import.hpp>
 
 namespace crimild {
@@ -50,8 +50,6 @@ namespace crimild {
             {
                 auto source = getComponent< AudioSourceComponent >()->getAudioSource();
                 source->setLoop( true );
-                source->setVolume( 0.0f );
-                source->play();
             }
 
             virtual void update( const Clock &c ) override 
@@ -62,10 +60,10 @@ namespace crimild {
 
                 auto d = Distance::compute( camera->getWorld().getTranslate(), getNode()->getWorld().getTranslate() );
                 if ( d <= _minDistance ) {
-                    source->setVolume( Numericf::min( 1.0f, source->getVolume() + c.getDeltaTime() ) );
+					source->play();
                 }
                 else {
-                    source->setVolume( Numericf::max( 0.0f, source->getVolume() - c.getDeltaTime() ) );   
+					source->pause();
                 }
             }
 
@@ -73,11 +71,36 @@ namespace crimild {
             crimild::Real32 _minDistance = 1.0f;
         };
 
+		class BackgroundMusic : public NodeComponent {
+			CRIMILD_IMPLEMENT_RTTI( crimild::examples::BackgroundMusic )
+		public:
+			BackgroundMusic( void )
+			{
+
+			}
+
+			virtual ~BackgroundMusic( void )
+			{
+
+			}
+
+			virtual void start( void ) override
+			{
+				auto source = getComponent< AudioSourceComponent >()->getAudioSource();
+				if ( source != nullptr ) {
+					source->setLoop( true );
+					source->setVolume( 0.5f );
+					source->play();
+				}
+			}
+		};
+
     }
 
 }
 
 using namespace crimild;
+using namespace crimild::sdl;
 using namespace crimild::audio;
 using namespace crimild::import;
 
@@ -106,7 +129,7 @@ SharedPointer< Node > buildPiano( void )
     scene->local().rotate().fromEulerAngles( 0.0, 45.0, 0.0 );
 
     auto trigger = crimild::alloc< Node >();
-    trigger->attachComponent< AudioSourceComponent >( AudioManager::getInstance()->createAudioSource( FileSystem::getInstance().pathForResource( "assets/music/piano.ogg" ), true ) );
+    trigger->attachComponent< AudioSourceComponent >( AudioManager::getInstance()->createAudioSource( FileSystem::getInstance().pathForResource( "assets/music/piano.wav" ), false ) );
     trigger->attachComponent< crimild::examples::MusicTrigger >( 5.0f );
     trigger->local().setTranslate( 0.0, 3.0f, 0.0 );
     scene->attachNode( trigger );
@@ -122,7 +145,7 @@ SharedPointer< Node > buildChello( void )
     scene->local().rotate().fromEulerAngles( 0.0, 0.0, 0.0 );
 
     auto trigger = crimild::alloc< Node >();
-    trigger->attachComponent< AudioSourceComponent >( AudioManager::getInstance()->createAudioSource( FileSystem::getInstance().pathForResource( "assets/music/cello.ogg" ), true ) );
+    trigger->attachComponent< AudioSourceComponent >( AudioManager::getInstance()->createAudioSource( FileSystem::getInstance().pathForResource( "assets/music/chello.wav" ), false ) );
     trigger->attachComponent< crimild::examples::MusicTrigger >( 3.0f );
     trigger->local().setTranslate( 0.0, 3.0f, 0.0 );
     scene->attachNode( trigger );
@@ -138,7 +161,7 @@ SharedPointer< Node > buildViolin( void )
     scene->local().rotate().fromEulerAngles( 0.0, 90.0, 0.0 );
 
     auto trigger = crimild::alloc< Node >();
-    trigger->attachComponent< AudioSourceComponent >( AudioManager::getInstance()->createAudioSource( FileSystem::getInstance().pathForResource( "assets/music/violin.ogg" ), true ) );
+    trigger->attachComponent< AudioSourceComponent >( AudioManager::getInstance()->createAudioSource( FileSystem::getInstance().pathForResource( "assets/music/violin.wav" ), false ) );
     trigger->attachComponent< crimild::examples::MusicTrigger >( 2.0f );
     trigger->local().setTranslate( 0.0, 0.0f, 0.0 );
     scene->attachNode( trigger );
@@ -148,13 +171,16 @@ SharedPointer< Node > buildViolin( void )
 
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Audio Room", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "Audio Room", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
     scene->attachNode( buildStudio() );
     scene->attachNode( buildPiano() );
     scene->attachNode( buildChello() );
     scene->attachNode( buildViolin() );
+
+    scene->attachComponent< AudioSourceComponent >( AudioManager::getInstance()->createAudioSource( FileSystem::getInstance().pathForResource( "assets/music/piano.ogg" ), true ) );
+	scene->attachComponent< crimild::examples::BackgroundMusic >();
 
     auto camera = crimild::alloc< Camera >();
     camera->local().setTranslate( Vector3f( 0.0f, 3.0f, 3.0f ) );
