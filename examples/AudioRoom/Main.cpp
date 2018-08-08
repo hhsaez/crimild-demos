@@ -106,9 +106,12 @@ using namespace crimild::import;
 
 SharedPointer< Node > buildStudio( void )
 {
-    auto lightBuilder = []( const Vector3f &position ) -> SharedPointer< Node > {
+    auto lightBuilder = []( const Vector3f &position, crimild::Bool enableShadows = false ) -> SharedPointer< Node > {
         auto light = crimild::alloc< Light >();
         light->local().setTranslate( position );
+		if ( enableShadows ) {
+			light->setShadowMap( crimild::alloc< ShadowMap >() );
+		}
         return light;
     };
 
@@ -117,7 +120,7 @@ SharedPointer< Node > buildStudio( void )
     scene->attachNode( lightBuilder( Vector3f( 4.0, 6.0, -4.0 ) ) );
     scene->attachNode( lightBuilder( Vector3f( -4.0, 6.0, -4.0 ) ) );
     scene->attachNode( lightBuilder( Vector3f( 4.0, 6.0, 4.0 ) ) );
-    scene->attachNode( lightBuilder( Vector3f( -4.0, 6.0, 4.0 ) ) );
+    scene->attachNode( lightBuilder( Vector3f( -4.0, 6.0, 4.0 ), true ) );
     return scene;
 }
 
@@ -186,6 +189,10 @@ int main( int argc, char **argv )
     camera->local().setTranslate( Vector3f( 0.0f, 3.0f, 3.0f ) );
     camera->attachComponent< FreeLookCameraComponent >();
     camera->attachComponent< AudioListenerComponent >();
+    auto renderPass = crimild::alloc< CompositeRenderPass >();
+    renderPass->attachRenderPass( crimild::alloc< ShadowRenderPass >() );
+    renderPass->attachRenderPass( crimild::alloc< StandardRenderPass >() );
+    camera->setRenderPass( renderPass );
     scene->attachNode( camera );
     
     sim->setScene( scene );
