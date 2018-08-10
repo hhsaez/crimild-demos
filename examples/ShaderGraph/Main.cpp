@@ -27,7 +27,7 @@
 
 #include <Crimild.hpp>
 #include <Crimild_OpenGL.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 #include <Crimild_Import.hpp>
 
 #include "Foundation/Containers/List.hpp"
@@ -53,6 +53,7 @@ using namespace crimild;
 using namespace crimild::import;
 using namespace crimild::shadergraph;
 using namespace crimild::shadergraph::nodes;
+using namespace crimild::sdl;
 
 SharedPointer< ShaderGraph > createVertexShaderGraph( void )
 {
@@ -167,7 +168,7 @@ SharedPointer< ShaderGraph > createFragmentShaderGraph( void )
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Shader Graph", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< SDLSimulation >( "Shader Graph", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
 

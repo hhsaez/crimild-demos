@@ -1,10 +1,11 @@
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 #include <Crimild_Scripting.hpp>
 #include <Crimild_Raytracing.hpp>
 
 using namespace crimild;
 using namespace crimild::raytracing;
+using namespace crimild::sdl;
 
 SharedPointer< Geometry > createSphere( const Vector3f &center, float radius, const RGBColorf &albedo, RTMaterial::Type type, float fuzz = 0.0f, float refIndex = 1.0f )
 {

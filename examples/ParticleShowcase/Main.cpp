@@ -26,10 +26,11 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 #include <Crimild_Scripting.hpp>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 SharedPointer< Node > room( void )
 {
@@ -55,7 +56,7 @@ int main( int argc, char **argv )
 {
 	crimild::init();
 	
-    auto sim = crimild::alloc< GLSimulation >( "Particle Showcase", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "Particle Showcase", crimild::alloc< Settings >( argc, argv ) );
 
 	sim->loadScene( FileSystem::getInstance().pathForResource( "assets/scenes/main.lua" ) );
 	

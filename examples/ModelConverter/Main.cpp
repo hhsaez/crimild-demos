@@ -26,7 +26,7 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 #include <Crimild_Import.hpp>
 #include <Crimild_Scripting.hpp>
 
@@ -34,6 +34,7 @@ using namespace crimild;
 using namespace crimild::animation;
 using namespace crimild::messaging;
 using namespace crimild::import;
+using namespace crimild::sdl;
 
 class ViewControls : 
     public NodeComponent,
@@ -295,7 +296,7 @@ int main( int argc, char **argv )
 {
     crimild::init();
     
-    auto sim = crimild::alloc< GLSimulation >( "Crimild Model Converter", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "Crimild Model Converter", crimild::alloc< Settings >( argc, argv ) );
 	auto renderer = sim->getRenderer();
 	renderer->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.5f, 0.5f, 0.0f ) );
 

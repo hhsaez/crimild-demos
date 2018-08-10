@@ -26,9 +26,10 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 SharedPointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf &color, float major, float minor, float speed )
 {
@@ -61,7 +62,7 @@ SharedPointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Lighting", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< SDLSimulation >( "Lighting", crimild::alloc< Settings >( argc, argv ) );
 
 	auto trefoilKnot = crimild::alloc< Geometry >();
 	auto trefoilKnotPrimitive = crimild::alloc< TrefoilKnotPrimitive >( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 );

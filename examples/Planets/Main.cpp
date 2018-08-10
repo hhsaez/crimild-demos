@@ -26,9 +26,10 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 static float SCALE_FACTOR = 1.0f / 1000000.0f;
 static float SIMULATION_SPEED = 1.0f / 60.0f;
@@ -292,7 +293,7 @@ SharedPointer< Group > buildSun( void )
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Planets", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< SDLSimulation >( "Planets", crimild::alloc< Settings >( argc, argv ) );
 
 	auto scene = crimild::alloc< Group >();
 

@@ -26,10 +26,11 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
 using namespace crimild::animation;
+using namespace crimild::sdl;
 
 using UpdateCallback = LambdaComponent;
 
@@ -132,7 +133,7 @@ SharedPointer< Node > createTriangle( void )
 
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Animation Blending", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "Animation Blending", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
 

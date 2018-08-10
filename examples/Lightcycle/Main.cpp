@@ -26,13 +26,14 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 #include <fstream>
 #include <string>
 #include <vector>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 SharedPointer< Node > makeGround( void )
 {
@@ -53,7 +54,7 @@ SharedPointer< Node > makeGround( void )
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Lightcycle", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< SDLSimulation >( "Lightcycle", crimild::alloc< Settings >( argc, argv ) );
 
 	auto scene = crimild::alloc< Group >();
 

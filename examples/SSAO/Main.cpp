@@ -26,9 +26,10 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 Node *makeGround( void )
 {
@@ -75,7 +76,7 @@ Node *makeBall( float x, float y, float z )
 
 int main( int argc, char **argv )
 {
-	GLSimulation sim( "Crimild Demo: Screen Space Ambient Occlusion", argc, argv );
+	SDLSimulation sim( "Crimild Demo: Screen Space Ambient Occlusion", argc, argv );
 
 	Pointer< Group > scene( new Group() );
     

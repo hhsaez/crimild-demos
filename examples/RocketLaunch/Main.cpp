@@ -26,10 +26,11 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 #include <Crimild_Scripting.hpp>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 namespace crimild {
 
@@ -302,7 +303,7 @@ int main( int argc, char **argv )
 	CRIMILD_REGISTER_OBJECT_BUILDER( crimild::demos::CaptionsController )
 	CRIMILD_REGISTER_OBJECT_BUILDER( crimild::demos::TextProfilerOutputHandler )
 	
-    auto sim = crimild::alloc< GLSimulation >(
+    auto sim = crimild::alloc< SDLSimulation >(
 		"Rocket Launch",
 		crimild::alloc< Settings >( argc, argv ) );
 

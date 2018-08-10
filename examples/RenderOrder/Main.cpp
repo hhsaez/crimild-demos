@@ -26,9 +26,10 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 SharedPointer< Node > createBillboard( const Vector3f &position, std::string imageFileName )
 {
@@ -49,7 +50,7 @@ SharedPointer< Node > createBillboard( const Vector3f &position, std::string ima
 
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "RenderOrder", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "RenderOrder", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
 
