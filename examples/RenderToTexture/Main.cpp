@@ -26,19 +26,11 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
-
-// why do we need these?
-CRIMILD_REGISTER_STREAM_OBJECT_BUILDER( crimild::SkinnedMeshJoint );
-CRIMILD_REGISTER_STREAM_OBJECT_BUILDER( crimild::SkinnedMeshJointCatalog );
-CRIMILD_REGISTER_STREAM_OBJECT_BUILDER( crimild::SkinnedMeshAnimationChannel );
-CRIMILD_REGISTER_STREAM_OBJECT_BUILDER( crimild::SkinnedMeshAnimationClip );
-CRIMILD_REGISTER_STREAM_OBJECT_BUILDER( crimild::SkinnedMeshSkeleton );
-CRIMILD_REGISTER_STREAM_OBJECT_BUILDER( crimild::SkinnedMeshAnimationState );
-CRIMILD_REGISTER_STREAM_OBJECT_BUILDER( crimild::SkinnedMesh );
-CRIMILD_REGISTER_STREAM_OBJECT_BUILDER( crimild::SkinnedMeshComponent );
+using namespace crimild::animation;
+using namespace crimild::sdl;
 
 /*
   \brief Renders a triangle in a texture and then use that texture on quads
@@ -47,7 +39,7 @@ int main( int argc, char **argv )
 {
     crimild::init();
     
-    auto sim = crimild::alloc< GLSimulation >( "RenderToTexture", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "RenderToTexture", crimild::alloc< Settings >( argc, argv ) );
 	sim->getRenderer()->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.5f, 0.5f, 1.0f ) );
 
     auto scene = crimild::alloc< Group >();
@@ -60,6 +52,15 @@ int main( int argc, char **argv )
     if ( decoder.read( FileSystem::getInstance().pathForResource( "model.crimild" ) ) ) {
         if ( decoder.getObjectCount() > 0 ) {
             auto model = decoder.getObjectAt< Node >( 0 );
+			if ( auto skeleton = model->getComponent< Skeleton >() ) {
+				if ( skeleton->getClips().size() > 0 ) {
+					auto animation = crimild::alloc< Animation >( skeleton->getClips().values().first() );
+					model->attachComponent< LambdaComponent >( [ animation, skeleton ]( Node *, const Clock &c ) {
+						animation->update( c );
+						skeleton->animate( animation );
+					});
+				}
+			}
             model->perform( UpdateWorldState() );
             model->local().setScale( 1.0f / model->getWorldBound()->getRadius() );
             model->local().setTranslate( 0.0f, -0.5f, 0.0f ); // center model
@@ -85,7 +86,7 @@ int main( int argc, char **argv )
     quadMaterial->getCullFaceState()->setEnabled( false );
     quadMaterial->getAlphaState()->setEnabled( true );
     quadMaterial->setProgram( Renderer::getInstance()->getShaderProgram( Renderer::SHADER_PROGRAM_UNLIT_TEXTURE ) );
-	auto texture = offscreenFBO->getRenderTargets().get( RenderTarget::RENDER_TARGET_NAME_COLOR )->getTexture();
+	auto texture = offscreenFBO->getRenderTargets()[ RenderTarget::RENDER_TARGET_NAME_COLOR ]->getTexture();
 	quadMaterial->setColorMap( texture );
     
     VertexPrecision quadVertices[] = {

@@ -26,12 +26,13 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 #include <Crimild_Import.hpp>
 
 using namespace crimild;
 using namespace crimild::messaging;
 using namespace crimild::import;
+using namespace crimild::sdl;
 
 class ViewControls : 
     public NodeComponent,
@@ -216,7 +217,7 @@ public:
 
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Crimild Model Viewer", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "Crimild Model Viewer", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
 

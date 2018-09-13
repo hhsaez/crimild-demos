@@ -26,13 +26,14 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 #include <fstream>
 #include <string>
 #include <vector>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 SharedPointer< Node > loadScene( void )
 {
@@ -50,7 +51,7 @@ SharedPointer< Node > loadScene( void )
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Shadows", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< SDLSimulation >( "Shadows", crimild::alloc< Settings >( argc, argv ) );
 
 	auto scene = crimild::alloc< Group >();
     scene->attachNode( loadScene() );
@@ -58,7 +59,8 @@ int main( int argc, char **argv )
 	auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
 	light->local().setTranslate( 10.0f, 25.0f, 20.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
-    light->setShadowMap( crimild::alloc< ShadowMap >() );
+    light->setCastShadows( true );
+	light->getShadowMap()->setOffset( 0.0009f );
 	scene->attachNode( light );
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );

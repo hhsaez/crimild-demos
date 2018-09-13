@@ -76,3 +76,16 @@ examples/AudioRoom/AudioRoom
 examples/RocketLaunch/RocketLaunch
 examples/RocketLaunch/RocketLunch
 .vscode
+examples/Animations/Animations
+examples/AnimationBlending/AnimationBlending
+examples/SkinnedMesh/SkinnedMesh
+examples/SkinnedMeshAdditiveBlending/SkinnedMeshAdditiveBlending
+examples/SkinnedMeshBlending/SkinnedMeshBlending
+examples/ShaderGraph/ShaderGraph
+examples/**/*.app
+SDL2ConfigVersion.cmake
+*.vcxproj
+*.vcxproj.*
+*.sln
+Win32
+.vs

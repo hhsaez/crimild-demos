@@ -26,9 +26,10 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 int main( int argc, char **argv )
 {
@@ -37,7 +38,7 @@ int main( int argc, char **argv )
 		  	  << "\nPress 2 to toggle specular map"
 		  	  << "\nPress 3 to toggle normal map" << std::endl;
 	
-	auto sim = crimild::alloc< GLSimulation >( "A simple example", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< SDLSimulation >( "A simple example", crimild::alloc< Settings >( argc, argv ) );
 
 	float vertices[] = {
         /* Positions */         /* Normals */       /* Tangents */      /* UVs */

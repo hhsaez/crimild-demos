@@ -26,7 +26,7 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 #include <fstream>
 #include <string>
@@ -34,10 +34,11 @@
 #include <functional>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Interpolations", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< SDLSimulation >( "Interpolations", crimild::alloc< Settings >( argc, argv ) );
 
 	auto trefoilKnot = crimild::alloc< Geometry >();
 	auto trefoilKnotPrimitive = crimild::alloc< TrefoilKnotPrimitive >( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 );

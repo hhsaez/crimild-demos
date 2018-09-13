@@ -26,9 +26,10 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 SharedPointer< Node > createTexturedQuad( const Vector3f &position, Texture::Filter minFilter, Texture::Filter magFilter )
 {
@@ -49,7 +50,7 @@ SharedPointer< Node > createTexturedQuad( const Vector3f &position, Texture::Fil
 
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Texture Filters", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "Texture Filters", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
     scene->attachNode( createTexturedQuad( Vector3f( -1.0f, +1.0f, 0.0f ), Texture::Filter::LINEAR, Texture::Filter::LINEAR ) );

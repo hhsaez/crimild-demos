@@ -26,13 +26,15 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 #include <Crimild_Import.hpp>
 #include <Crimild_Scripting.hpp>
 
 using namespace crimild;
+using namespace crimild::animation;
 using namespace crimild::messaging;
 using namespace crimild::import;
+using namespace crimild::sdl;
 
 class ViewControls : 
     public NodeComponent,
@@ -246,35 +248,6 @@ SharedPointer< Node > convert( std::string file )
     c.tick();
     Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Loaded raw model: ", c.getDeltaTime(), "s" );
 
-	{
-        FileStream os( FileSystem::getInstance().pathForResource( "assets/model.crimild4" ), FileStream::OpenMode::WRITE );
-        os.addObject( model );
-        if ( !os.flush() ) {
-            return nullptr;
-        }
-    }
-	
-    c.tick();
-    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Saved to stream: ", c.getDeltaTime(), "s" );
-
-	{
-		FileStream is( FileSystem::getInstance().pathForResource( "assets/model.crimild4" ), FileStream::OpenMode::READ );
-		if ( !is.load() ) {
-			Log::error( "Load failed" );
-			return nullptr;
-		}
-		
-		if ( is.getObjectCount() == 0 ) {
-			Log::error( "File is empty?" );
-			return nullptr;
-		}
-
-		model = is.getObjectAt< Group >( 0 );
-	}
-
-	c.tick();
-    Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Loaded from stream: ", c.getDeltaTime(), "s" );
-
     {
         coding::FileEncoder encoder;
 		encoder.encode( model );
@@ -305,6 +278,16 @@ SharedPointer< Node > convert( std::string file )
 	Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Decoded from file: ", c.getDeltaTime(), "s" );
 
 	model->attachComponent< DebugGeometryInfo >();
+
+	if ( auto skeleton = model->getComponent< Skeleton >() ) {
+		if ( skeleton->getClips().size() > 0 ) {
+			auto animation = crimild::alloc< Animation >( skeleton->getClips().values().first() );
+			model->attachComponent< LambdaComponent >( [ animation, skeleton ]( Node *, const Clock &c ) {
+				animation->update( c );
+				skeleton->animate( animation );
+			});
+		}
+	}
 	
     return model;
 }
@@ -313,7 +296,7 @@ int main( int argc, char **argv )
 {
     crimild::init();
     
-    auto sim = crimild::alloc< GLSimulation >( "Crimild Model Converter", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "Crimild Model Converter", crimild::alloc< Settings >( argc, argv ) );
 	auto renderer = sim->getRenderer();
 	renderer->getScreenBuffer()->setClearColor( RGBAColorf( 0.5f, 0.5f, 0.5f, 0.0f ) );
 

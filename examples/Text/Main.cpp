@@ -26,9 +26,10 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
+using namespace crimild::sdl;
 
 SharedPointer< Node > generateText( SharedPointer< Font > const &font, std::string str, const Vector3f position, const RGBAColorf &color )
 {
@@ -43,7 +44,7 @@ SharedPointer< Node > generateText( SharedPointer< Font > const &font, std::stri
 
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< GLSimulation >( "Rendering text", crimild::alloc< Settings >( argc, argv ) );
+    auto sim = crimild::alloc< SDLSimulation >( "Rendering text", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
     

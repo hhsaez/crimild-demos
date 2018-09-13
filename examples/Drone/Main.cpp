@@ -26,7 +26,7 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 #include <fstream>
 #include <string>
@@ -34,6 +34,7 @@
 
 using namespace crimild;
 using namespace crimild::audio;
+using namespace crimild::sdl;
 
 class DroneComponent : public NodeComponent {
 public:
@@ -115,7 +116,7 @@ SharedPointer< Node > loadRoom( void )
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Drone", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< SDLSimulation >( "Drone", crimild::alloc< Settings >( argc, argv ) );
 
 	auto scene = crimild::alloc< Group >();
 	for ( int i = 0; i < 3; i++ ) {

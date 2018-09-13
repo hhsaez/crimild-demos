@@ -26,7 +26,7 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
+#include <Crimild_SDL.hpp>
 
 using namespace crimild;
 
@@ -61,7 +61,7 @@ SharedPointer< Node > makeSphere( float x, float y, float z )
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< GLSimulation >( "Selecting objects with the mouse", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< sdl::SDLSimulation >( "Selecting objects with the mouse", crimild::alloc< Settings >( argc, argv ) );
 	sim->addSystem( crimild::alloc< UISystem >() );
 
 	auto scene = crimild::alloc< Group >();
