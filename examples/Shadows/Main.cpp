@@ -59,7 +59,8 @@ int main( int argc, char **argv )
 	auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
 	light->local().setTranslate( 10.0f, 25.0f, 20.0f );
     light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
-    light->setShadowMap( crimild::alloc< ShadowMap >() );
+    light->setCastShadows( true );
+	light->getShadowMap()->setOffset( 0.0009f );
 	scene->attachNode( light );
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
