@@ -89,3 +89,4 @@ SDL2ConfigVersion.cmake
 *.sln
 Win32
 .vs
+examples/RenderGraphs/RenderGraphs
