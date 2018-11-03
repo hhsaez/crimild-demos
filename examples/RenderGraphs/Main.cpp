@@ -31,15 +31,17 @@
 
 #include "Rendering/RenderGraph/RenderGraph.hpp"
 #include "Rendering/RenderGraph/RenderGraphPass.hpp"
-#include "Rendering/RenderGraph/RenderGraphResource.hpp"
+#include "Rendering/RenderGraph/RenderGraphAttachment.hpp"
 
 namespace crimild {
 
 	namespace rendergraph {
 
 		class DepthPass : public RenderGraphPass {
+            CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::DepthPass )
 		public:
-			DepthPass( void )
+            DepthPass( std::string name = "Depth Pass" )
+                : RenderGraphPass( name )
 			{
 
 			}
@@ -49,37 +51,14 @@ namespace crimild {
 				
 			}
 			
-			void setDepthOutput( RenderGraphResource *resource ) { _depthOutput = resource; }
-			RenderGraphResource *getDepthOutput( void ) { return _depthOutput; }
+			void setDepthOutput( RenderGraphAttachment *attachment ) { _depthOutput = attachment; }
+			RenderGraphAttachment *getDepthOutput( void ) { return _depthOutput; }
 			
-			void setNormalOutput( RenderGraphResource *resource ) { _normalOutput = resource; }
-			RenderGraphResource *getNormalOutput( void ) { return _normalOutput; }
+			void setNormalOutput( RenderGraphAttachment *attachment ) { _normalOutput = attachment; }
+			RenderGraphAttachment *getNormalOutput( void ) { return _normalOutput; }
 			
-			virtual void setup( rendergraph::RenderGraph *graph )
+			virtual void setup( rendergraph::RenderGraph *graph ) override
 			{
-				auto renderer = Renderer::getInstance();
-				
-				int width = renderer->getScreenBuffer()->getWidth();
-				int height = renderer->getScreenBuffer()->getHeight();
-				
-				_gBuffer = crimild::alloc< FrameBufferObject >( width, height );
-				
-				if ( _depthOutput != nullptr ) {
-					_depthRT = crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER_AND_TEXTURE, width, height, true );
-					_depthOutput->setTexture( _depthRT->getTexture() );
-					_depthOutput->setRenderTarget( crimild::get_ptr( _depthRT ) );
-				}
-				else {
-					_depthRT = crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER, width, height );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_DEPTH_TARGET_NAME, _depthRT );
-				
-				_colorRT = crimild::alloc< RenderTarget >( RenderTarget::Type::COLOR_RGBA, RenderTarget::Output::RENDER_AND_TEXTURE, width, height );
-				if ( _normalOutput != nullptr ) {
-					_normalOutput->setTexture( _colorRT->getTexture() );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_COLOR_TARGET_NAME, _colorRT );
-				
 				graph->write( this, { _depthOutput, _normalOutput } );
 
 				const char *normal_vs = R"(
@@ -126,18 +105,30 @@ namespace crimild {
                 _program->registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::MODEL_MATRIX_UNIFORM, "uMMatrix" );
 			}
 			
-			virtual void execute( Renderer *renderer, RenderQueue *renderQueue )
+			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
 			{
 				CRIMILD_PROFILE( "Render Opaque Objects" )
+
+                _gBuffer = graph->createFBO( { _depthOutput, _normalOutput } );
+
+                renderer->bindFrameBuffer( crimild::get_ptr( _gBuffer ) );
+
+				renderer->setColorMaskState( ColorMaskState::DISABLED );
+				renderObjects( renderer, renderQueue, RenderQueue::RenderableType::OCCLUDER );
+				renderer->setColorMaskState( ColorMaskState::ENABLED );
 				
-				renderer->bindFrameBuffer( crimild::get_ptr( _gBuffer ) );
+				renderObjects( renderer, renderQueue, RenderQueue::RenderableType::OPAQUE );
 				
-				auto renderables = renderQueue->getRenderables( RenderQueue::RenderableType::OPAQUE );
+				renderer->unbindFrameBuffer( crimild::get_ptr( _gBuffer ) );
+			}
+
+			void renderObjects( Renderer *renderer, RenderQueue *renderQueue, RenderQueue::RenderableType renderableType )
+			{
+				auto renderables = renderQueue->getRenderables( renderableType );
 				if ( renderables->size() == 0 ) {
 					return;
 				}
 
-//                auto program = AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_RENDER_PASS_STANDARD );
                 auto program = crimild::get_ptr( _program );
 
 				renderQueue->each( renderables, [this, renderer, renderQueue, program ]( RenderQueue::Renderable *renderable ) {
@@ -151,30 +142,15 @@ namespace crimild {
 					auto view = renderQueue->getViewMatrix();
 					renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::VIEW_MATRIX_UNIFORM ), view );
 				
-					renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::USE_SHADOW_MAP_UNIFORM ), false );
-					
-					renderQueue->each( [renderer, program]( Light *light, int ) {
-						renderer->bindLight( program, light );
-					});
-					
 					renderStandardGeometry( renderer, crimild::get_ptr( renderable->geometry ), program, material, renderable->modelTransform );
-					
-					renderQueue->each( [ renderer, program ]( Light *light, int ) {
-						renderer->unbindLight( program, light );
-					});
 					
 					renderer->unbindProgram( program );
 				});
-				
-				renderer->unbindFrameBuffer( crimild::get_ptr( _gBuffer ) );
 			}
-			
+
+			// TODO: bind normal maps
 			void renderStandardGeometry( Renderer *renderer, Geometry *geometry, ShaderProgram *program, Material *material, const Matrix4f &modelTransform )
 			{
-				if ( material != nullptr ) {
-					renderer->bindMaterial( program, material );
-				}
-				
 				renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::MODEL_MATRIX_UNIFORM ), modelTransform );
 				
 				auto rc = geometry->getComponent< RenderStateComponent >();
@@ -212,27 +188,23 @@ namespace crimild {
 					renderer->unbindVertexBuffer( program, vbo );
 					renderer->unbindIndexBuffer( program, ibo );
 				});
-				
-				if ( material != nullptr ) {
-					renderer->unbindMaterial( program, material );
-				}
 			}
 			
 		private:
 			SharedPointer< FrameBufferObject > _gBuffer;
-			SharedPointer< RenderTarget > _depthRT;
-			SharedPointer< RenderTarget > _colorRT;
 			SharedPointer< ShaderProgram > _program;
 			
-			RenderGraphResource *_depthOutput = nullptr;
-			RenderGraphResource *_normalOutput = nullptr;
+			RenderGraphAttachment *_depthOutput = nullptr;
+			RenderGraphAttachment *_normalOutput = nullptr;
 		};
 
 
 
 		class OpaquePass : public RenderGraphPass {
+            CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::OpaquePass )
 		public:
-			OpaquePass( void )
+            OpaquePass( std::string name = "Render Opaque Objects" )
+                : RenderGraphPass( name )
 			{
 
 			}
@@ -242,58 +214,34 @@ namespace crimild {
 				
 			}
 			
-			void setDepthInput( RenderGraphResource *resource ) { _depthInput = resource; }
-			RenderGraphResource *getDepthInput( void ) { return _depthInput; }
+			void setDepthInput( RenderGraphAttachment *attachment ) { _depthInput = attachment; }
+			RenderGraphAttachment *getDepthInput( void ) { return _depthInput; }
 			
-			void setColorOutput( RenderGraphResource *resource ) { _colorOutput = resource; }
-			RenderGraphResource *getColorOutput( void ) { return _colorOutput; }
+			void setColorOutput( RenderGraphAttachment *attachment ) { _colorOutput = attachment; }
+			RenderGraphAttachment *getColorOutput( void ) { return _colorOutput; }
 			
-			virtual void setup( rendergraph::RenderGraph *graph )
+			virtual void setup( rendergraph::RenderGraph *graph ) override
 			{
-				auto renderer = Renderer::getInstance();
-				
-				int width = renderer->getScreenBuffer()->getWidth();
-				int height = renderer->getScreenBuffer()->getHeight();
-				
-				_gBuffer = crimild::alloc< FrameBufferObject >( width, height );
-				
-				if ( _depthInput != nullptr ) {
-                    _depthRT = crimild::retain( _depthInput->getRenderTarget() );
+                _clearFlags = FrameBufferObject::ClearFlag::COLOR;
+				if ( _depthInput == nullptr ) {
+					_depthInput = graph->createAttachment(
+                        "Aux Depth Buffer",
+						RenderGraphAttachment::Hint::FORMAT_DEPTH |
+						RenderGraphAttachment::Hint::RENDER_ONLY );
+                    _clearFlags = FrameBufferObject::ClearFlag::ALL;
 				}
-				else {
-					_depthRT = crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER, width, height );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_DEPTH_TARGET_NAME, _depthRT );
-				/*
-				if ( _depthOutput != nullptr ) {
-					_depthRT = crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER_AND_TEXTURE, width, height, true );
-					_depthOutput->setTexture( _depthRT->getTexture() );
-					_depthOutput->setRenderTarget( crimild::get_ptr( _depthRT ) );
-					//_depthOutput->setFormat( RenderPassResource::Format::R32G0B0A0 );
-				}
-				else {
-					_depthRT = crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER, width, height );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_DEPTH_TARGET_NAME, _depthRT );
-				*/
-				
-				_colorRT = crimild::alloc< RenderTarget >( RenderTarget::Type::COLOR_RGBA, RenderTarget::Output::RENDER_AND_TEXTURE, width, height );
-				if ( _colorOutput != nullptr ) {
-					_colorOutput->setTexture( _colorRT->getTexture() );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_COLOR_TARGET_NAME, _colorRT );
-
-				_gBuffer->setClearFlags( FrameBufferObject::ClearFlag::COLOR );
 
                 graph->read( this, { _depthInput } );
 				graph->write( this, { _colorOutput } );
+
+				_program = crimild::alloc< opengl::StandardShaderProgram >();
 			}
 			
-			virtual void execute( Renderer *renderer, RenderQueue *renderQueue )
+			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
 			{
-				if ( _gBuffer == nullptr ) {
-				}
-				
+                _gBuffer = graph->createFBO( { _depthInput, _colorOutput } );
+                _gBuffer->setClearFlags( _clearFlags );
+
 				CRIMILD_PROFILE( "Render Opaque Objects" )
 				
 				renderer->bindFrameBuffer( crimild::get_ptr( _gBuffer ) );
@@ -303,7 +251,7 @@ namespace crimild {
 					return;
 				}
 
-				auto program = AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_RENDER_PASS_STANDARD );
+				auto program = crimild::get_ptr( _program );
 
 				
 				renderQueue->each( renderables, [ this, renderer, renderQueue, &program ]( RenderQueue::Renderable *renderable ) {
@@ -355,7 +303,7 @@ namespace crimild {
 					});
 				}
 
-				auto depthState = crimild::alloc< DepthState >( true, DepthState::CompareFunc::LEQUAL, false );
+				auto depthState = crimild::alloc< DepthState >( true, DepthState::CompareFunc::EQUAL, false );
 				renderer->setDepthState( depthState );
 				
 				geometry->forEachPrimitive( [renderer, program]( Primitive *primitive ) {
@@ -390,17 +338,19 @@ namespace crimild {
 			}
 			
 		private:
+			SharedPointer< ShaderProgram > _program;
 			SharedPointer< FrameBufferObject > _gBuffer;
-			SharedPointer< RenderTarget > _depthRT;
-			SharedPointer< RenderTarget > _colorRT;
-			
-			RenderGraphResource *_depthInput = nullptr;
-			RenderGraphResource *_colorOutput = nullptr;
+            crimild::Int8 _clearFlags;
+
+			RenderGraphAttachment *_depthInput = nullptr;
+			RenderGraphAttachment *_colorOutput = nullptr;
 		};
 
 		class TranslucentPass : public RenderGraphPass {
+            CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::TranslucentPass )
 		public:
-			TranslucentPass( void )
+            TranslucentPass( std::string name = "Render Translucent Objects" )
+                : RenderGraphPass( name )
 			{
 
 			}
@@ -410,50 +360,36 @@ namespace crimild {
 				
 			}
 
-			void setDepthInput( RenderGraphResource *resource ) { _depthInput = resource; }
-			RenderGraphResource *getDepthInput( void ) { return _depthInput; }
+			void setDepthInput( RenderGraphAttachment *attachment ) { _depthInput = attachment; }
+			RenderGraphAttachment *getDepthInput( void ) { return _depthInput; }
 			
-			void setColorInput( RenderGraphResource *resource ) { _colorInput = resource; }
-			RenderGraphResource *getColorInput( void ) { return _colorInput; }
+			void setColorInput( RenderGraphAttachment *attachment ) { _colorInput = attachment; }
+			RenderGraphAttachment *getColorInput( void ) { return _colorInput; }
 			
-			void setColorOutput( RenderGraphResource *resource ) { _colorOutput = resource; }
-			RenderGraphResource *getColorOutput( void ) { return _colorOutput; }
+			void setColorOutput( RenderGraphAttachment *attachment ) { _colorOutput = attachment; }
+			RenderGraphAttachment *getColorOutput( void ) { return _colorOutput; }
 			
-			virtual void setup( rendergraph::RenderGraph *graph )
+			virtual void setup( rendergraph::RenderGraph *graph ) override
 			{
-				auto renderer = Renderer::getInstance();
-				
-				int width = renderer->getScreenBuffer()->getWidth();
-				int height = renderer->getScreenBuffer()->getHeight();
-				
-				_gBuffer = crimild::alloc< FrameBufferObject >( width, height );
-
-				if ( _depthInput != nullptr ) {
-                    _depthRT = crimild::retain( _depthInput->getRenderTarget() );
-				}
-				else {
-					_depthRT = crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER, width, height );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_DEPTH_TARGET_NAME, _depthRT );
-
-				_colorRT = crimild::alloc< RenderTarget >( RenderTarget::Type::COLOR_RGBA, RenderTarget::Output::RENDER_AND_TEXTURE, width, height );
-				
-				if ( _colorOutput != nullptr ) {
-					_colorOutput->setTexture( _colorRT->getTexture() );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_COLOR_TARGET_NAME, _colorRT );
-
-				_gBuffer->setClearFlags( FrameBufferObject::ClearFlag::COLOR );
+                _clearFlags = FrameBufferObject::ClearFlag::COLOR;
+                if ( _depthInput == nullptr ) {
+                    _depthInput = graph->createAttachment(
+                    "Aux Depth Buffer",
+                    RenderGraphAttachment::Hint::FORMAT_DEPTH | RenderGraphAttachment::Hint::RENDER_ONLY );
+                    _clearFlags = FrameBufferObject::ClearFlag::ALL;
+                }
 
                 graph->read( this, { _depthInput } );
 				graph->write( this, { _colorOutput } );
+
+				_program = crimild::alloc< opengl::StandardShaderProgram >();
 			}
 			
-			virtual void execute( Renderer *renderer, RenderQueue *renderQueue )
+			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
 			{
-				if ( _gBuffer == nullptr ) {
-				}
-				
+                _gBuffer = graph->createFBO( { _depthInput, _colorOutput } );
+                _gBuffer->setClearFlags( _clearFlags );
+
 				CRIMILD_PROFILE( "Render Opaque Objects" )
 				
 				renderer->bindFrameBuffer( crimild::get_ptr( _gBuffer ) );
@@ -462,12 +398,12 @@ namespace crimild {
 				if ( renderables->size() == 0 ) {
 					return;
 				}
-				
+
 				renderQueue->each( renderables, [this, renderer, renderQueue]( RenderQueue::Renderable *renderable ) {
 					auto material = crimild::get_ptr( renderable->material );
 					auto program = material->getProgram();
 					if ( program == nullptr ) {
-						program = AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_RENDER_PASS_STANDARD );
+						program = crimild::get_ptr( _program );
 					}
 					
 					renderer->bindProgram( program );
@@ -478,7 +414,15 @@ namespace crimild {
 					auto view = renderQueue->getViewMatrix();
 					renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::VIEW_MATRIX_UNIFORM ), view );
 					
+					renderQueue->each( [renderer, program]( Light *light, int ) {
+						renderer->bindLight( program, light );
+					});
+					
 					renderStandardGeometry( renderer, crimild::get_ptr( renderable->geometry ), program, material, renderable->modelTransform );
+					
+					renderQueue->each( [ renderer, program ]( Light *light, int ) {
+						renderer->unbindLight( program, light );
+					});
 					
 					renderer->unbindProgram( program );
 				});
@@ -509,9 +453,6 @@ namespace crimild {
                 auto depthState = crimild::alloc< DepthState >( true, DepthState::CompareFunc::LEQUAL, false );
                 renderer->setDepthState( depthState );
 
-//                renderer->setAlphaState( AlphaState::ENABLED );
-
-
 				geometry->forEachPrimitive( [renderer, program]( Primitive *primitive ) {
 					// TODO: maybe we shound't add a geometry to the queue if it
 					// has no valid primitive instead of quering the state of the
@@ -540,59 +481,44 @@ namespace crimild {
 					renderer->unbindMaterial( program, material );
 				}
 
-//                renderer->setAlphaState( AlphaState::DISABLED );
                 renderer->setDepthState( DepthState::ENABLED );
 			}
 
 		public:
+			SharedPointer< ShaderProgram > _program;
 			SharedPointer< FrameBufferObject > _gBuffer;
-			SharedPointer< RenderTarget > _depthRT;
-			SharedPointer< RenderTarget > _colorRT;
-			
-			RenderGraphResource *_depthInput = nullptr;
-			RenderGraphResource *_colorInput = nullptr;
-			RenderGraphResource *_colorOutput = nullptr;			
+            crimild::Int8 _clearFlags;
+
+			RenderGraphAttachment *_depthInput = nullptr;
+			RenderGraphAttachment *_colorInput = nullptr;
+			RenderGraphAttachment *_colorOutput = nullptr;			
 		};
 
 		class DepthToColorPass : public RenderGraphPass {
 			CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::DepthToColorPass )
 		public:
-			DepthToColorPass( void ) { }
+            DepthToColorPass( std::string name = "Convert Depth to RGB" ) : RenderGraphPass( name ) { }
 			virtual ~DepthToColorPass( void ) { }
 
-			void setInput( RenderGraphResource *resource ) { _input = resource; }
-			RenderGraphResource *getInput( void ) { return _input; }
+			void setInput( RenderGraphAttachment *attachment ) { _input = attachment; }
+			RenderGraphAttachment *getInput( void ) { return _input; }
 
-			void setOutput( RenderGraphResource *resource ) { _output = resource; }
-			RenderGraphResource *getOutput( void ) { return _output; }
+			void setOutput( RenderGraphAttachment *attachment ) { _output = attachment; }
+			RenderGraphAttachment *getOutput( void ) { return _output; }
 
 			virtual void setup( RenderGraph *graph ) override
 			{
 				graph->read( this, { _input } );
 				graph->write( this, { _output } );
-
-				auto renderer = Renderer::getInstance();
-				
-				int width = renderer->getScreenBuffer()->getWidth();
-				int height = renderer->getScreenBuffer()->getHeight();
-				
-				_gBuffer = crimild::alloc< FrameBufferObject >( width, height );
-				
-				auto depthRT = crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER, width, height );
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_DEPTH_TARGET_NAME, depthRT );
-				
-				auto colorRT = crimild::alloc< RenderTarget >( RenderTarget::Type::COLOR_RGBA, RenderTarget::Output::RENDER_AND_TEXTURE, width, height );
-				if ( _output != nullptr ) {
-					_output->setTexture( colorRT->getTexture() );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_COLOR_TARGET_NAME, colorRT );
 			}
 
-			virtual void execute( Renderer *renderer, RenderQueue *renderQueue ) override
+			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
 			{
 				if ( _input == nullptr || _input->getTexture() == nullptr ) {
 					return;
 				}
+
+                _gBuffer = graph->createFBO( { _output } );
 
 				renderer->bindFrameBuffer( crimild::get_ptr( _gBuffer ) );
 				
@@ -619,59 +545,45 @@ namespace crimild {
 		private:
 			SharedPointer< FrameBufferObject > _gBuffer;
 			
-			RenderGraphResource *_input = nullptr;
-			RenderGraphResource *_output = nullptr;
+			RenderGraphAttachment *_input = nullptr;
+			RenderGraphAttachment *_output = nullptr;
 		};
 
 		
 		class BlendPass : public RenderGraphPass {
 			CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::BlendPass )
 		public:
-			BlendPass( void ) { }
+            BlendPass( std::string name = "Blend Inputs" ) : RenderGraphPass( name ) { }
 			virtual ~BlendPass( void ) { }
 
-			void addInput( RenderGraphResource *input )
+			void addInput( RenderGraphAttachment *input )
 			{
 				_inputs.add( input );
 			}
 
-			void setOutput( RenderGraphResource *resource ) { _output = resource; }
-			RenderGraphResource *getOutput( void ) { return _output; }
+			void setOutput( RenderGraphAttachment *attachment ) { _output = attachment; }
+			RenderGraphAttachment *getOutput( void ) { return _output; }
 
 			virtual void setup( RenderGraph *graph ) override
 			{
-				graph->read( this, _inputs );
+                graph->read( this, _inputs );
 				graph->write( this, { _output } );
-
-				auto renderer = Renderer::getInstance();
-				
-				int width = renderer->getScreenBuffer()->getWidth();
-				int height = renderer->getScreenBuffer()->getHeight();
-				
-				_gBuffer = crimild::alloc< FrameBufferObject >( width, height );
-				
-				auto depthRT = crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER, width, height );
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_DEPTH_TARGET_NAME, depthRT );
-				
-				auto colorRT = crimild::alloc< RenderTarget >( RenderTarget::Type::COLOR_RGBA, RenderTarget::Output::RENDER_AND_TEXTURE, width, height );
-				if ( _output != nullptr ) {
-					_output->setTexture( colorRT->getTexture() );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_COLOR_TARGET_NAME, colorRT );
 			}
 
-			virtual void execute( Renderer *renderer, RenderQueue *renderQueue ) override
+			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
 			{
 				if ( _inputs.size() == 0 ) {
 					return;
 				}
+
+                _gBuffer = graph->createFBO( { _output } );
 
 				renderer->bindFrameBuffer( crimild::get_ptr( _gBuffer ) );
 
                 renderer->setAlphaState( AlphaState::ENABLED_ADDITIVE_BLEND );
                 renderer->setDepthState( DepthState::DISABLED );
 
-				_inputs.each( [ this, renderer ]( RenderGraphResource *input ) {
+				_inputs.each( [ this, renderer ]( RenderGraphAttachment *input ) {
 					render( renderer, input->getTexture() );
 				});
 
@@ -704,16 +616,17 @@ namespace crimild {
 		private:
 			SharedPointer< FrameBufferObject > _gBuffer;
 			
-			containers::Array< RenderGraphResource * > _inputs;
-			
-			RenderGraphResource *_output = nullptr;
+			containers::Array< RenderGraphAttachment * > _inputs;
+
+			RenderGraphAttachment *_output = nullptr;
 		};
 
 		class ColorTintPass : public RenderGraphPass {
 			CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::ColorTintPass )
 
 		public:
-			ColorTintPass( const RGBAColorf &tint = RGBAColorf( 0.4392156863f, 0.2588235294f, 0.07843137255f, 1.0f ), crimild::Real32 value = 1.0f )
+            ColorTintPass( std::string name = "Color Tint", const RGBAColorf &tint = RGBAColorf( 0.4392156863f, 0.2588235294f, 0.07843137255f, 1.0f ), crimild::Real32 value = 1.0f )
+                : RenderGraphPass( name )
 			{
 				_program = crimild::alloc< crimild::opengl::ColorTintShaderProgram >();
 				_program->attachUniform( crimild::alloc< RGBAColorfUniform >( ColorTintImageEffect::COLOR_TINT_UNIFORM_TINT, tint ) );
@@ -725,40 +638,25 @@ namespace crimild {
 
 			}
 
-			void setInput( RenderGraphResource *resource ) { _input = resource; }
-			RenderGraphResource *getInput( void ) { return _input; }
+			void setInput( RenderGraphAttachment *attachment ) { _input = attachment; }
+			RenderGraphAttachment *getInput( void ) { return _input; }
 
-			void setOutput( RenderGraphResource *resource ) { _output = resource; }
-			RenderGraphResource *getOutput( void ) { return _output; }
+			void setOutput( RenderGraphAttachment *attachment ) { _output = attachment; }
+			RenderGraphAttachment *getOutput( void ) { return _output; }
 
 			virtual void setup( RenderGraph *graph ) override
 			{
-				graph->read( this, { _input } );
+                graph->read( this, { _input } );
 				graph->write( this, { _output } );
-
-				auto renderer = Renderer::getInstance();
-				
-				int width = renderer->getScreenBuffer()->getWidth();
-				int height = renderer->getScreenBuffer()->getHeight();
-				
-				_gBuffer = crimild::alloc< FrameBufferObject >( width, height );
-				
-				auto depthRT = crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER, width, height );
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_DEPTH_TARGET_NAME, depthRT );
-				
-				auto colorRT = crimild::alloc< RenderTarget >( RenderTarget::Type::COLOR_RGBA, RenderTarget::Output::RENDER_AND_TEXTURE, width, height );
-				if ( _output != nullptr ) {
-					_output->setTexture( colorRT->getTexture() );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_COLOR_TARGET_NAME, colorRT );
-
 			}
 
-			virtual void execute( Renderer *renderer, RenderQueue *renderQueue ) override
+			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
 			{
 				if ( _input == nullptr || _input->getTexture() == nullptr ) {
 					return;
 				}
+
+                _gBuffer = graph->createFBO( { _output } );
 
 				renderer->bindFrameBuffer( crimild::get_ptr( _gBuffer ) );
 				
@@ -785,53 +683,39 @@ namespace crimild {
 			SharedPointer< FrameBufferObject > _gBuffer;
 			SharedPointer< ShaderProgram > _program;
 			
-			RenderGraphResource *_input = nullptr;
-			RenderGraphResource *_output = nullptr;
+			RenderGraphAttachment *_input = nullptr;
+			RenderGraphAttachment *_output = nullptr;
 		};
 		
 		class FrameDebugPass : public RenderGraphPass {
 			CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::FrameDebugPass )
 
 		public:
-			FrameDebugPass( void ) { }
+            FrameDebugPass( std::string name = "Debug Frame" ) : RenderGraphPass( name ) { }
 			virtual ~FrameDebugPass( void ) { }
 
-			void addInput( RenderGraphResource *input )
+			void addInput( RenderGraphAttachment *input )
 			{
 				_inputs.add( input );
 			}
 
-			void setOutput( RenderGraphResource *resource ) { _output = resource; }
-			RenderGraphResource *getOutput( void ) { return _output; }
+			void setOutput( RenderGraphAttachment *attachment ) { _output = attachment; }
+			RenderGraphAttachment *getOutput( void ) { return _output; }
 
 			virtual void setup( RenderGraph *graph ) override
 			{
-				graph->read( this, _inputs );
+                graph->read( this, _inputs );
 				graph->write( this, { _output } );
-
-				auto renderer = Renderer::getInstance();
-				
-				int width = renderer->getScreenBuffer()->getWidth();
-				int height = renderer->getScreenBuffer()->getHeight();
-				
-				_gBuffer = crimild::alloc< FrameBufferObject >( width, height );
-				_gBuffer->setClearColor( RGBAColorf( 1.0f, 0.0f, 1.0f, 1.0f ) );
-				
-				auto depthRT = crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER, width, height );
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_DEPTH_TARGET_NAME, depthRT );
-				
-				auto colorRT = crimild::alloc< RenderTarget >( RenderTarget::Type::COLOR_RGBA, RenderTarget::Output::RENDER_AND_TEXTURE, width, height );
-				if ( _output != nullptr ) {
-					_output->setTexture( colorRT->getTexture() );
-				}
-				_gBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_COLOR_TARGET_NAME, colorRT );
 			}
 
-			virtual void execute( Renderer *renderer, RenderQueue *renderQueue ) override
+			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
 			{
 				if ( _inputs.size() == 0 ) {
 					return;
 				}
+
+                _gBuffer = graph->createFBO( { _output } );
+                _gBuffer->setClearColor( RGBAColorf( 1.0f, 0.0f, 1.0f, 1.0f ) );
 
 				const static auto LAYOUT_12 = containers::Array< Rectf > {
 					Rectf( 0.25f, 0.25f, 0.5f, 0.5f ),
@@ -870,7 +754,7 @@ namespace crimild {
 
                 auto layout = LAYOUT_9;
 
-				_inputs.each( [ this, renderer, &layout ]( RenderGraphResource *input, crimild::Size idx ) {
+				_inputs.each( [ this, renderer, &layout ]( RenderGraphAttachment *input, crimild::Size idx ) {
 					if ( idx < layout.size() ) {
 						renderer->setViewport( layout[ idx ] );
 						render( renderer, input->getTexture() );
@@ -906,15 +790,16 @@ namespace crimild {
 		private:
 			SharedPointer< FrameBufferObject > _gBuffer;
 
-			containers::Array< RenderGraphResource * > _inputs;
-			
-			RenderGraphResource *_output = nullptr;
+			containers::Array< RenderGraphAttachment * > _inputs;
+
+			RenderGraphAttachment *_output = nullptr;
 		};
 		
 		class PresentPass : public RenderGraphPass {
 			CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::PresentPass )
 		public:
-			PresentPass( void )
+            PresentPass( std::string name = "Present Frame" )
+                : RenderGraphPass( name )
 			{
 				
 			}
@@ -924,38 +809,20 @@ namespace crimild {
 				
 			}
 			
-			void setInput( RenderGraphResource *resource ) { _input = resource; }
-			RenderGraphResource *getInput( void ) { return _input; }
+			void setInput( RenderGraphAttachment *attachment ) { _input = attachment; }
+			RenderGraphAttachment *getInput( void ) { return _input; }
 			
 			virtual void setup( RenderGraph *graph ) override
 			{
 				graph->read( this, { _input } );
 			}
 			
-			virtual void execute( Renderer *renderer, RenderQueue *renderQueue ) override
+			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
 			{
 				if ( _input == nullptr || _input->getTexture() == nullptr ) {
 					return;
 				}
 
-				/*
-				auto fbo = renderer->getFrameBuffer( RenderPass::S_BUFFER_NAME );
-				if ( fbo == nullptr ) {
-					int width = renderer->getScreenBuffer()->getWidth();
-					int height = renderer->getScreenBuffer()->getHeight();
-					
-					Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Creating S_BUFFER with size ", width, "x", height );
-					
-					auto sBuffer = crimild::alloc< FrameBufferObject >( width, height );
-					sBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_DEPTH_TARGET_NAME, crimild::alloc< RenderTarget >( RenderTarget::Type::DEPTH_24, RenderTarget::Output::RENDER, width, height ) );
-					sBuffer->getRenderTargets().insert( RenderPass::S_BUFFER_COLOR_TARGET_NAME, crimild::alloc< RenderTarget >( RenderTarget::Type::COLOR_RGBA, RenderTarget::Output::RENDER_AND_TEXTURE, width, height ) );
-					renderer->setFrameBuffer( RenderPass::S_BUFFER_NAME, sBuffer );
-					fbo = crimild::get_ptr( sBuffer );
-				}
-
-				renderer->bindFrameBuffer( fbo );
-				*/
-				
 				auto program = renderer->getShaderProgram( Renderer::SHADER_PROGRAM_SCREEN_TEXTURE );
 				assert( program && "No valid program to render texture" );
 
@@ -972,12 +839,10 @@ namespace crimild {
 					getInput()->getTexture() );
 				
 				renderer->unbindProgram( program );
-
-				//renderer->unbindFrameBuffer( fbo );
 			}
 			
 		private:
-			RenderGraphResource *_input = nullptr;
+			RenderGraphAttachment *_input = nullptr;
 		};
 		
 		
@@ -1010,57 +875,63 @@ namespace crimild {
 using namespace crimild;
 using namespace crimild::rendergraph;
 
-SharedPointer< RenderGraph > createRenderGraph( void )
+SharedPointer< RenderGraph > createRenderGraph( crimild::Bool useDebugPass )
 {
 	auto renderGraph = crimild::alloc< RenderGraph >();
 
     auto depthPass = renderGraph->createPass< DepthPass >();
 	auto gPass = renderGraph->createPass< OpaquePass >();
-	auto translucentPass = renderGraph->createPass< TranslucentPass >();
-	auto blendTranslucentPass = renderGraph->createPass< BlendPass >();
-	auto sepiaPass = renderGraph->createPass< ColorTintPass >();
-	auto depthToColorPass = renderGraph->createPass< DepthToColorPass >();
-	auto debugPass = renderGraph->createPass< FrameDebugPass >();
+    auto translucentPass = renderGraph->createPass< TranslucentPass >();
+    auto blendTranslucentPass = renderGraph->createPass< BlendPass >();
+    auto sepiaPass = renderGraph->createPass< ColorTintPass >();
 	auto presentPass = renderGraph->createPass< PresentPass >();
 
-    auto depthBuffer = renderGraph->createResource();
-    auto normalBuffer = renderGraph->createResource();
-	auto colorBuffer = renderGraph->createResource();
-	auto translucentBuffer = renderGraph->createResource();
-	auto blendedTranslucentBuffer = renderGraph->createResource();
-	auto depthColorBuffer = renderGraph->createResource();
-	auto sepiaBuffer = renderGraph->createResource();
-	auto debugBuffer = renderGraph->createResource();
+    auto depthBuffer = renderGraph->createAttachment( "Depth", RenderGraphAttachment::Hint::FORMAT_DEPTH_HDR );
+	auto colorBuffer = renderGraph->createAttachment( "Color", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
+    auto translucentBuffer = renderGraph->createAttachment( "Translucent", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
+    auto blendedTranslucentBuffer = renderGraph->createAttachment( "Color + Translucent", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
+    auto sepiaBuffer = renderGraph->createAttachment( "Sepia", RenderGraphAttachment::Hint::FORMAT_RGBA );
 
     depthPass->setDepthOutput( depthBuffer );
-    depthPass->setNormalOutput( normalBuffer );
 
-	gPass->setDepthInput( depthBuffer );
+    gPass->setDepthInput( depthBuffer );
 	gPass->setColorOutput( colorBuffer );
 
-	translucentPass->setDepthInput( depthBuffer );
-	translucentPass->setColorOutput( translucentBuffer );
+    translucentPass->setDepthInput( depthBuffer );
+    translucentPass->setColorOutput( translucentBuffer );
 
-	blendTranslucentPass->addInput( colorBuffer );
-	blendTranslucentPass->addInput( translucentBuffer );
-	blendTranslucentPass->setOutput( blendedTranslucentBuffer );
+    blendTranslucentPass->addInput( colorBuffer );
+    blendTranslucentPass->addInput( translucentBuffer );
+    blendTranslucentPass->setOutput( blendedTranslucentBuffer );
 
-	depthToColorPass->setInput( depthBuffer );
-	depthToColorPass->setOutput( depthColorBuffer );
+    sepiaPass->setInput( blendedTranslucentBuffer );
+    sepiaPass->setOutput( sepiaBuffer );
 
-	sepiaPass->setInput( blendedTranslucentBuffer );
-	sepiaPass->setOutput( sepiaBuffer );
+    if ( useDebugPass ) {
+        auto normalBuffer = renderGraph->createAttachment( "Normal", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
+        depthPass->setNormalOutput( normalBuffer );
 
-	debugPass->addInput( sepiaBuffer );
-    debugPass->addInput( depthColorBuffer );
-    debugPass->addInput( normalBuffer );
-	debugPass->addInput( colorBuffer );
-	debugPass->addInput( translucentBuffer );
-	debugPass->addInput( blendedTranslucentBuffer );
-	debugPass->setOutput( debugBuffer );
+        auto depthToColorPass = renderGraph->createPass< DepthToColorPass >();
+        auto depthColorBuffer = renderGraph->createAttachment( "Depth RGB", RenderGraphAttachment::Hint::FORMAT_RGBA );
+        depthToColorPass->setInput( depthBuffer );
+        depthToColorPass->setOutput( depthColorBuffer );
 
-	presentPass->setInput( debugBuffer );
-	
+        auto debugPass = renderGraph->createPass< FrameDebugPass >();
+        auto debugBuffer = renderGraph->createAttachment( "Debug", RenderGraphAttachment::Hint::FORMAT_RGBA );
+        debugPass->addInput( sepiaBuffer );
+        debugPass->addInput( depthColorBuffer );
+        debugPass->addInput( normalBuffer );
+        debugPass->addInput( colorBuffer );
+        debugPass->addInput( translucentBuffer );
+        debugPass->addInput( blendedTranslucentBuffer );
+        debugPass->setOutput( debugBuffer );
+
+        presentPass->setInput( debugBuffer );
+    }
+    else {
+        presentPass->setInput( sepiaBuffer );
+    }
+
 	return renderGraph;
 }
 
@@ -1094,39 +965,71 @@ SharedPointer< Node > createTeapots( void )
 	return scene;
 }
 
+SharedPointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf &color, float major, float minor, float speed )
+{
+	auto orbitingLight = crimild::alloc< Group >();
+
+	auto primitive = crimild::alloc< SpherePrimitive >( 0.5f );
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( primitive );
+
+	auto material = crimild::alloc< Material >();
+	material->setDiffuse( color );
+   	material->setProgram( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_DIFFUSE ) );
+    material->setAlphaState( AlphaState::ENABLED );
+	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+
+	orbitingLight->attachNode( geometry );
+
+	auto light = crimild::alloc< Light >();
+	light->setColor( color );
+    light->setAmbient( 0.1f * color );
+	orbitingLight->attachNode( light );
+
+	auto orbitComponent = crimild::alloc< OrbitComponent >( 0.0f, 0.0f, major, minor, speed );
+	orbitingLight->attachComponent( orbitComponent );
+
+	auto group = crimild::alloc< Group >();
+	group->attachNode( orbitingLight );
+	group->local().setRotate( rotation );
+
+	return group;
+}
+
 int main( int argc, char **argv )
 {
     auto settings = crimild::alloc< Settings >( argc, argv );
     settings->set( "video.width", 1280 );
     settings->set( "video.height", 900 );
+    settings->set( "video.show_frame_time", true );
     auto sim = crimild::alloc< sdl::SDLSimulation >( "Render Graphs", settings );
 
     auto scene = crimild::alloc< Group >();
 
 	auto teapots = createTeapots();
-	teapots->attachComponent< RotationComponent >( Vector3f::UNIT_Y, 0.25f );
+	teapots->attachComponent< RotationComponent >( Vector3f::UNIT_Y, 0.05f );
 	scene->attachNode( teapots );
 
-	auto light1 = crimild::alloc< Light >();
-	light1->local().setTranslate( -50.0f, 15.0f, 30.0f );
-	light1->setColor( RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ) );
-	scene->attachNode( light1 );
+	scene->attachNode( buildLight( 
+		Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 1.0 ).getNormalized(), Numericf::HALF_PI ), 
+		RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ),
+		-20.0f, 20.25f, 0.95f ).get() );
 
-	auto light2 = crimild::alloc< Light >();
-	light2->local().setTranslate( 50.0f, 15.0f, 0.0f );
-	light2->setColor( RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ) );
-	scene->attachNode( light2 );
+	scene->attachNode( buildLight( 
+		Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, -1.0 ).getNormalized(), -Numericf::HALF_PI ), 
+		RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ), 
+		20.0f, 20.25f, -0.75f ).get() );
 
-	auto light3 = crimild::alloc< Light >();
-	light3->local().setTranslate( 0.0f, 50.0f, -50.0f );
-	light3->setColor( RGBAColorf( 0.0f, 0.0f, 1.0f, 1.0f ) );
-	scene->attachNode( light3 );
+	scene->attachNode( buildLight( 
+		Quaternion4f::createFromAxisAngle( Vector3f( 1.0f, 1.0f, 0.0 ).getNormalized(), Numericf::HALF_PI ),
+		RGBAColorf( 0.0f, 0.0f, 1.0f, 1.0f ), 
+		20.25f, 20.0f, -0.85f ).get() );
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 0.0f, 5.0f, 30.0f );
 	camera->local().lookAt( Vector3f( 0.0f, 3.0f, 0.0f ) );
-	auto renderGraph = createRenderGraph();
-	camera->setRenderPass( crimild::alloc< RenderGraphRenderPassHelper >( renderGraph ) );
+    auto renderGraph = createRenderGraph( false );
+    camera->setRenderPass( crimild::alloc< RenderGraphRenderPassHelper >( renderGraph ) );
 	scene->attachNode( camera );
     
     sim->setScene( scene );
@@ -1137,14 +1040,23 @@ int main( int argc, char **argv )
 				crimild::concurrency::sync_frame( [ camera ]() {
 					std::cout << "RenderGraph" << std::endl;
 					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
-					auto renderGraph = createRenderGraph();
+					auto renderGraph = createRenderGraph( false );
 					camera->setRenderPass( crimild::alloc< RenderGraphRenderPassHelper >( renderGraph ) );
 				});
 				break;
 
-			case CRIMILD_INPUT_KEY_W:
+            case CRIMILD_INPUT_KEY_W:
+                crimild::concurrency::sync_frame( [ camera ]() {
+                    std::cout << "RenderGraph (Debug)" << std::endl;
+                    Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
+                    auto renderGraph = createRenderGraph( true );
+                    camera->setRenderPass( crimild::alloc< RenderGraphRenderPassHelper >( renderGraph ) );
+                });
+                break;
+
+			case CRIMILD_INPUT_KEY_E:
 				crimild::concurrency::sync_frame( [ camera ]() {
-					std::cout << "RenderPass" << std::endl;
+					std::cout << "RenderPass (post)" << std::endl;
 					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
 					camera->setRenderPass( crimild::alloc< PostRenderPass >( crimild::alloc< StandardRenderPass >() ) );
 					auto sepiaToneEffect = crimild::alloc< ColorTintImageEffect >( ColorTintImageEffect::TINT_SEPIA );
@@ -1152,9 +1064,9 @@ int main( int argc, char **argv )
 				});
 				break;
 
-			case CRIMILD_INPUT_KEY_E:
+			case CRIMILD_INPUT_KEY_R:
 				crimild::concurrency::sync_frame( [ camera ]() {
-					std::cout << "Default" << std::endl;
+					std::cout << "RenderPass (no post)" << std::endl;
 					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
 					camera->setRenderPass( crimild::alloc< StandardRenderPass >() );
 				});
