@@ -887,7 +887,7 @@ SharedPointer< RenderGraph > createRenderGraph( crimild::Bool useDebugPass )
 	auto presentPass = renderGraph->createPass< PresentPass >();
 
     auto depthBuffer = renderGraph->createAttachment( "Depth", RenderGraphAttachment::Hint::FORMAT_DEPTH_HDR );
-	auto colorBuffer = renderGraph->createAttachment( "Color", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
+    auto colorBuffer = renderGraph->createAttachment( "Color", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
     auto translucentBuffer = renderGraph->createAttachment( "Translucent", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
     auto blendedTranslucentBuffer = renderGraph->createAttachment( "Color + Translucent", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
     auto sepiaBuffer = renderGraph->createAttachment( "Sepia", RenderGraphAttachment::Hint::FORMAT_RGBA );

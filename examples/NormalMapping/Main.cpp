@@ -34,9 +34,9 @@ using namespace crimild::sdl;
 int main( int argc, char **argv )
 {
 	std::cout << "Usage: "
-			  << "\nPress 1 to toggle color map"
-		  	  << "\nPress 2 to toggle specular map"
-		  	  << "\nPress 3 to toggle normal map" << std::endl;
+			  << "\nPress J to toggle color map"
+		  	  << "\nPress K to toggle specular map"
+		  	  << "\nPress L to toggle normal map" << std::endl;
 	
 	auto sim = crimild::alloc< SDLSimulation >( "A simple example", crimild::alloc< Settings >( argc, argv ) );
 
@@ -91,15 +91,15 @@ int main( int argc, char **argv )
 	scene->attachNode( camera );
 
 	scene->attachComponent( crimild::alloc< LambdaComponent >( [material, colorMap, normalMap, specularMap, interactiveLight, camera]( Node *, const Clock &t ) {
-		if ( Input::getInstance()->isKeyDown( '1' ) ) {
+		if ( Input::getInstance()->isKeyDown( 'J' ) ) {
 			material->setColorMap( material->getColorMap() != nullptr ? nullptr : colorMap );
 		}
 
-		if ( Input::getInstance()->isKeyDown( '2' ) ) {
+		if ( Input::getInstance()->isKeyDown( 'K' ) ) {
 			material->setSpecularMap( material->getSpecularMap() != nullptr ? nullptr : specularMap );
 		}
 		
-		if ( Input::getInstance()->isKeyDown( '3' ) ) {
+		if ( Input::getInstance()->isKeyDown( 'L' ) ) {
 			material->setNormalMap( material->getNormalMap() != nullptr ? nullptr : normalMap );
 		}
 
