@@ -33,347 +33,13 @@
 #include "Rendering/RenderGraph/RenderGraphPass.hpp"
 #include "Rendering/RenderGraph/RenderGraphAttachment.hpp"
 #include "Rendering/RenderGraph/Passes/ForwardLightingPass.hpp"
+#include "Rendering/RenderGraph/Passes/ScreenPass.hpp"
+#include "Rendering/RenderGraph/Passes/DepthPass.hpp"
+#include "Rendering/RenderGraph/Passes/BlendPass.hpp"
 
 namespace crimild {
 
 	namespace rendergraph {
-
-		class ScreenPass : public RenderGraphPass {
-            CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::ScreenPass )
-		public:
-            ScreenPass( RenderGraph *graph )
-			    : RenderGraphPass( graph, "Screen Pass" )
-			{
-				_depthOutput = graph->createAttachment( getName() + " - Depth", RenderGraphAttachment::Hint::FORMAT_DEPTH | RenderGraphAttachment::Hint::RENDER_ONLY );
-				_output = graph->createAttachment( getName() + " - Color", RenderGraphAttachment::Hint::FORMAT_RGBA );
-			}
-			
-			virtual ~ScreenPass( void )
-			{
-				
-			}
-			
-			void setOutput( RenderGraphAttachment *attachment ) { _output = attachment; }
-			RenderGraphAttachment *getOutput( void ) { return _output; }
-			
-			virtual void setup( rendergraph::RenderGraph *graph ) override
-			{
-				graph->write( this, { _depthOutput, _output } );
-
-				const char *normal_vs = R"(
-                    CRIMILD_GLSL_ATTRIBUTE vec3 aPosition;
-
-                    uniform mat4 uPMatrix;
-                    uniform mat4 uMMatrix;
-
-                    void main()
-                    {
-		vec4 vWorldVertex = uMMatrix * vec4( aPosition, 1.0 );
-    gl_Position = uPMatrix * vWorldVertex;
-                    }
-                )";
-
-                const char *normal_fs = R"(
-                    CRIMILD_GLSL_PRECISION_FLOAT_HIGH
-
-                    CRIMILD_GLSL_DECLARE_FRAGMENT_OUTPUT
-
-                    void main( void )
-                    {
-                        CRIMILD_GLSL_FRAGMENT_OUTPUT = vec4( 0.0, 1.0, 0.0, 1.0 );
-                    }
-                )";
-
-                _program = crimild::alloc< ShaderProgram >();
-                _program->setVertexShader( opengl::OpenGLUtils::getVertexShaderInstance( normal_vs ) );
-                _program->setFragmentShader( opengl::OpenGLUtils::getFragmentShaderInstance( normal_fs ) );
-                _program->registerStandardLocation( ShaderLocation::Type::ATTRIBUTE, ShaderProgram::StandardLocation::POSITION_ATTRIBUTE, "aPosition" );
-                _program->registerStandardLocation( ShaderLocation::Type::ATTRIBUTE, ShaderProgram::StandardLocation::NORMAL_ATTRIBUTE, "aNormal" );
-                _program->registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::PROJECTION_MATRIX_UNIFORM, "uPMatrix" );
-                _program->registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::VIEW_MATRIX_UNIFORM, "uVMatrix" );
-                _program->registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::MODEL_MATRIX_UNIFORM, "uMMatrix" );
-			}
-			
-			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
-			{
-				CRIMILD_PROFILE( "Render Opaque Objects" )
-
-                auto fbo = graph->createFBO( { _depthOutput, _output } );
-
-                renderer->bindFrameBuffer( crimild::get_ptr( fbo ) );
-
-				auto renderables = renderQueue->getRenderables( RenderQueue::RenderableType::SCREEN );
-				if ( renderables->size() == 0 ) {
-					return;
-				}
-
-                auto program = crimild::get_ptr( _program );
-
-				crimild::Real32 width = renderer->getScreenBuffer()->getWidth();
-				crimild::Real32 height = renderer->getScreenBuffer()->getHeight();
-				auto aspect = width / height;
-				auto halfAspect = 0.5f * aspect;
-#if 0
-				auto f = Frustumf( -aspect, aspect, -1.0, 1.0, -1.0, 1.0 );
-				auto projection = f.computeOrthographicMatrix();
-#else
-				#if 0
-				auto left = 0.0f;
-				auto right = crimild::Real32( width );
-				auto bottom = crimild::Real32( height );
-				auto top = 0.0f;
-				auto near = -100.0f;
-				auto far = 100.0f;
-				#else
-				auto left = -aspect;
-				auto right = aspect;
-				auto top = 1.0f;
-				auto bottom = -1.0f;
-				auto near = -100.0f;
-				auto far = 100.0f;
-				#endif
-				
-				const auto projection = Matrix4f(
-					2.0f / ( right - left ), 0.0f, 0.0f, - ( right + left ) / ( right - left ),
-					0.0f, 2.0f / ( top - bottom ), 0.0f, - ( top + bottom ) / ( top - bottom ),
-					0.0f, 0.0f, -2.0f / ( far - near ), - ( far + near ) / ( far - near ),
-					0.0f, 0.0f, 0.0f, 1.0f
-				);
-#endif
-
-				renderQueue->each( renderables, [ this, renderer, renderQueue, program, projection ]( RenderQueue::Renderable *renderable ) {
-					auto material = crimild::get_ptr( renderable->material );
-
-					renderer->bindProgram( program );
-					
-					renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::PROJECTION_MATRIX_UNIFORM ), projection );
-				
-					renderStandardGeometry( renderer, crimild::get_ptr( renderable->geometry ), program, material, renderable->modelTransform );
-					
-					renderer->unbindProgram( program );
-				});
-				
-				renderer->unbindFrameBuffer( crimild::get_ptr( fbo ) );
-			}
-
-			void renderObjects( Renderer *renderer, RenderQueue *renderQueue, RenderQueue::RenderableType renderableType )
-			{
-			}
-
-			// TODO: bind normal maps
-			void renderStandardGeometry( Renderer *renderer, Geometry *geometry, ShaderProgram *program, Material *material, const Matrix4f &modelTransform )
-			{
-				renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::MODEL_MATRIX_UNIFORM ), modelTransform );
-				
-				auto rc = geometry->getComponent< RenderStateComponent >();
-				renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::SKINNED_MESH_JOINT_COUNT_UNIFORM ), 0 );
-				if ( auto skeleton = rc->getSkeleton() ) {
-					renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::SKINNED_MESH_JOINT_COUNT_UNIFORM ), ( int ) skeleton->getJoints().size() );
-					skeleton->getJoints().each( [ renderer, program ]( const std::string &, SharedPointer< animation::Joint > const &joint ) {
-						renderer->bindUniform(
-							program->getStandardLocation( ShaderProgram::StandardLocation::SKINNED_MESH_JOINT_POSE_UNIFORM + joint->getId() ),
-							joint->getPoseMatrix()
-							);
-					});
-				}
-				
-				geometry->forEachPrimitive( [renderer, program]( Primitive *primitive ) {
-					// TODO: maybe we shound't add a geometry to the queue if it
-					// has no valid primitive instead of quering the state of the
-					// VBO and IBO while rendering
-					
-					auto vbo = primitive->getVertexBuffer();
-					if ( vbo == nullptr ) {
-						return;
-					}
-					
-					auto ibo = primitive->getIndexBuffer();
-					if ( ibo == nullptr ) {
-						return;
-					}
-					
-					renderer->bindVertexBuffer( program, vbo );
-					renderer->bindIndexBuffer( program, ibo );
-					
-					renderer->drawPrimitive( program, primitive );
-					
-					renderer->unbindVertexBuffer( program, vbo );
-					renderer->unbindIndexBuffer( program, ibo );
-				});
-			}
-			
-		private:
-			SharedPointer< FrameBufferObject > _gBuffer;
-			SharedPointer< ShaderProgram > _program;
-			
-			RenderGraphAttachment *_depthOutput = nullptr;
-			RenderGraphAttachment *_output = nullptr;
-		};
-
-		class DepthPass : public RenderGraphPass {
-            CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::DepthPass )
-		public:
-            DepthPass( RenderGraph *graph )
-			    : RenderGraphPass( graph, "Depth Pass" )
-			{
-				_depthOutput = graph->createAttachment( getName() + " - Depth Buffer", RenderGraphAttachment::Hint::FORMAT_DEPTH_HDR );
-				_normalOutput = graph->createAttachment( getName() + " - Normal Buffer", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
-			}
-			
-			virtual ~DepthPass( void )
-			{
-				
-			}
-			
-			void setDepthOutput( RenderGraphAttachment *attachment ) { _depthOutput = attachment; }
-			RenderGraphAttachment *getDepthOutput( void ) { return _depthOutput; }
-			
-			void setNormalOutput( RenderGraphAttachment *attachment ) { _normalOutput = attachment; }
-			RenderGraphAttachment *getNormalOutput( void ) { return _normalOutput; }
-			
-			virtual void setup( rendergraph::RenderGraph *graph ) override
-			{
-				graph->write( this, { _depthOutput, _normalOutput } );
-
-				const char *normal_vs = R"(
-                    CRIMILD_GLSL_ATTRIBUTE vec3 aPosition;
-                    CRIMILD_GLSL_ATTRIBUTE vec3 aNormal;
-
-                    uniform mat4 uPMatrix;
-                    uniform mat4 uVMatrix;
-                    uniform mat4 uMMatrix;
-
-                    CRIMILD_GLSL_VARYING_OUT vec3 vScreenNormal;
-
-                    void main()
-                    {
-		vec4 vWorldVertex = uMMatrix * vec4( aPosition, 1.0 );
-    vec4 viewVertex = uVMatrix * vWorldVertex;
-    gl_Position = uPMatrix * viewVertex;
-                        //CRIMILD_GLSL_VERTEX_OUTPUT = uPMatrix * uVMatrix * uMMatrix * vec4(aPosition, 1.0);
-                        vScreenNormal = normalize( uVMatrix * uMMatrix * vec4( aNormal, 0.0 ) ).xyz;
-                    }
-                )";
-
-                const char *normal_fs = R"(
-                    CRIMILD_GLSL_PRECISION_FLOAT_HIGH
-
-                    CRIMILD_GLSL_VARYING_IN vec3 vScreenNormal;
-
-                    CRIMILD_GLSL_DECLARE_FRAGMENT_OUTPUT
-
-                    void main( void )
-                    {
-                        vec3 normal = normalize( vScreenNormal );
-                        CRIMILD_GLSL_FRAGMENT_OUTPUT = vec4( normal, 1.0 );
-                    }
-                )";
-
-                _program = crimild::alloc< ShaderProgram >();
-                _program->setVertexShader( opengl::OpenGLUtils::getVertexShaderInstance( normal_vs ) );
-                _program->setFragmentShader( opengl::OpenGLUtils::getFragmentShaderInstance( normal_fs ) );
-                _program->registerStandardLocation( ShaderLocation::Type::ATTRIBUTE, ShaderProgram::StandardLocation::POSITION_ATTRIBUTE, "aPosition" );
-                _program->registerStandardLocation( ShaderLocation::Type::ATTRIBUTE, ShaderProgram::StandardLocation::NORMAL_ATTRIBUTE, "aNormal" );
-                _program->registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::PROJECTION_MATRIX_UNIFORM, "uPMatrix" );
-                _program->registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::VIEW_MATRIX_UNIFORM, "uVMatrix" );
-                _program->registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::MODEL_MATRIX_UNIFORM, "uMMatrix" );
-			}
-			
-			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
-			{
-				CRIMILD_PROFILE( "Render Opaque Objects" )
-
-                _gBuffer = graph->createFBO( { _depthOutput, _normalOutput } );
-
-                renderer->bindFrameBuffer( crimild::get_ptr( _gBuffer ) );
-
-				renderer->setColorMaskState( ColorMaskState::DISABLED );
-				renderObjects( renderer, renderQueue, RenderQueue::RenderableType::OCCLUDER );
-				renderer->setColorMaskState( ColorMaskState::ENABLED );
-				
-				renderObjects( renderer, renderQueue, RenderQueue::RenderableType::OPAQUE );
-				renderObjects( renderer, renderQueue, RenderQueue::RenderableType::OPAQUE_CUSTOM );
-				
-				renderer->unbindFrameBuffer( crimild::get_ptr( _gBuffer ) );
-			}
-
-			void renderObjects( Renderer *renderer, RenderQueue *renderQueue, RenderQueue::RenderableType renderableType )
-			{
-				auto renderables = renderQueue->getRenderables( renderableType );
-				if ( renderables->size() == 0 ) {
-					return;
-				}
-
-                auto program = crimild::get_ptr( _program );
-
-				renderQueue->each( renderables, [this, renderer, renderQueue, program ]( RenderQueue::Renderable *renderable ) {
-					auto material = crimild::get_ptr( renderable->material );
-
-					renderer->bindProgram( program );
-					
-					auto projection = renderQueue->getProjectionMatrix();
-					renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::PROJECTION_MATRIX_UNIFORM ), projection );
-					
-					auto view = renderQueue->getViewMatrix();
-					renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::VIEW_MATRIX_UNIFORM ), view );
-				
-					renderStandardGeometry( renderer, crimild::get_ptr( renderable->geometry ), program, material, renderable->modelTransform );
-					
-					renderer->unbindProgram( program );
-				});
-			}
-
-			// TODO: bind normal maps
-			void renderStandardGeometry( Renderer *renderer, Geometry *geometry, ShaderProgram *program, Material *material, const Matrix4f &modelTransform )
-			{
-				renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::MODEL_MATRIX_UNIFORM ), modelTransform );
-				
-				auto rc = geometry->getComponent< RenderStateComponent >();
-				renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::SKINNED_MESH_JOINT_COUNT_UNIFORM ), 0 );
-				if ( auto skeleton = rc->getSkeleton() ) {
-					renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::SKINNED_MESH_JOINT_COUNT_UNIFORM ), ( int ) skeleton->getJoints().size() );
-					skeleton->getJoints().each( [ renderer, program ]( const std::string &, SharedPointer< animation::Joint > const &joint ) {
-						renderer->bindUniform(
-							program->getStandardLocation( ShaderProgram::StandardLocation::SKINNED_MESH_JOINT_POSE_UNIFORM + joint->getId() ),
-							joint->getPoseMatrix()
-							);
-					});
-				}
-				
-				geometry->forEachPrimitive( [renderer, program]( Primitive *primitive ) {
-					// TODO: maybe we shound't add a geometry to the queue if it
-					// has no valid primitive instead of quering the state of the
-					// VBO and IBO while rendering
-					
-					auto vbo = primitive->getVertexBuffer();
-					if ( vbo == nullptr ) {
-						return;
-					}
-					
-					auto ibo = primitive->getIndexBuffer();
-					if ( ibo == nullptr ) {
-						return;
-					}
-					
-					renderer->bindVertexBuffer( program, vbo );
-					renderer->bindIndexBuffer( program, ibo );
-					
-					renderer->drawPrimitive( program, primitive );
-					
-					renderer->unbindVertexBuffer( program, vbo );
-					renderer->unbindIndexBuffer( program, ibo );
-				});
-			}
-			
-		private:
-			SharedPointer< FrameBufferObject > _gBuffer;
-			SharedPointer< ShaderProgram > _program;
-			
-			RenderGraphAttachment *_depthOutput = nullptr;
-			RenderGraphAttachment *_normalOutput = nullptr;
-		};
-
-
 
 		class OpaquePass : public RenderGraphPass {
             CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::OpaquePass )
@@ -578,87 +244,6 @@ namespace crimild {
 		};
 
 		
-		class BlendPass : public RenderGraphPass {
-			CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::BlendPass )
-		public:
-            BlendPass( RenderGraph *graph, SharedPointer< AlphaState > const &alphaState = AlphaState::ENABLED_ADDITIVE_BLEND )
-			    : RenderGraphPass( graph, "Blend" ),
-				_alphaState( alphaState )
-			{
-				
-			}
-			
-			virtual ~BlendPass( void )
-			{
-
-			}
-
-			void addInput( RenderGraphAttachment *input )
-			{
-				_inputs.add( input );
-			}
-
-			void setOutput( RenderGraphAttachment *attachment ) { _output = attachment; }
-			RenderGraphAttachment *getOutput( void ) { return _output; }
-
-			virtual void setup( RenderGraph *graph ) override
-			{
-                graph->read( this, _inputs );
-				graph->write( this, { _output } );
-			}
-
-			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
-			{
-				if ( _inputs.size() == 0 ) {
-					return;
-				}
-
-                _gBuffer = graph->createFBO( { _output } );
-
-				renderer->bindFrameBuffer( crimild::get_ptr( _gBuffer ) );
-
-                renderer->setAlphaState( _alphaState );
-                renderer->setDepthState( DepthState::DISABLED );
-
-				_inputs.each( [ this, renderer ]( RenderGraphAttachment *input ) {
-					render( renderer, input->getTexture() );
-				});
-
-                renderer->setAlphaState( AlphaState::DISABLED );
-                renderer->setDepthState( DepthState::ENABLED );
-				
-				renderer->unbindFrameBuffer( crimild::get_ptr( _gBuffer ) );
-			}
-
-		private:
-			void render( Renderer *renderer, Texture *texture )
-			{
-				auto program = renderer->getShaderProgram( Renderer::SHADER_PROGRAM_SCREEN_TEXTURE );
-
-				renderer->bindProgram( program );
-
-				renderer->bindTexture(
-					program->getStandardLocation( ShaderProgram::StandardLocation::COLOR_MAP_UNIFORM ),
-					texture );
-
-				renderer->drawScreenPrimitive( program );
-				
-				renderer->unbindTexture(
-					program->getStandardLocation( ShaderProgram::StandardLocation::COLOR_MAP_UNIFORM ),
-					texture );
-				
-				renderer->unbindProgram( program );				
-			}
-
-		private:
-			SharedPointer< FrameBufferObject > _gBuffer;
-			SharedPointer< AlphaState > _alphaState;
-			
-			containers::Array< RenderGraphAttachment * > _inputs;
-
-			RenderGraphAttachment *_output = nullptr;
-		};
-
 		class ColorTintPass : public RenderGraphPass {
 			CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::ColorTintPass )
 
@@ -930,7 +515,7 @@ namespace crimild {
 			
 			virtual void setup( RenderGraph *graph ) override
 			{
-                auto depthPass = graph->createPass< DepthPass >();
+                auto depthPass = graph->createPass< passes::DepthPass >();
                 auto opaquePass = graph->createPass< OpaquePass >();
 				auto translucentTypes = containers::Array< RenderQueue::RenderableType > {
 					RenderQueue::RenderableType::OPAQUE_CUSTOM,
@@ -938,7 +523,7 @@ namespace crimild {
 				};
 				auto translucentPass = graph->createPass< passes::ForwardLightingPass >( translucentTypes );
 				
-                auto colorPass = graph->createPass< BlendPass >();
+                auto colorPass = graph->createPass< passes::BlendPass >();
 
 				depthPass->setDepthOutput( _depthOutput );
 				depthPass->setNormalOutput( _normalOutput );
@@ -1079,7 +664,7 @@ SharedPointer< Node > createTeapots( void )
 	scene->attachNode( teapot( Vector3f( -10.0f, 0.0f, -10.0f ), RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ), 6.0f ) );
 	scene->attachNode( teapot( Vector3f( 10.0f, 0.0f, -10.0f ), RGBAColorf( 1.0f, 1.0f, 1.0f, 0.75f ), 8.0f ) );
     scene->attachNode( teapot( Vector3f( 0.0f, 0.0f, 0.0f ), RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ), 10.0f, true ) );
-	scene->attachNode( teapot( Vector3f( 0.0f, 0.85f, 0.0f ), RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ), 0.1f, false, true ) );
+	scene->attachNode( teapot( Vector3f( 0.0f, -0.8f, 0.0f ), RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ), 0.1f, false, true ) );
 
 	return scene;
 }
@@ -1115,6 +700,25 @@ SharedPointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf
 	return group;
 }
 
+SharedPointer< Node > buildUI( void )
+{
+	auto ui = crimild::alloc< Group >();
+
+	auto fontFile = FileSystem::getInstance().pathForResource( "assets/fonts/Verdana.txt" );
+	auto font = crimild::alloc< Font >( fontFile );
+	auto text = crimild::alloc< Text >();
+	text->setFont( font );
+	text->setSize( 0.1 );
+	text->setText( "Render Graphs are Working :)" );
+	text->setHorizontalAlignment( Text::HorizontalAlignment::CENTER );
+	text->setTextColor( RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ) );
+	text->getNodeAt( 0 )->getComponent< RenderStateComponent >()->setRenderOnScreen( true );
+	text->local().setTranslate( 0.0f, -0.9f, 0.0f );
+	ui->attachNode( text );
+
+	return ui;
+}
+
 int main( int argc, char **argv )
 {
     auto settings = crimild::alloc< Settings >( argc, argv );
@@ -1126,6 +730,8 @@ int main( int argc, char **argv )
 	auto teapots = createTeapots();
 	teapots->attachComponent< RotationComponent >( Vector3f::UNIT_Y, 0.05f );
 	scene->attachNode( teapots );
+
+	scene->attachNode( buildUI() );
 
 	scene->attachNode( buildLight( 
 		Quaternion4f::createFromAxisAngle( Vector3f( 0.0f, 1.0f, 1.0 ).getNormalized(), Numericf::HALF_PI ), 
