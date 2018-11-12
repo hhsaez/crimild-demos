@@ -418,58 +418,6 @@ namespace crimild {
 			RenderGraphAttachment *_output = nullptr;
 		};
 
-		class RenderGraphRenderPassHelper : public RenderPass {
-		public:
-			RenderGraphRenderPassHelper( SharedPointer< rendergraph::RenderGraph > const &renderGraph )
-				: _renderGraph( renderGraph )
-			{
-				_program = crimild::alloc< opengl::ScreenTextureShaderProgram >();
-			}
-			
-			virtual ~RenderGraphRenderPassHelper( void )
-			{
-				
-			}
-
-			virtual void render( Renderer *renderer, RenderQueue *renderQueue, Camera *camera ) override
-			{
-				_renderGraph->execute( renderer, renderQueue );
-
-				auto output = _renderGraph->getOutput();
-				if ( output == nullptr ) {
-					CRIMILD_LOG_ERROR( "No output provided for render graph" );
-					return;
-				}
-
-				auto texture = output->getTexture();
-				if ( texture == nullptr ) {
-					CRIMILD_LOG_ERROR( "No valid texture for render graph output" );
-					return;
-				}
-
-				auto program = crimild::get_ptr( _program );
-				assert( program && "No valid program to render texture" );
-
-				renderer->bindProgram( program );
-
-				renderer->bindTexture(
-					program->getStandardLocation( ShaderProgram::StandardLocation::COLOR_MAP_UNIFORM ),
-					texture );
-
-				renderer->drawScreenPrimitive( program );
-				
-				renderer->unbindTexture(
-					program->getStandardLocation( ShaderProgram::StandardLocation::COLOR_MAP_UNIFORM ),
-					texture );
-				
-				renderer->unbindProgram( program );
-			}
-			
-		private:
-			SharedPointer< rendergraph::RenderGraph > _renderGraph;
-			SharedPointer< ShaderProgram > _program;			
-		};
-
 		class HDRSceneRenderPass : public RenderGraphPass {
 			CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::HDRSceneRenderPass )
 			
@@ -752,7 +700,7 @@ int main( int argc, char **argv )
 	camera->local().setTranslate( 0.0f, 5.0f, 30.0f );
 	camera->local().lookAt( Vector3f( 0.0f, 3.0f, 0.0f ) );
     auto renderGraph = createRenderGraph( false );
-    camera->setRenderPass( crimild::alloc< RenderGraphRenderPassHelper >( renderGraph ) );
+    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
 	scene->attachNode( camera );
     
     sim->setScene( scene );
@@ -764,7 +712,7 @@ int main( int argc, char **argv )
 					std::cout << "Full" << std::endl;
 					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
 					auto renderGraph = createRenderGraph( false );
-					camera->setRenderPass( crimild::alloc< RenderGraphRenderPassHelper >( renderGraph ) );
+					camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
 				});
 				break;
 
@@ -773,7 +721,7 @@ int main( int argc, char **argv )
                     std::cout << "Full (Debug)" << std::endl;
                     Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
                     auto renderGraph = createRenderGraph( true );
-                    camera->setRenderPass( crimild::alloc< RenderGraphRenderPassHelper >( renderGraph ) );
+                    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
                 });
                 break;
 
@@ -782,7 +730,7 @@ int main( int argc, char **argv )
                     std::cout << "Forward" << std::endl;
                     Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
                     auto renderGraph = createForwardRenderGraph( false );
-                    camera->setRenderPass( crimild::alloc< RenderGraphRenderPassHelper >( renderGraph ) );
+                    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
                 });
                 break;
 
@@ -791,7 +739,7 @@ int main( int argc, char **argv )
                     std::cout << "Forward (Debug)" << std::endl;
                     Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
                     auto renderGraph = createForwardRenderGraph( true );
-                    camera->setRenderPass( crimild::alloc< RenderGraphRenderPassHelper >( renderGraph ) );
+                    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
                 });
                 break;
 
