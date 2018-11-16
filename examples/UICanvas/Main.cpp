@@ -29,9 +29,11 @@
 #include <Crimild_SDL.hpp>
 #include <Crimild_OpenGL.hpp>
 
-#include <UI/UIFrame.hpp>
-#include <UI/UICanvas.hpp>
-#include <UI/UIBackground.hpp>
+#include "UI/UIFrame.hpp"
+#include "UI/UICanvas.hpp"
+#include "UI/UIBackground.hpp"
+#include "UI/UIFrameConstraint.hpp"
+#include "UI/UIFrameConstraintMaker.hpp"
 
 using namespace crimild;
 using namespace crimild::rendergraph;
@@ -66,21 +68,48 @@ SharedPointer< RenderGraph > createRenderGraph( crimild::Bool enableDebug )
 SharedPointer< Node > buildUI( void )
 {
 	auto canvas = crimild::alloc< Group >();
-	canvas->attachComponent< UICanvas >( 100, 100 );
-	canvas->attachComponent< UIBackground >( RGBAColorf( 1.0f, 1.0f, 0.0f, 1.0f ) );
+	canvas->attachComponent< UICanvas >( 640, 480 );
+	canvas->attachComponent< UIBackground >( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ) );
 
-	auto view = crimild::alloc< Group >();
-	view->attachComponent< UIFrame >( Rectf( 50, 25, 50, 50 ) )
-	    ->setZIndex( 1 );
-	view->attachComponent< UIBackground >( RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ));
-	canvas->attachNode( view );
+	auto view1 = crimild::alloc< Group >();
+	view1->attachComponent< UIFrame >()->pin()->top( canvas )->left( canvas )->size( 200, 400 )->margin( 10.0f );
+	view1->attachComponent< UIBackground >( RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ) );
+	canvas->attachNode( view1 );
 
 	auto view2 = crimild::alloc< Group >();
-	view2->attachComponent< UIFrame >( Rectf( 25.0f, 25.0f, 25.0f, 25.0f ) )
-	    ->setZIndex( 2 );
+	view2->attachComponent< UIFrame >()->pin()->fillParent()->margin( 20 );
 	view2->attachComponent< UIBackground >( RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ) );
-	view->attachNode( view2 );
+	view1->attachNode( view2 );
 
+	auto view3 = crimild::alloc< Group >();
+	view3->attachComponent< UIFrame >()->pin()->size( 200, 300 )->after( view1 )->centerY( view1 )->marginLeft( 10 );
+	view3->attachComponent< UIBackground >( RGBAColorf( 0.0f, 0.0f, 1.0f, 1.0f ) );
+	canvas->attachNode( view3 );
+
+	auto view4 = crimild::alloc< Group >();
+	view4->attachComponent< UIFrame >()->pin()->size( 50, 30 )->below( view3 )->centerX( view3 )->marginTop( 20 );
+	view4->attachComponent< UIBackground >( RGBAColorf( 0.0f, 1.0f, 1.0f, 1.0f ) );
+	canvas->attachNode( view4 );
+
+	auto view5 = crimild::alloc< Group >();
+	view5->attachComponent< UIFrame >()->pin()->after( view3 )->top( view3 )->right( canvas )->height( 250 )->margin( 0, 10, 0, 10 );
+	view5->attachComponent< UIBackground >( RGBAColorf( 1.0f, 0.0f, 1.0f, 1.0f ) );
+	canvas->attachNode( view5 );
+
+	auto view6 = crimild::alloc< Group >();
+	view6->attachComponent< UIFrame >()->pin()->after( view3 )->below( view5 )->bottom( view4 )->right( canvas )->margin( 10, 5, 0, 5 );
+	view6->attachComponent< UIBackground >( RGBAColorf( 1.0f, 0.5f, 0.0f, 1.0f ) );
+	canvas->attachNode( view6 );
+
+	auto view7 = crimild::alloc< Group >();
+	view7->attachComponent< UIFrame >()->pin()->size( 300, 50 )->centerX( view6 )->right()->bottom();
+	view7->attachComponent< UIBackground >( RGBAColorf( 1.0f, 1.0f, 0.0f, 1.0f ) );
+	canvas->attachNode( view7 );
+
+	canvas->perform( ApplyToGeometries( []( Geometry *geo ) {
+		geo->getComponent< RenderStateComponent >()->setRenderOnScreen( true );
+	}));
+	
 	return canvas;
 }
 
