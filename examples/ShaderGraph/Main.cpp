@@ -33,7 +33,6 @@
 #include "Foundation/Containers/List.hpp"
 
 #include "Rendering/ShaderGraph/ShaderGraph.hpp"
-#include "Rendering/ShaderGraph/ShaderGraphVariable.hpp"
 #include "Rendering/ShaderGraph/Nodes/VertexShaderInputs.hpp"
 #include "Rendering/ShaderGraph/Nodes/VertexShaderOutputs.hpp"
 #include "Rendering/ShaderGraph/Nodes/VertexOutput.hpp"
@@ -92,7 +91,7 @@ private:
 		auto viewVector = graph->addNode< ViewVector >(
 			vsInputs->getViewPosition()
 		)->getResult();
-		
+
 		graph->addOutputNode< StandardVertexOutputs >( vsInputs->getProjectedPosition() );
 		graph->addOutputNode< VertexOutput >( "vWorldNormal", worldNormal );
 		graph->addOutputNode< VertexOutput >( "vViewVector", viewVector );
