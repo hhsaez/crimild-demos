@@ -33,6 +33,7 @@
 #include "Foundation/Containers/List.hpp"
 
 #include "Rendering/ShaderGraph/ShaderGraph.hpp"
+#include "Rendering/ShaderGraph/CSL.hpp"
 #include "Rendering/ShaderGraph/Nodes/VertexShaderInputs.hpp"
 #include "Rendering/ShaderGraph/Nodes/VertexShaderOutputs.hpp"
 #include "Rendering/ShaderGraph/Nodes/VertexOutput.hpp"
@@ -45,11 +46,10 @@
 #include "Rendering/ShaderGraph/Nodes/Negate.hpp"
 #include "Rendering/ShaderGraph/Nodes/Normalize.hpp"
 #include "Rendering/ShaderGraph/Nodes/Vector.hpp"
-#include "Rendering/ShaderGraph/Nodes/ViewVector.hpp"
-#include "Rendering/ShaderGraph/Nodes/WorldNormal.hpp"
 #include "Rendering/ShaderGraph/Nodes/Scalar.hpp"
 #include "Rendering/ShaderGraph/Nodes/Pow.hpp"
 #include "Rendering/ShaderGraph/Nodes/Copy.hpp"
+#include "Rendering/ShaderGraph/Nodes/Convert.hpp"
 
 using namespace crimild;
 using namespace crimild::import;
@@ -80,71 +80,44 @@ private:
 	SharedPointer< ShaderGraph > createVertexShaderGraph( void )
 	{
 		auto graph = Renderer::getInstance()->createShaderGraph();
-		
-		auto vsInputs = graph->addInputNode< StandardVertexInputs >();
-		
-		auto worldNormal = graph->addNode< WorldNormal >(
-			vsInputs->getModelMatrixUniform(),
-			vsInputs->getNormalAttribute()
-		)->getResult();
-		
-		auto viewVector = graph->addNode< ViewVector >(
-			vsInputs->getViewPosition()
-		)->getResult();
 
-		graph->addOutputNode< StandardVertexOutputs >( vsInputs->getProjectedPosition() );
-		graph->addOutputNode< VertexOutput >( "vWorldNormal", worldNormal );
-		graph->addOutputNode< VertexOutput >( "vViewVector", viewVector );
+		auto inputs = graph->addInputNode< StandardVertexInputs >();
+		auto aNormal = inputs->getNormalAttribute();
+		auto uMMatrix = inputs->getModelMatrixUniform();
+		auto viewPosition = inputs->getViewPosition();
+		auto projPosition = inputs->getProjectedPosition();
+
+		auto worldNormal = csl::worldNormal( uMMatrix, aNormal );
+		auto viewVector = csl::viewVector( viewPosition );
 		
+		csl::vertexPosition( projPosition );
+		csl::vertexOutput( "vWorldNormal", worldNormal );
+		csl::vertexOutput( "vViewVector", viewVector );
+
 		return graph;
 	}
 	
 	SharedPointer< ShaderGraph > createFragmentShaderGraph( void )
 	{
 		auto graph = Renderer::getInstance()->createShaderGraph();
-		
-		auto worldNormal = graph->addInputNode< FragmentInput >( Variable::Type::VECTOR_3, "vWorldNormal" )->getInput();
-		auto viewVector = graph->addInputNode< FragmentInput >( Variable::Type::VECTOR_3, "vViewVector" )->getInput();
-		
-		auto kONE = graph->addNode< ScalarConstant >( 1.0f, "kONE" )->getVariable();
-		auto kZERO = graph->addNode< ScalarConstant >( 0.0f, "kZERO" )->getVariable();
-		auto kFresnelExp = graph->addNode< ScalarConstant >( 2.0f, "kFresnelExp" )->getVariable();
-		auto kDiffuse = graph->addNode< VectorConstant >( Vector4f( 1.0f, 1.0f, 1.0f, 1.0f ) )->getVector();
+
+		auto N = csl::vec3_in( "vWorldNormal" );
+		auto V = csl::vec3_in( "vViewVector" );
+
+		auto ONE = csl::scalar( 1.0 );
+		auto ZERO = csl::scalar( 0.0f );
+		auto EXP = csl::scalar( 2.0f );
+		auto COLOR = csl::vec4( Vector4f::ONE );
 		
 		// approximate a fresnel effect
-		auto effect = graph->addNode< Pow >(
-			// 1 - x
-			graph->addNode< Subtract >(
-				kONE,
-				// remap >= 0
-				graph->addNode< Max >(
-					kZERO,
-					// dot( N, D )
-					graph->addNode< Dot >(
-						worldNormal,
-						viewVector
-					)->getResult()
-				)->getResult()
-			)->getResult(),
-			kFresnelExp
-		)->getResult();
-		
-		auto rgb = graph->addNode< VectorToScalars >(
-			graph->addNode< Multiply >(
-				effect,
-				kDiffuse
-			)->getResult()
-		);
-		
-		// for alpha to 1
-		auto finalColor = graph->addNode< ScalarsToVector >(
-			rgb->getX(),
-			rgb->getY(),
-			rgb->getZ(),
-			kONE
-		)->getVector();
-		
-		graph->addOutputNode< FragmentColorOutput >( finalColor );
+		auto d = csl::max( ZERO, csl::dot( N, V ) );
+		auto cD = csl::sub( ONE, d );
+		auto fx = csl::pow( cD, EXP );
+
+		auto color = csl::mult( COLOR, fx );
+		color = csl::vec4( csl::vec3( color ), ONE );
+
+		csl::fragColor( color );
 		
 		return graph;
 	}
