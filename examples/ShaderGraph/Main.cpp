@@ -81,13 +81,9 @@ private:
 	{
 		auto graph = Renderer::getInstance()->createShaderGraph();
 
-		auto inputs = graph->addInputNode< StandardVertexInputs >();
-		auto aNormal = inputs->getNormalAttribute();
-		auto uMMatrix = inputs->getModelMatrixUniform();
-		auto viewPosition = inputs->getViewPosition();
-		auto projPosition = inputs->getProjectedPosition();
-
-		auto worldNormal = csl::worldNormal( uMMatrix, aNormal );
+		auto viewPosition = csl::viewPosition();
+		auto projPosition = csl::projectedPosition();
+		auto worldNormal = csl::worldNormal();
 		auto viewVector = csl::viewVector( viewPosition );
 		
 		csl::vertexPosition( projPosition );
