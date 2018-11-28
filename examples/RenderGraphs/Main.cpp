@@ -36,6 +36,7 @@
 #include "Rendering/RenderGraph/Passes/ScreenPass.hpp"
 #include "Rendering/RenderGraph/Passes/DepthPass.hpp"
 #include "Rendering/RenderGraph/Passes/BlendPass.hpp"
+#include "Rendering/RenderGraph/Passes/DepthToRGBPass.hpp"
 
 namespace crimild {
 
@@ -188,62 +189,6 @@ namespace crimild {
 			RenderGraphAttachment *_colorOutput = nullptr;
 		};
 
-		class DepthToColorPass : public RenderGraphPass {
-			CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::DepthToColorPass )
-		public:
-            DepthToColorPass( RenderGraph *graph, std::string name = "Convert Depth to RGB" ) : RenderGraphPass( graph, name ) { }
-			virtual ~DepthToColorPass( void ) { }
-
-			void setInput( RenderGraphAttachment *attachment ) { _input = attachment; }
-			RenderGraphAttachment *getInput( void ) { return _input; }
-
-			void setOutput( RenderGraphAttachment *attachment ) { _output = attachment; }
-			RenderGraphAttachment *getOutput( void ) { return _output; }
-
-			virtual void setup( RenderGraph *graph ) override
-			{
-				graph->read( this, { _input } );
-				graph->write( this, { _output } );
-			}
-
-			virtual void execute( RenderGraph *graph, Renderer *renderer, RenderQueue *renderQueue ) override
-			{
-				if ( _input == nullptr || _input->getTexture() == nullptr ) {
-					return;
-				}
-
-                _gBuffer = graph->createFBO( { _output } );
-
-				renderer->bindFrameBuffer( crimild::get_ptr( _gBuffer ) );
-				
-				auto program = renderer->getShaderProgram( Renderer::SHADER_PROGRAM_DEBUG_DEPTH );
-				assert( program && "No valid program to render texture" );
-
-				renderer->bindProgram( program );
-
-				renderer->bindTexture(
-					program->getStandardLocation( ShaderProgram::StandardLocation::COLOR_MAP_UNIFORM ),
-					getInput()->getTexture() );
-
-				renderer->drawScreenPrimitive( program );
-				
-				renderer->unbindTexture(
-					program->getStandardLocation( ShaderProgram::StandardLocation::COLOR_MAP_UNIFORM ),
-					getInput()->getTexture() );
-				
-				renderer->unbindProgram( program );
-
-				renderer->unbindFrameBuffer( crimild::get_ptr( _gBuffer ) );
-			}
-
-		private:
-			SharedPointer< FrameBufferObject > _gBuffer;
-			
-			RenderGraphAttachment *_input = nullptr;
-			RenderGraphAttachment *_output = nullptr;
-		};
-
-		
 		class ColorTintPass : public RenderGraphPass {
 			CRIMILD_IMPLEMENT_RTTI( crimild::rendergraph::ColorTintPass )
 
@@ -512,7 +457,7 @@ SharedPointer< RenderGraph > createForwardRenderGraph( crimild::Bool enableDebug
 	};
 	auto forwardPass = renderGraph->createPass< ForwardLightingPass >( types );
     auto sepiaPass = renderGraph->createPass< ColorTintPass >();
-    auto depthToColorPass = renderGraph->createPass< DepthToColorPass >();
+    auto depthToColorPass = renderGraph->createPass< DepthToRGBPass >();
     auto debugPass = renderGraph->createPass< FrameDebugPass >();
 
     auto sepiaBuffer = renderGraph->createAttachment( "Sepia", RenderGraphAttachment::Hint::FORMAT_RGBA );
@@ -543,7 +488,7 @@ SharedPointer< RenderGraph > createRenderGraph( crimild::Bool useDebugPass )
 	auto renderGraph = crimild::alloc< RenderGraph >();
 
 	auto scenePass = renderGraph->createPass< HDRSceneRenderPass >();
-    auto depthRGBPass = renderGraph->createPass< DepthToColorPass >();
+    auto depthRGBPass = renderGraph->createPass< DepthToRGBPass >();
     auto debugPass = renderGraph->createPass< FrameDebugPass >();
     auto sepiaPass = renderGraph->createPass< ColorTintPass >();
 	auto screenPass = renderGraph->createPass< ScreenPass >();
