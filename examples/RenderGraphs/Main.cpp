@@ -115,7 +115,19 @@ namespace crimild {
 						renderer->bindLight( program, light );
 					});
 					
-					renderStandardGeometry( renderer, crimild::get_ptr( renderable->geometry ), program, material, renderable->modelTransform );
+					if ( material != nullptr ) {
+						renderer->bindMaterial( program, material );
+					}
+				
+					renderer->setDepthState( _depthState );
+
+					renderer->drawGeometry( crimild::get_ptr( renderable->geometry ), program, renderable->modelTransform );
+					
+					if ( material != nullptr ) {
+						renderer->unbindMaterial( program, material );
+					}
+
+					renderer->setDepthState( DepthState::ENABLED );
 					
 					renderQueue->each( [ renderer, program ]( Light *light, int ) {
 						renderer->unbindLight( program, light );
@@ -125,59 +137,6 @@ namespace crimild {
 				});
 				
                 renderer->unbindFrameBuffer( crimild::get_ptr( fbo ) );
-			}
-			
-			void renderStandardGeometry( Renderer *renderer, Geometry *geometry, ShaderProgram *program, Material *material, const Matrix4f &modelTransform )
-			{
-				if ( material != nullptr ) {
-					renderer->bindMaterial( program, material );
-				}
-				
-				renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::MODEL_MATRIX_UNIFORM ), modelTransform );
-				
-				auto rc = geometry->getComponent< RenderStateComponent >();
-				renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::SKINNED_MESH_JOINT_COUNT_UNIFORM ), 0 );
-				if ( auto skeleton = rc->getSkeleton() ) {
-					renderer->bindUniform( program->getStandardLocation( ShaderProgram::StandardLocation::SKINNED_MESH_JOINT_COUNT_UNIFORM ), ( int ) skeleton->getJoints().size() );
-					skeleton->getJoints().each( [ renderer, program ]( const std::string &, SharedPointer< animation::Joint > const &joint ) {
-						renderer->bindUniform(
-							program->getStandardLocation( ShaderProgram::StandardLocation::SKINNED_MESH_JOINT_POSE_UNIFORM + joint->getId() ),
-							joint->getPoseMatrix()
-							);
-					});
-				}
-
-                renderer->setDepthState( _depthState );
-
-				geometry->forEachPrimitive( [renderer, program]( Primitive *primitive ) {
-					// TODO: maybe we shound't add a geometry to the queue if it
-					// has no valid primitive instead of quering the state of the
-					// VBO and IBO while rendering
-					
-					auto vbo = primitive->getVertexBuffer();
-					if ( vbo == nullptr ) {
-						return;
-					}
-					
-					auto ibo = primitive->getIndexBuffer();
-					if ( ibo == nullptr ) {
-						return;
-					}
-					
-					renderer->bindVertexBuffer( program, vbo );
-					renderer->bindIndexBuffer( program, ibo );
-					
-					renderer->drawPrimitive( program, primitive );
-					
-					renderer->unbindVertexBuffer( program, vbo );
-					renderer->unbindIndexBuffer( program, ibo );
-				});
-				
-				if ( material != nullptr ) {
-					renderer->unbindMaterial( program, material );
-				}
-
-                renderer->setDepthState( DepthState::ENABLED );
 			}
 			
 		private:
