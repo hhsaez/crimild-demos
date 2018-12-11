@@ -5,6 +5,8 @@
 
 using namespace crimild;
 using namespace crimild::raytracing;
+using namespace crimild::rendergraph;
+using namespace crimild::rendergraph::passes;
 using namespace crimild::sdl;
 
 SharedPointer< Geometry > createSphere( const Vector3f &center, float radius, const RGBColorf &albedo, RTMaterial::Type type, float fuzz = 0.0f, float refIndex = 1.0f )
@@ -117,6 +119,35 @@ SharedPointer< Image > rtScene( int nx, int ny, int ns )
     return result;
 }
 
+SharedPointer< Node > createTexturedQuad( SharedPointer< Image > const &image )
+{
+	auto aspect = crimild::Real32( image->getWidth() ) / crimild::Real32( image->getHeight() );
+	
+    auto quad = crimild::alloc< Geometry >();
+    quad->attachPrimitive( crimild::alloc< QuadPrimitive >( 2.0f * aspect, 2.0f, VertexFormat::VF_P3_UV2 ) );
+
+    auto material = crimild::alloc< Material >();
+	auto texture = crimild::alloc< Texture >( image );
+	texture->setMinFilter( Texture::Filter::NEAREST );
+	texture->setMagFilter( Texture::Filter::NEAREST );
+    material->setColorMap( texture );    
+    quad->getComponent< MaterialComponent >()->attachMaterial( material );
+
+	quad->getComponent< RenderStateComponent >()->setRenderOnScreen( true );
+
+    return quad;
+}
+
+SharedPointer< RenderGraph > createRenderGraph( crimild::Bool enableDebug )
+{
+	auto renderGraph = crimild::alloc< RenderGraph >();
+
+	auto screenPass = renderGraph->createPass< ScreenPass >();
+	renderGraph->setOutput( screenPass->getOutput() );
+
+	return renderGraph;
+}
+
 int main( int argc, char **argv )
 {
 	auto settings = crimild::alloc< scripting::LuaSettings >( argc, argv );
@@ -131,18 +162,34 @@ int main( int argc, char **argv )
 	int samples = settings->get< int >( "crimild.raytracer.samples", 1 );
 	int workers = settings->get< int >( "crimild.raytracer.workers", -1 );
 
+	settings->set( "video.width", screenX );
+	settings->set( "video.height", screenY );
+
     Log::debug( CRIMILD_CURRENT_CLASS_NAME, "Settings: ", screenX, " ", screenY, " ", samples );
 
-    for ( int i = 0; i < 1; i++ ) {
-        crimild::concurrency::JobScheduler jobScheduler;
-        jobScheduler.configure( workers );
-        jobScheduler.start();
+	SharedPointer< Image > rtResult;
 
-        auto rtResult = rtScene( screenX, screenY, samples );
+	{
+		crimild::concurrency::JobScheduler jobScheduler;
+		jobScheduler.configure( workers );
+		jobScheduler.start();
 
-        jobScheduler.stop();
+		rtResult = rtScene( screenX, screenY, samples );
+
+		jobScheduler.stop();
     }
 
-	return 0;
+    auto sim = crimild::alloc< SDLSimulation >( "Raytracing", settings );
+
+    auto scene = crimild::alloc< Group >();
+	scene->attachNode( createTexturedQuad( rtResult ) );
+
+    auto camera = crimild::alloc< Camera >();
+    auto renderGraph = createRenderGraph( false );
+    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
+    scene->attachNode( camera );
+    
+    sim->setScene( scene );
+	return sim->run();
 }
 
