@@ -33,10 +33,12 @@
 #include "Foundation/Containers/List.hpp"
 
 #include "Rendering/ShaderGraph/ShaderGraph.hpp"
-#include "Rendering/ShaderGraph/Nodes/VertexShaderInput.hpp"
-#include "Rendering/ShaderGraph/Nodes/VertexShaderOutput.hpp"
-#include "Rendering/ShaderGraph/Nodes/FragmentShaderInput.hpp"
-#include "Rendering/ShaderGraph/Nodes/FragmentShaderOutput.hpp"
+#include "Rendering/ShaderGraph/CSL.hpp"
+#include "Rendering/ShaderGraph/Nodes/VertexShaderInputs.hpp"
+#include "Rendering/ShaderGraph/Nodes/VertexShaderOutputs.hpp"
+#include "Rendering/ShaderGraph/Nodes/VertexOutput.hpp"
+#include "Rendering/ShaderGraph/Nodes/FragmentInput.hpp"
+#include "Rendering/ShaderGraph/Nodes/FragmentColorOutput.hpp"
 #include "Rendering/ShaderGraph/Nodes/Multiply.hpp"
 #include "Rendering/ShaderGraph/Nodes/Dot.hpp"
 #include "Rendering/ShaderGraph/Nodes/Max.hpp"
@@ -46,125 +48,77 @@
 #include "Rendering/ShaderGraph/Nodes/Vector.hpp"
 #include "Rendering/ShaderGraph/Nodes/Scalar.hpp"
 #include "Rendering/ShaderGraph/Nodes/Pow.hpp"
-#include "Rendering/ShaderGraph/ShaderBuilder.hpp"
-#include "Rendering/ShaderGraph/OpenGLShaderBuilder.hpp"
+#include "Rendering/ShaderGraph/Nodes/Copy.hpp"
+#include "Rendering/ShaderGraph/Nodes/Convert.hpp"
 
 using namespace crimild;
 using namespace crimild::import;
 using namespace crimild::shadergraph;
-using namespace crimild::shadergraph::nodes;
 using namespace crimild::sdl;
 
-SharedPointer< ShaderGraph > createVertexShaderGraph( void )
-{
-	// vertex shader graph	
-	auto vsGraph = crimild::alloc< ShaderGraph >();	
-	auto vsInputs = vsGraph->createNode< nodes::VertexShaderInput >();
+class CustomShader : public ShaderProgram {
+public:
+	CustomShader( void )
+	{
+		setVertexShader( crimild::alloc< VertexShader >( createVertexShaderGraph()->build() ) );
+		setFragmentShader( crimild::alloc< FragmentShader >( createFragmentShaderGraph()->build() ) );
 
-	// constants
-	auto kZero = vsGraph->createNode< nodes::Scalar >( 0.0f );
-	auto kOne = vsGraph->createNode< nodes::Scalar >( 1.0f );
-	auto kDirection = vsGraph->createNode< nodes::Vector >( Vector4f( 0.0f, 0.0f, -1.0f, 0.0f ) );
+		registerStandardLocation( ShaderLocation::Type::ATTRIBUTE, ShaderProgram::StandardLocation::POSITION_ATTRIBUTE, "aPosition" );
+		registerStandardLocation( ShaderLocation::Type::ATTRIBUTE, ShaderProgram::StandardLocation::NORMAL_ATTRIBUTE, "aNormal" );
+		
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::PROJECTION_MATRIX_UNIFORM, "uPMatrix" );
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::VIEW_MATRIX_UNIFORM, "uVMatrix" );
+		registerStandardLocation( ShaderLocation::Type::UNIFORM, ShaderProgram::StandardLocation::MODEL_MATRIX_UNIFORM, "uMMatrix" );
+	}
 
-	// compute model-space position
-	auto modelPosition = vsGraph->createNode< nodes::Vector >();
-	vsGraph->connect( vsInputs->getPosition(), modelPosition->getInputXYZ() );
-	vsGraph->connect( kOne->getOutputValue(), modelPosition->getInputW() );
+	virtual ~CustomShader( void )
+	{
+		
+	}
 
-	// compute world-space position
-	auto worldPosition= vsGraph->createNode< nodes::Multiply >();
-	vsGraph->connect( vsInputs->getMMatrix(), worldPosition->getA() );
-	vsGraph->connect( modelPosition->getOutputXYZW(), worldPosition->getB() );
+private:
+	SharedPointer< ShaderGraph > createVertexShaderGraph( void )
+	{
+		auto graph = Renderer::getInstance()->createShaderGraph();
 
-	// compute view-space position
-	auto viewPosition = vsGraph->createNode< nodes::Multiply >();
-	vsGraph->connect( vsInputs->getVMatrix(), viewPosition->getA() );
-	vsGraph->connect( worldPosition->getOutput(), viewPosition->getB() );
+		auto viewPosition = csl::viewPosition();
+		auto projPosition = csl::projectedPosition();
+		auto worldNormal = csl::worldNormal();
+		auto viewVector = csl::viewVector( viewPosition );
+		
+		csl::vertexPosition( projPosition );
+		csl::vertexOutput( "vWorldNormal", worldNormal );
+		csl::vertexOutput( "vViewVector", viewVector );
 
-	// compute screen-space position
-	auto screenPosition = vsGraph->createNode< nodes::Multiply >();
-	vsGraph->connect( vsInputs->getPMatrix(), screenPosition->getA() );
-	vsGraph->connect( viewPosition->getOutput(), screenPosition->getB() );
-
-	// compute model-space normal
-	auto modelNormal = vsGraph->createNode< nodes::Vector >();
-	vsGraph->connect( vsInputs->getNormal(), modelNormal->getInputXYZ() );
-	vsGraph->connect( kZero->getOutputValue(), modelNormal->getInputW() );
-
-	// compute world-space normal
-	auto worldNormal = vsGraph->createNode< nodes::Multiply >();
-	vsGraph->connect( vsInputs->getMMatrix(), worldNormal->getA() );
-	vsGraph->connect( modelNormal->getOutputXYZW(), worldNormal->getB() );
-	auto worldNormalXYZ = vsGraph->createNode< nodes::Vector >();
-	vsGraph->connect( worldNormal->getOutput(), worldNormalXYZ->getInputXYZW() );
+		return graph;
+	}
 	
-	// compute view vector
-	auto negViewVector = vsGraph->createNode< nodes::Negate >();
-	vsGraph->connect( viewPosition->getOutput(), negViewVector->getInputValue() );
-	auto normalizedViewVector = vsGraph->createNode< nodes::Normalize >();
-	vsGraph->connect( negViewVector->getNegated(), normalizedViewVector->getInputValue() );
-	auto viewVector = vsGraph->createNode< nodes::Vector >();
-	vsGraph->connect( normalizedViewVector->getNormalized(), viewVector->getInputXYZW() );
+	SharedPointer< ShaderGraph > createFragmentShaderGraph( void )
+	{
+		auto graph = Renderer::getInstance()->createShaderGraph();
 
-	// connect outputs
-	auto vsOutputs = vsGraph->createNode< nodes::VertexShaderOutput >();
-	vsGraph->connect( screenPosition->getOutput(), vsOutputs->getScreenPosition() );
-    vsGraph->connect( worldNormalXYZ->getOutputXYZ(), vsOutputs->getWorldNormal() );
-	vsGraph->connect( viewVector->getOutputXYZ(), vsOutputs->getViewVector() );
+		auto N = csl::vec3_in( "vWorldNormal" );
+		auto V = csl::vec3_in( "vViewVector" );
 
-	return vsGraph;
-}
+		auto ONE = csl::scalar( 1.0 );
+		auto ZERO = csl::scalar( 0.0f );
+		auto EXP = csl::scalar( 2.0f );
+		auto COLOR = csl::vec4( Vector4f::ONE );
+		
+		// approximate a fresnel effect
+		auto d = csl::max( ZERO, csl::dot( N, V ) );
+		auto cD = csl::sub( ONE, d );
+		auto fx = csl::pow( cD, EXP );
 
-SharedPointer< ShaderGraph > createFragmentShaderGraph( void )
-{
-	// fragment shader graph
-	auto fsGraph = crimild::alloc< ShaderGraph >();
-	auto fsInput = fsGraph->createNode< FragmentShaderInput >();
-	auto fsOutput = fsGraph->createNode< FragmentShaderOutput >();
+		auto color = csl::mult( COLOR, fx );
+		color = csl::vec4( csl::vec3( color ), ONE );
 
-	// constants
-	auto kZero = fsGraph->createNode< nodes::Scalar >( 0.0f );
-	auto kOne = fsGraph->createNode< nodes::Scalar >( 1.0f );
-	auto kFresnelExp = fsGraph->createNode< nodes::Scalar >( 5.0f );
+		csl::fragColor( color );
+		
+		return graph;
+	}
 
-	// diffuse
-	auto diffuse = fsGraph->createNode< nodes::Vector >( Vector4f( 1.0f, 1.0f, 1.0f, 1.0f ) );
-
-	// dot( N, D )
-	auto dotND = fsGraph->createNode< nodes::Dot >();
-	fsGraph->connect( fsInput->getWorldNormal(), dotND->getA() );
-	fsGraph->connect( fsInput->getViewVector(), dotND->getB() );
-
-	// remap to > 0
-	auto posDotND = fsGraph->createNode< nodes::Max >();
-	fsGraph->connect( dotND->getValue(), posDotND->getA() );
-	fsGraph->connect( kZero->getOutputValue(), posDotND->getB() );
-
-	// 1 - MaxF
-	auto oneMinusDotND = fsGraph->createNode< nodes::Subtract >();
-	fsGraph->connect( kOne->getOutputValue(), oneMinusDotND->getA() );
-	fsGraph->connect( posDotND->getValue(), oneMinusDotND->getB() );
-
-	// fresnel approx.
-	auto fresnel = fsGraph->createNode< nodes::Pow >();
-	fsGraph->connect( oneMinusDotND->getValue(), fresnel->getBase() );
-	fsGraph->connect( kFresnelExp->getOutputValue(), fresnel->getExponent() );
-
-	// rgb
-	auto rgb = fsGraph->createNode< nodes::Multiply >();
-	fsGraph->connect( fresnel->getValue(), rgb->getA() );
-	fsGraph->connect( diffuse->getOutputXYZ(), rgb->getB() );
-
-	// frag color
-	auto fragColor = fsGraph->createNode< nodes::Vector >();
-	fsGraph->connect( rgb->getOutput(), fragColor->getInputXYZ() );
-	fsGraph->connect( kOne->getOutputValue(), fragColor->getInputW() );
-
-	// connect outputs
-    fsGraph->connect( fragColor->getOutputXYZW(), fsOutput->getFragColor() );
-
-	return fsGraph;
-}
+};
 
 int main( int argc, char **argv )
 {
@@ -172,35 +126,44 @@ int main( int argc, char **argv )
 
     auto scene = crimild::alloc< Group >();
 
-	auto model = SceneImporter::importScene( FileSystem::getInstance().pathForResource( "assets/models/monkey.obj" ) );
-	if ( model == nullptr ) {
-		return -1;
-	}
-	
-	model->perform( UpdateWorldState() );
-	model->local().setScale( 1.0f / model->getWorldBound()->getRadius() );
-    model->attachComponent< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.15f * Numericf::HALF_PI );
-	scene->attachNode( model );
-
-	Material *material = nullptr;
-	model->perform( Apply( [ &material ]( crimild::Node *node ) {
-		if ( auto ms = node->getComponent< MaterialComponent >() ) {
-			if ( auto m = ms->first() ) {
-				material = m;
-			}
-		}
-	}));
-	
-	auto vsGraph = createVertexShaderGraph();
-	auto fsGraph = createFragmentShaderGraph();
-	auto shaderBuilder = crimild::alloc< OpenGLShaderBuilder >();
-	auto program = shaderBuilder->build( vsGraph, fsGraph );
+	auto program = crimild::alloc< CustomShader >();
 	if ( program != nullptr ) {
 		std::cout << "VERTEX SHADER:\n" << program->getVertexShader()->getSource() << "\n";
 		std::cout << "FRAGMENT SHADER:\n" << program->getFragmentShader()->getSource() << "\n";
 	}
+
+	auto model = []( const Vector3f &position, SharedPointer< ShaderProgram > const &program ) -> SharedPointer< Node > {
+		auto model = SceneImporter::importScene( FileSystem::getInstance().pathForResource( "assets/models/monkey.obj" ) );
+		if ( model == nullptr ) {
+			return nullptr;
+		}
+
+		model->perform( UpdateWorldState() );
+		model->local().setScale( 1.0f / model->getWorldBound()->getRadius() );
+		auto speed = Random::generate( -0.2f, 0.2f );
+		model->attachComponent< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), speed * Numericf::HALF_PI );
+
+		Material *material = nullptr;
+		model->perform( Apply( [ &material ]( crimild::Node *node ) {
+			if ( auto ms = node->getComponent< MaterialComponent >() ) {
+				if ( auto m = ms->first() ) {
+					material = m;
+				}
+			}
+		}));
+		
+		material->setProgram( program );
+
+		model->local().setTranslate( position );
+		
+		return model;
+	};
 	
-	material->setProgram( program );
+	scene->attachNode( model( Vector3f( 0.0f, 0.0f, 0.0f ), program ) );
+	scene->attachNode( model( Vector3f( -3.0f, 2.0f, -6.0f ), program ) );
+	scene->attachNode( model( Vector3f( -3.0f, -1.5f, -4.0f ), program ) );
+	scene->attachNode( model( Vector3f( 3.0f, 2.0f, -5.5f ), program ) );
+	scene->attachNode( model( Vector3f( 2.5f, -1.5f, -3.5f ), program ) );
 
     auto camera = crimild::alloc< Camera >();
     camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 2.0f ) );
