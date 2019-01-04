@@ -40,6 +40,8 @@
 #include "Rendering/RenderGraph/Passes/FrameDebugPass.hpp"
 #include "Rendering/RenderGraph/Passes/OpaquePass.hpp"
 #include "Rendering/RenderGraph/Passes/LightAccumulationPass.hpp"
+#include "Rendering/RenderGraph/Passes/TextureColorPass.hpp"
+#include "Rendering/RenderGraph/Passes/DeferredLightingPass.hpp"
 
 namespace crimild {
 
@@ -120,8 +122,10 @@ namespace crimild {
 			{
 				_depthOutput = graph->createAttachment( getName() + " - Depth", RenderGraphAttachment::Hint::FORMAT_DEPTH_HDR );
 				_normalOutput = graph->createAttachment( getName() + " - Normal", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
-				_lightingADOutput = graph->createAttachment( getName() + " - Lighting Ambient + Diffuse", RenderGraphAttachment::Hint::FORMAT_RGBA );
-				_lightingSOutput = graph->createAttachment( getName() + " - Lighting Specular", RenderGraphAttachment::Hint::FORMAT_RGBA );
+				_roughnessOutput = graph->createAttachment( getName() + " - Roughness", RenderGraphAttachment::Hint::FORMAT_RGBA_HDR );
+				_lightAmbientOutput = graph->createAttachment( getName() + " - Lighting Ambient", RenderGraphAttachment::Hint::FORMAT_RGBA );
+				_lightDiffuseOutput = graph->createAttachment( getName() + " - Lighting Diffuse", RenderGraphAttachment::Hint::FORMAT_RGBA );
+				_lightSpecularOutput = graph->createAttachment( getName() + " - Lighting Specular", RenderGraphAttachment::Hint::FORMAT_RGBA );
 				_opaqueOutput = graph->createAttachment( getName() + " - Opaque", RenderGraphAttachment::Hint::FORMAT_RGBA );
 				_opaqueLitOutput = graph->createAttachment( getName() + " - Opaque Lit", RenderGraphAttachment::Hint::FORMAT_RGBA );
 				_translucentOutput = graph->createAttachment( getName() + " - Translucent", RenderGraphAttachment::Hint::FORMAT_RGBA );
@@ -139,11 +143,17 @@ namespace crimild {
 			void setNormalOutput( RenderGraphAttachment *output ) { _normalOutput = output; };
             RenderGraphAttachment *getNormalOutput( void ) { return _normalOutput; }
 
-			void setLightingADOutput( RenderGraphAttachment *output ) { _lightingADOutput = output; };
-            RenderGraphAttachment *getLightingADOutput( void ) { return _lightingADOutput; }
+			void setRoughnessOutput( RenderGraphAttachment *output ) { _roughnessOutput = output; };
+            RenderGraphAttachment *getRoughnessOutput( void ) { return _roughnessOutput; }
 
-			void setLightingSOutput( RenderGraphAttachment *output ) { _lightingSOutput = output; };
-            RenderGraphAttachment *getLightingSOutput( void ) { return _lightingSOutput; }
+			void setLightAmbientOutput( RenderGraphAttachment *output ) { _lightAmbientOutput = output; };
+            RenderGraphAttachment *getLightAmbientOutput( void ) { return _lightAmbientOutput; }
+
+			void setLightDiffuseOutput( RenderGraphAttachment *output ) { _lightDiffuseOutput = output; };
+            RenderGraphAttachment *getLightDiffuseOutput( void ) { return _lightDiffuseOutput; }
+
+			void setLightSpecularOutput( RenderGraphAttachment *output ) { _lightSpecularOutput = output; };
+            RenderGraphAttachment *getLightSpecularOutput( void ) { return _lightSpecularOutput; }
 
 			void setOpaqueOutput( RenderGraphAttachment *output ) { _opaqueOutput = output; };
             RenderGraphAttachment *getOpaqueOutput( void ) { return _opaqueOutput; }
@@ -160,8 +170,10 @@ namespace crimild {
         private:
             RenderGraphAttachment *_depthOutput = nullptr;
             RenderGraphAttachment *_normalOutput = nullptr;
-            RenderGraphAttachment *_lightingADOutput = nullptr;
-            RenderGraphAttachment *_lightingSOutput = nullptr;
+            RenderGraphAttachment *_roughnessOutput = nullptr;
+            RenderGraphAttachment *_lightAmbientOutput = nullptr;
+            RenderGraphAttachment *_lightDiffuseOutput = nullptr;
+            RenderGraphAttachment *_lightSpecularOutput = nullptr;
             RenderGraphAttachment *_opaqueOutput = nullptr;
             RenderGraphAttachment *_opaqueLitOutput = nullptr;
             RenderGraphAttachment *_translucentOutput = nullptr;
@@ -173,8 +185,12 @@ namespace crimild {
 			{
                 auto depthPass = graph->createPass< passes::DepthPass >();
 				auto lightingPass = graph->createPass< passes::LightAccumulationPass >();
+				auto roughnessPass = graph->createPass< passes::TextureColorPass >();
+				/*
                 auto opaquePass = graph->createPass< passes::OpaquePass >();
 				auto opaqueLitPass = graph->createPass< passes::BlendPass >( AlphaState::ENABLED_MULTIPLY_BLEND );
+				*/
+				auto deferredLightingPass = graph->createPass< passes::DeferredLightingPass >();
 				auto translucentTypes = containers::Array< RenderQueue::RenderableType > {
 					RenderQueue::RenderableType::OPAQUE_CUSTOM,
 					RenderQueue::RenderableType::TRANSLUCENT,
@@ -186,23 +202,33 @@ namespace crimild {
 				depthPass->setDepthOutput( _depthOutput );
 				depthPass->setNormalOutput( _normalOutput );
 
+				roughnessPass->setInput( _normalOutput );
+				roughnessPass->setOutput( _roughnessOutput );
+
 				lightingPass->setDepthInput( _depthOutput );
 				lightingPass->setNormalInput( _normalOutput );
-				lightingPass->setAmbientDiffuseOutput( _lightingADOutput );
-				lightingPass->setSpecularOutput( _lightingSOutput );
+				lightingPass->setAmbientOutput( _lightAmbientOutput );
+				lightingPass->setDiffuseOutput( _lightDiffuseOutput );
+				lightingPass->setSpecularOutput( _lightSpecularOutput );
 
+				/*
 				opaquePass->setDepthInput( _depthOutput );
                 opaquePass->setColorOutput( _opaqueOutput );
 
 				opaqueLitPass->addInput( _opaqueOutput );
 				opaqueLitPass->addInput( _lightingADOutput );
 				opaqueLitPass->setOutput( _opaqueLitOutput );
+				*/
+				deferredLightingPass->setDepthInput( _depthOutput );
+				deferredLightingPass->setAmbientAccumInput( _lightAmbientOutput );
+				deferredLightingPass->setDiffuseAccumInput( _lightDiffuseOutput );
+				deferredLightingPass->setSpecularAccumInput( _lightSpecularOutput );
+				deferredLightingPass->setColorOutput( _opaqueLitOutput );
 
                 translucentPass->setDepthInput( _depthOutput );
                 translucentPass->setColorOutput( _translucentOutput );
 
                 colorPass->addInput( _opaqueLitOutput );
-                colorPass->addInput( _lightingSOutput );
                 colorPass->addInput( _translucentOutput );
                 colorPass->setOutput( _colorOutput );
 			}
@@ -285,13 +311,15 @@ SharedPointer< RenderGraph > createRenderGraph( crimild::Bool useDebugPass )
     depthRGBPass->setOutput( depthRGBBuffer );
 
 	//debugPass->addInput( frameBuffer );
-    //debugPass->addInput( depthRGBBuffer );
+    debugPass->addInput( depthRGBBuffer );
     debugPass->addInput( scenePass->getNormalOutput() );
-    debugPass->addInput( scenePass->getLightingADOutput() );
-    debugPass->addInput( scenePass->getLightingSOutput() );
+	debugPass->addInput( scenePass->getRoughnessOutput() );
+    debugPass->addInput( scenePass->getLightAmbientOutput() );
+    debugPass->addInput( scenePass->getLightDiffuseOutput() );
+    debugPass->addInput( scenePass->getLightSpecularOutput() );
     //debugPass->addInput( scenePass->getOpaqueOutput() );
-    //debugPass->addInput( scenePass->getOpaqueLitOutput() );
-    //debugPass->addInput( scenePass->getTranslucentOutput() );
+    debugPass->addInput( scenePass->getOpaqueLitOutput() );
+    debugPass->addInput( scenePass->getTranslucentOutput() );
     debugPass->addInput( scenePass->getColorOutput() );
     //debugPass->addInput( sepiaBuffer );
 	//debugPass->addInput( screenPass->getOutput() );
@@ -315,6 +343,7 @@ SharedPointer< Node > createTeapots( void )
 		geometry->local().setTranslate( position );
 
 		auto m = crimild::alloc< Material >();
+		m->setAmbient( RGBAColorf::ONE );
 		m->setDiffuse( color );
 		if ( color.a() < 1.0f ) m->setAlphaState( AlphaState::ENABLED );
 		if ( isOccluder ) m->setColorMaskState( ColorMaskState::DISABLED );
