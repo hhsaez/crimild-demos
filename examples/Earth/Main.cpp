@@ -50,40 +50,8 @@ using namespace crimild::rendergraph::passes;
 SharedPointer< RenderGraph > createRenderGraph( crimild::Bool useDebugPass )
 {
 	auto graph = crimild::alloc< RenderGraph >();
-
-	auto depthPass = graph->createPass< passes::DepthPass >();
-	auto lightingPass = graph->createPass< passes::LightAccumulationPass >();
-	auto deferredLightingPass = graph->createPass< passes::DeferredLightingPass >();
-	auto translucentTypes = containers::Array< RenderQueue::RenderableType > {
-		RenderQueue::RenderableType::OPAQUE_CUSTOM,
-		RenderQueue::RenderableType::TRANSLUCENT,
-	};
-	auto translucentPass = graph->createPass< passes::ForwardLightingPass >( translucentTypes );
-	auto colorPass = graph->createPass< passes::BlendPass >();
-    auto debugPass = graph->createPass< FrameDebugPass >();
-
-	lightingPass->setDepthInput( depthPass->getDepthOutput() );
-	lightingPass->setNormalInput( depthPass->getNormalOutput() );
-	
-	deferredLightingPass->setDepthInput( depthPass->getDepthOutput() );
-	deferredLightingPass->setAmbientAccumInput( lightingPass->getAmbientOutput() );
-	deferredLightingPass->setDiffuseAccumInput( lightingPass->getDiffuseOutput() );
-	deferredLightingPass->setSpecularAccumInput( lightingPass->getSpecularOutput() );
-
-	translucentPass->setDepthInput( depthPass->getDepthOutput() );
-
-	colorPass->addInput( deferredLightingPass->getColorOutput() );
-	colorPass->addInput( translucentPass->getColorOutput() );
-
-	debugPass->addInput( colorPass->getOutput() );
-    debugPass->addInput( depthPass->getNormalOutput() );
-    debugPass->addInput( lightingPass->getAmbientOutput() );
-    debugPass->addInput( lightingPass->getDiffuseOutput() );
-    debugPass->addInput( lightingPass->getSpecularOutput() );
-    debugPass->addInput( deferredLightingPass->getColorOutput() );
-    debugPass->addInput( translucentPass->getColorOutput() );
-
-	graph->setOutput( useDebugPass ? debugPass->getOutput() : colorPass->getOutput() );
+	auto scenePass = graph->createPass< passes::ForwardLightingPass >();
+	graph->setOutput( scenePass->getColorOutput() );
 
 	return graph;
 }
@@ -103,18 +71,46 @@ SharedPointer< Node > buildDirectionalLight( const RGBAColorf &color, const Vect
 	return light;
 }
 
-SharedPointer< Node > buildEarth( void )
+SharedPointer< Node > buildEarth( const Vector3f &position )
+{
+	auto group = crimild::alloc< Group >();
+	
+	auto primitive = crimild::alloc< SpherePrimitive >( 1.0f, VertexFormat::VF_P3_N3_UV2 );
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( primitive );
+
+	auto material = crimild::alloc< Material >();
+	material->setAmbient( RGBAColorf::ONE );
+	material->setDiffuse( RGBAColorf::ONE );
+	material->setColorMap( AssetManager::getInstance()->get< Texture >( "assets/textures/earth-color.tga" ) );
+	material->setSpecularMap( AssetManager::getInstance()->get< Texture >( "assets/textures/earth-specular.tga" ) );
+	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+
+	geometry->attachComponent( crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.01 ) );
+
+	group->attachNode( geometry );
+
+	group->local().setTranslate( position );
+	group->local().rotate().fromEulerAngles( 0.0f, 0.0f, 0.5f );
+
+	return group;
+}
+
+SharedPointer< Node > buildMoon( const Vector3f &position )
 {
 	auto primitive = crimild::alloc< SpherePrimitive >( 1.0f, VertexFormat::VF_P3_N3_UV2 );
 	auto geometry = crimild::alloc< Geometry >();
 	geometry->attachPrimitive( primitive );
 
 	auto material = crimild::alloc< Material >();
-	material->setColorMap( AssetManager::getInstance()->get< Texture >( "assets/textures/earth-color.tga" ) );
-	material->setSpecularMap( AssetManager::getInstance()->get< Texture >( "assets/textures/earth-specular.tga" ) );
+	material->setAmbient( RGBAColorf::ZERO );
+	material->setDiffuse( RGBAColorf::ONE );
+	material->setSpecular( RGBAColorf::ZERO );
+	material->setColorMap( AssetManager::getInstance()->get< Texture >( "assets/textures/moon-color.tga" ) );
 	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
-	geometry->attachComponent( crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.01 ) );
+	geometry->local().setTranslate( position );
+	geometry->local().rotate().fromEulerAngles( -0.1f * Numericf::HALF_PI, 0.0f, 0.0f );
 
 	return geometry;
 }
@@ -127,12 +123,13 @@ int main( int argc, char **argv )
 
     auto scene = crimild::alloc< Group >();
 
-	scene->attachNode( buildEarth() );
+	scene->attachNode( buildEarth( Vector3f( 0.0f, 0.0f, -2.0f ) ) );
+	scene->attachNode( buildMoon( Vector3f( -0.1f, -1.1f, 2.5f ) ) );
 
-	scene->attachNode( buildAmbientLight( RGBAColorf( 0.1f, 0.1f, 0.1f, 1.0f ) ) );
-	scene->attachNode( buildDirectionalLight( RGBAColorf( 1.0f, 0.95f, 0.85f, 1.0f ), Vector3f( -0.05f * Numericf::PI, 0.25f * Numericf::PI, 0.0f ) ) );
+	scene->attachNode( buildAmbientLight( RGBAColorf( 0.0f, 0.0f, 0.05f, 1.0f ) ) );
+	scene->attachNode( buildDirectionalLight( RGBAColorf( 1.0f, 0.95f, 0.85f, 1.0f ), Vector3f( -0.25f * Numericf::PI, 0.25f * Numericf::PI, 0.0f ) ) );
 
-	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
+	auto camera = crimild::alloc< Camera >();
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
     auto renderGraph = createRenderGraph( true );
     camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );

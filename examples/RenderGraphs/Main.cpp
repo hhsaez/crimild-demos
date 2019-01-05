@@ -185,7 +185,7 @@ namespace crimild {
 			{
                 auto depthPass = graph->createPass< passes::DepthPass >();
 				auto lightingPass = graph->createPass< passes::LightAccumulationPass >();
-				auto roughnessPass = graph->createPass< passes::TextureColorPass >();
+				auto roughnessPass = graph->createPass< passes::TextureColorPass >( TextureColorPass::Mode::ALPHA );
 				/*
                 auto opaquePass = graph->createPass< passes::OpaquePass >();
 				auto opaqueLitPass = graph->createPass< passes::BlendPass >( AlphaState::ENABLED_MULTIPLY_BLEND );
