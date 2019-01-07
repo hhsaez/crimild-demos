@@ -28,7 +28,13 @@
 #include <Crimild.hpp>
 #include <Crimild_SDL.hpp>
 
+#include "Rendering/RenderGraph/RenderGraph.hpp"
+#include "Rendering/RenderGraph/RenderGraphPass.hpp"
+#include "Rendering/RenderGraph/RenderGraphAttachment.hpp"
+#include "Rendering/RenderGraph/Passes/ForwardLightingPass.hpp"
+
 using namespace crimild;
+using namespace crimild::rendergraph;
 using namespace crimild::sdl;
 
 SharedPointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf &color, float major, float minor, float speed )
@@ -41,7 +47,7 @@ SharedPointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf
 
 	auto material = crimild::alloc< Material >();
 	material->setDiffuse( color );
-   	material->setProgram( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_DIFFUSE ) );
+   	//material->setProgram( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_DIFFUSE ) );
 	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
 	orbitingLight->attachNode( geometry );
@@ -93,6 +99,10 @@ int main( int argc, char **argv )
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
+	auto graph = crimild::alloc< RenderGraph >();
+	auto scenePass = graph->createPass< passes::ForwardLightingPass >();
+	graph->setOutput( scenePass->getColorOutput() );
+    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( graph ) );
 	scene->attachNode( camera );
 
 	sim->setScene( scene );
