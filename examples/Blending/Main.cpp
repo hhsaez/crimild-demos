@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Hernan Saez
+ * Copyright (c) 2002-present, H. Hernan Saez
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -28,12 +28,16 @@
 #include <Crimild.hpp>
 #include <Crimild_SDL.hpp>
 
+#include "Rendering/RenderGraph/RenderGraph.hpp"
+#include "Rendering/RenderGraph/Passes/ForwardLightingPass.hpp"
+
 using namespace crimild;
 using namespace crimild::sdl;
+using namespace crimild::rendergraph;
 
 SharedPointer< Node > buildBackground( float x, float y, float z ) 
 {
-	auto primitive = crimild::alloc< QuadPrimitive >( 9.0f, 9.0f, VertexFormat::VF_P3_N3_UV2 );
+	auto primitive = crimild::alloc< QuadPrimitive >( 15.0f, 15.0f, VertexFormat::VF_P3_N3_UV2 );
 	auto geometry = crimild::alloc< Geometry >();
 	geometry->attachPrimitive( primitive );
 
@@ -53,6 +57,9 @@ SharedPointer< Node > buildEarth( float x, float y, float z )
 	geometry->attachPrimitive( primitive );
 
 	auto material = crimild::alloc< Material >();
+	material->setAmbient( RGBAColorf::ZERO );
+	material->setDiffuse( RGBAColorf::ONE );
+	material->setSpecular( RGBAColorf::ZERO );
 	material->setColorMap( AssetManager::getInstance()->get< Texture >( "earth-color.tga" ) );
 	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
@@ -71,10 +78,11 @@ SharedPointer< Node > buildAtmosphere( float x, float y, float z )
 
 	auto material = crimild::alloc< Material >();
 	material->setColorMap( AssetManager::getInstance()->get< Texture >( "earth-atmosphere.tga" ) );
-	material->getAlphaState()->setEnabled( true );
-    material->setAmbient( RGBAColorf( 0.35f, 0.35f, 0.35f, 1.0f ) );
-	material->getAlphaState()->setSrcBlendFunc( AlphaState::SrcBlendFunc::SRC_COLOR );
-	material->getAlphaState()->setDstBlendFunc( AlphaState::DstBlendFunc::ONE_MINUS_SRC_COLOR );
+	material->setAmbient( RGBAColorf::ONE );
+	material->setDiffuse( RGBAColorf::ONE );
+	material->setSpecular( RGBAColorf::ZERO );
+	auto alpha = crimild::alloc< AlphaState >( true, AlphaState::SrcBlendFunc::ONE, AlphaState::DstBlendFunc::ONE );
+	material->setAlphaState( alpha );
 	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
 	geometry->attachComponent( crimild::alloc< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.005 ) );
@@ -84,9 +92,18 @@ SharedPointer< Node > buildAtmosphere( float x, float y, float z )
 	return geometry;
 }
 
+SharedPointer< RenderGraph > createRenderGraph( void )
+{
+	auto graph = crimild::alloc< RenderGraph >();
+	auto scenePass = graph->createPass< passes::ForwardLightingPass >();
+	graph->setOutput( scenePass->getColorOutput() );
+
+	return graph;
+}
+
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< SDLSimulation >( "Textures", crimild::alloc< Settings >( argc, argv ) );
+	auto sim = crimild::alloc< SDLSimulation >( "Blending", crimild::alloc< Settings >( argc, argv ) );
 
 	auto scene = crimild::alloc< Group >();
 	scene->attachNode( buildBackground( 0, 0, -5 ) );
@@ -94,12 +111,22 @@ int main( int argc, char **argv )
 	scene->attachNode( buildAtmosphere( 0.5, 0, 0 ) );
 
 	auto camera = crimild::alloc< Camera >();
-	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
+	camera->local().setTranslate( -0.5f, 0.0f, 1.5f );
+    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( createRenderGraph() ) );
 	scene->attachNode( camera );
-    
-    auto light = crimild::alloc< Light >();
-    light->local().setTranslate( -3.0f, 1.0f, 3.0f );
-    scene->attachNode( light );
+
+	{
+		auto light = crimild::alloc< Light >();
+		light->local().setTranslate( -2.0f, 0.0f, -2.0f );
+		scene->attachNode( light );
+	}
+
+	{
+		auto light = crimild::alloc< Light >( Light::Type::AMBIENT );
+		light->setAmbient( RGBAColorf( 0.0f, 0.0f, 0.025f, 1.0f ) );
+		scene->attachNode( light );
+	}
+
 
 	sim->setScene( scene );
 
