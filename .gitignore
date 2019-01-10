@@ -94,3 +94,5 @@ examples/UICanvas/UICanvas
 examples/Earth/Earth
 examples/Spotlight/Spotlight
 examples/Spotlight/Spotlight
+examples/CubeMap/CubeMap
+examples/Skybox/Skybox
