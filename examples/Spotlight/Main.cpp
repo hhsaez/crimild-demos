@@ -92,7 +92,6 @@ SharedPointer< Node > buildCube( const Vector3f &position )
 int main( int argc, char **argv )
 {
     auto settings = crimild::alloc< Settings >( argc, argv );
-    settings->set( "video.show_frame_time", true );
     auto sim = crimild::alloc< sdl::SDLSimulation >( "Spotlight", settings );
 
     auto scene = crimild::alloc< Group >();

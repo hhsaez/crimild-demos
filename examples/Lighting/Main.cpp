@@ -28,11 +28,6 @@
 #include <Crimild.hpp>
 #include <Crimild_SDL.hpp>
 
-#include "Rendering/RenderGraph/RenderGraph.hpp"
-#include "Rendering/RenderGraph/RenderGraphPass.hpp"
-#include "Rendering/RenderGraph/RenderGraphAttachment.hpp"
-#include "Rendering/RenderGraph/Passes/ForwardLightingPass.hpp"
-
 using namespace crimild;
 using namespace crimild::rendergraph;
 using namespace crimild::sdl;
@@ -47,13 +42,14 @@ SharedPointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf
 
 	auto material = crimild::alloc< Material >();
 	material->setDiffuse( color );
-   	//material->setProgram( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_DIFFUSE ) );
+	material->setProgram( crimild::alloc< UnlitShaderProgram >() );
 	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
 	orbitingLight->attachNode( geometry );
 
 	auto light = crimild::alloc< Light >();
 	light->setColor( color );
+	light->setAttenuation( Vector3f( 0.0f, 0.5f, 3.0f ) );
 	orbitingLight->attachNode( light );
 
 	auto orbitComponent = crimild::alloc< OrbitComponent >( 0.0f, 0.0f, major, minor, speed );
@@ -71,7 +67,12 @@ int main( int argc, char **argv )
 	auto sim = crimild::alloc< SDLSimulation >( "Lighting", crimild::alloc< Settings >( argc, argv ) );
 
 	auto trefoilKnot = crimild::alloc< Geometry >();
-	auto trefoilKnotPrimitive = crimild::alloc< TrefoilKnotPrimitive >( Primitive::Type::TRIANGLES, 1.0, VertexFormat::VF_P3_N3 );
+	auto trefoilKnotPrimitive = crimild::alloc< TrefoilKnotPrimitive >(
+		Primitive::Type::TRIANGLES,
+		1.0,
+		VertexFormat::VF_P3_N3,
+		Vector2f( 300, 60 )
+	);
 	trefoilKnot->attachPrimitive( trefoilKnotPrimitive );
 	
 	auto material = crimild::alloc< Material >();
