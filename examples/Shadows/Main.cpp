@@ -33,7 +33,39 @@
 #include <vector>
 
 using namespace crimild;
+using namespace crimild::rendergraph;
+using namespace crimild::rendergraph::passes;
 using namespace crimild::sdl;
+
+SharedPointer< RenderGraph > createRenderGraph( crimild::Bool debugEnabled = false )
+{
+	auto graph = crimild::alloc< RenderGraph >();
+
+	auto depthPass = graph->createPass< DepthPass >();
+	auto scenePass = graph->createPass< ForwardLightingPass >();
+	auto shadowPass = graph->createPass< ShadowPass >();
+
+	scenePass->setDepthInput( depthPass->getDepthOutput() );
+	scenePass->setShadowInput( shadowPass->getShadowOutput() );
+
+	graph->setOutput( scenePass->getColorOutput() );
+
+	if ( debugEnabled ) {
+		auto linearizeDepthPass = graph->createPass< LinearizeDepthPass >();
+		linearizeDepthPass->setInput( depthPass->getDepthOutput() );
+
+		auto shadowMap = graph->createPass< TextureColorPass >( TextureColorPass::Mode::RED );
+		shadowMap->setInput( shadowPass->getShadowOutput() );
+
+		auto debugPass = graph->createPass< FrameDebugPass >();
+		debugPass->addInput( shadowMap->getOutput() );
+		debugPass->addInput( scenePass->getColorOutput() );
+		debugPass->addInput( linearizeDepthPass->getOutput() );
+		graph->setOutput( debugPass->getOutput() );
+	}
+
+	return graph;
+}
 
 SharedPointer< Node > loadScene( void )
 {
@@ -51,28 +83,67 @@ SharedPointer< Node > loadScene( void )
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< SDLSimulation >( "Shadows", crimild::alloc< Settings >( argc, argv ) );
+    auto settings = crimild::alloc< Settings >( argc, argv );
+    settings->set( "video.show_frame_time", true );
+    auto sim = crimild::alloc< sdl::SDLSimulation >( "Shadows", settings );
 
 	auto scene = crimild::alloc< Group >();
     scene->attachNode( loadScene() );
 
-	auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-	light->local().setTranslate( 10.0f, 25.0f, 20.0f );
-    light->local().lookAt( Vector3f( 0.0f, 0.0f, 0.0f ), Vector3f( 0.0f, 1.0f, 0.0 ) );
-    light->setCastShadows( true );
-	light->getShadowMap()->setOffset( 0.0009f );
-	scene->attachNode( light );
+	{
+		auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+		light->local().rotate().fromEulerAngles( -1.0f, Numericf::HALF_PI, 0.0f );
+		light->setCastShadows( true );
+		scene->attachNode( light );
+	}
+
+	{
+		auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+		light->local().rotate().fromEulerAngles( -0.5f, Numericf::PI, 0.0f );
+		light->setCastShadows( true );
+		scene->attachNode( light );
+	}
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
-	camera->local().setTranslate( 1.0f, 25.0f, 25.0f );
+	camera->local().setTranslate( 1.0f, 15.0f, 35.0f );
     camera->local().lookAt( Vector3f( 0.0f, 5.0f, 0.0 ), Vector3f( 0.0f, 1.0f, 0.0f ) );
-    auto renderPass = crimild::alloc< CompositeRenderPass >();
-    renderPass->attachRenderPass( crimild::alloc< ShadowRenderPass >() );
-    renderPass->attachRenderPass( crimild::alloc< StandardRenderPass >() );
-    camera->setRenderPass( renderPass );
+	camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( createRenderGraph() ) );
 	scene->attachNode( camera );
 
 	sim->setScene( scene );
+
+	sim->registerMessageHandler< crimild::messaging::KeyReleased >( [ camera ]( crimild::messaging::KeyReleased const &msg ) {
+		switch ( msg.key ) {
+			case CRIMILD_INPUT_KEY_Q:
+				crimild::concurrency::sync_frame( [ camera ]() {
+					std::cout << "Full" << std::endl;
+					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
+					auto renderGraph = createRenderGraph( false );
+					camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
+				});
+				break;
+				
+			case CRIMILD_INPUT_KEY_W:
+				crimild::concurrency::sync_frame( [ camera ]() {
+					std::cout << "Debug" << std::endl;
+					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
+					auto renderGraph = createRenderGraph( true );
+					camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
+				});
+				break;
+
+			case CRIMILD_INPUT_KEY_A:
+				crimild::concurrency::sync_frame( [ camera ]() {
+					std::cout << "Legacy" << std::endl;
+					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
+					auto renderPass = crimild::alloc< CompositeRenderPass >();
+					renderPass->attachRenderPass( crimild::alloc< ShadowRenderPass >() );
+					renderPass->attachRenderPass( crimild::alloc< StandardRenderPass >() );
+					camera->setRenderPass( renderPass );
+				});
+				break;
+		}
+	});
 	return sim->run();
 }
 
