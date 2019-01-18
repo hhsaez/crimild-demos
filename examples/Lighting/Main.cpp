@@ -64,7 +64,9 @@ SharedPointer< Node > buildLight( const Quaternion4f &rotation, const RGBAColorf
 
 int main( int argc, char **argv )
 {
-	auto sim = crimild::alloc< SDLSimulation >( "Lighting", crimild::alloc< Settings >( argc, argv ) );
+	crimild::init();
+	
+	CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< SDLSimulation >( "Lighting", crimild::alloc< Settings >( argc, argv ) );
 
 	auto trefoilKnot = crimild::alloc< Geometry >();
 	auto trefoilKnotPrimitive = crimild::alloc< TrefoilKnotPrimitive >(

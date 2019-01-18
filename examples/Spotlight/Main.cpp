@@ -91,8 +91,10 @@ SharedPointer< Node > buildCube( const Vector3f &position )
 
 int main( int argc, char **argv )
 {
+	crimild::init();
+	
     auto settings = crimild::alloc< Settings >( argc, argv );
-    auto sim = crimild::alloc< sdl::SDLSimulation >( "Spotlight", settings );
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< sdl::SDLSimulation >( "Spotlight", settings );
 
     auto scene = crimild::alloc< Group >();
 

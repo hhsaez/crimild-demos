@@ -29,10 +29,13 @@
 #include <Crimild_SDL.hpp>
 
 using namespace crimild;
+using namespace crimild::rendergraph;
 
 int main( int argc, char **argv )
 {
-    auto sim = crimild::alloc< sdl::SDLSimulation >( "Triangle", crimild::alloc< Settings >( argc, argv ) );
+	crimild::init();
+	
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< sdl::SDLSimulation >( "Triangle", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
 
@@ -53,7 +56,8 @@ int main( int argc, char **argv )
     auto geometry = crimild::alloc< Geometry >();
     geometry->attachPrimitive( primitive );
     auto material = crimild::alloc< Material >();
-    material->setProgram( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_VERTEX_COLOR ) );
+	material->setDiffuse( RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ) );
+	material->setProgram( crimild::alloc< UnlitShaderProgram >() );
     material->getCullFaceState()->setEnabled( false );
     geometry->getComponent< MaterialComponent >()->attachMaterial( material );
     geometry->attachComponent< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f * Numericf::HALF_PI );
@@ -61,6 +65,10 @@ int main( int argc, char **argv )
 
     auto camera = crimild::alloc< Camera >();
     camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 3.0f ) );
+	auto graph = crimild::alloc< RenderGraph >();
+	auto scenePass = graph->createPass< passes::ForwardLightingPass >();
+	graph->setOutput( scenePass->getColorOutput() );
+    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( graph ) );
     scene->attachNode( camera );
     
     sim->setScene( scene );

@@ -38,3 +38,13 @@ Updating code
   cmake .
   make all -j4
 
+Build web demos
+---------------
+
+mkdir build-web
+cd build-web
+cmake .. -DCMAKE_TOOLCHAIN_FILE=#{EMSCRIPTEN_HOME}/cmake/Modules/Platform/Emscripten.cmake
+make clean all -j8
+
+(Ignore SDL_Mixer2 warning)
+
