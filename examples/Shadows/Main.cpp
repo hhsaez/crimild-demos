@@ -37,20 +37,27 @@ using namespace crimild::rendergraph;
 using namespace crimild::rendergraph::passes;
 using namespace crimild::sdl;
 
+const RGBAColorf COLOR_BACKGROUND = RGBAColorf( 247.0f / 255.0f, 92.0f / 255.0f, 3.0f / 255.0f, 1.0f );
+const RGBAColorf COLOR_FLOOR = RGBAColorf( 253.0f / 255.0f, 246.0f / 255.0f, 236.0f / 255.0f, 1.0f );
+const RGBAColorf COLOR_WALL = RGBAColorf( 254.0f / 255.0f, 220.0f / 255.0f, 172.0f / 255.0f, 1.0f );
+const RGBAColorf COLOR_PILLAR = RGBAColorf( 244.0f / 255.0f, 113.0f / 255.0f, 112.0f / 255.0f, 1.0f );
+const RGBAColorf COLOR_TEAPOT = RGBAColorf( 187.0f / 255.0f, 55.0f / 255.0f, 101.0f / 255.0f, 1.0f );
+
 SharedPointer< RenderGraph > createRenderGraph( crimild::Bool debugEnabled = false )
 {
 	auto graph = crimild::alloc< RenderGraph >();
 
-	auto depthPass = graph->createPass< DepthPass >();
 	auto scenePass = graph->createPass< ForwardLightingPass >();
 	auto shadowPass = graph->createPass< ShadowPass >();
 
-	scenePass->setDepthInput( depthPass->getDepthOutput() );
 	scenePass->setShadowInput( shadowPass->getShadowOutput() );
 
 	graph->setOutput( scenePass->getColorOutput() );
 
 	if ( debugEnabled ) {
+		auto depthPass = graph->createPass< DepthPass >();
+		scenePass->setDepthInput( depthPass->getDepthOutput() );
+		
 		auto linearizeDepthPass = graph->createPass< LinearizeDepthPass >();
 		linearizeDepthPass->setInput( depthPass->getDepthOutput() );
 
@@ -67,25 +74,123 @@ SharedPointer< RenderGraph > createRenderGraph( crimild::Bool debugEnabled = fal
 	return graph;
 }
 
+SharedPointer< Node > buildBackground( void )
+{
+    auto background = crimild::alloc< Group >();
+
+    auto geometry = crimild::alloc< Geometry >();
+    geometry->attachPrimitive( crimild::alloc< QuadPrimitive >( 200.0f, 200.0f ) );
+    geometry->local().setTranslate( -50.0f * Vector3f::UNIT_Z );
+
+    auto material = crimild::alloc< Material >();
+    material->setDiffuse( COLOR_BACKGROUND );
+    material->setProgram( crimild::alloc< UnlitShaderProgram >() );
+    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+
+    background->attachNode( geometry );
+
+    auto ambientLight = crimild::alloc< Light >( Light::Type::AMBIENT );
+    ambientLight->setAmbient( 0.1f * COLOR_BACKGROUND );
+    background->attachNode( ambientLight );
+
+    return background;
+}
+
+SharedPointer< Node > buildFloor( void )
+{
+    auto geometry = crimild::alloc< Geometry >();
+    geometry->attachPrimitive( crimild::alloc< BoxPrimitive >( 50.0f, 0.1f, 50.0f, VertexFormat::VF_P3_N3 ) );
+    geometry->local().setTranslate( -0.05f * Vector3f::UNIT_Y );
+
+    auto material = crimild::alloc< Material >();
+    material->setAmbient( RGBAColorf::ONE );
+    material->setDiffuse( COLOR_FLOOR );
+    material->setSpecular( RGBAColorf::ZERO );
+    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+
+    return geometry;
+}
+
+SharedPointer< Node > buildWall( void )
+{
+    auto scene = crimild::alloc< Group >();
+
+    auto material = crimild::alloc< Material >();
+    material->setAmbient( RGBAColorf::ONE );
+    material->setDiffuse( COLOR_WALL );
+
+    auto floor = crimild::alloc< Geometry >();
+    floor->attachPrimitive( crimild::alloc< BoxPrimitive >( 20.0f, 0.25f, 20.0f, VertexFormat::VF_P3_N3 ) );
+    floor->local().setTranslate( 0.125f * Vector3f::UNIT_Y );
+    floor->getComponent< MaterialComponent >()->attachMaterial( material );
+    scene->attachNode( floor );
+
+    auto wall = crimild::alloc< Geometry >();
+    wall->attachPrimitive( crimild::alloc< BoxPrimitive >( 20.0f, 30.0f, 0.25f, VertexFormat::VF_P3_N3 ) );
+    wall->local().setTranslate( -10.0f * Vector3f::UNIT_Z );
+    wall->getComponent< MaterialComponent >()->attachMaterial( material );
+    scene->attachNode( wall );
+
+    return scene;
+}
+
+SharedPointer< Node > buildPillar( const Vector3f &position )
+{
+    auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( crimild::alloc< ConePrimitive >( Primitive::Type::TRIANGLES, 10.0f, 1.25f, VertexFormat::VF_P3_N3 ) );
+    geometry->local().setTranslate( 5.0f * Vector3f::UNIT_Y + position );
+
+    auto material = crimild::alloc< Material >();
+    material->setAmbient( RGBAColorf::ONE );
+    material->setDiffuse( COLOR_PILLAR );
+    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+
+    return geometry;
+}
+
+SharedPointer< Node > buildTeapot( void )
+{
+	auto geometry = crimild::alloc< Geometry >();
+	geometry->attachPrimitive( crimild::alloc< NewellTeapotPrimitive >() );
+	geometry->local().setScale( 0.25f );
+
+    auto material = crimild::alloc< Material >();
+    material->setAmbient( RGBAColorf::ONE );
+    material->setDiffuse( COLOR_TEAPOT );
+    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+
+    return geometry;
+}
+
 SharedPointer< Node > loadScene( void )
 {
     auto scene = crimild::alloc< Group >( "scene" );
-    
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/scene.obj" ) );
-	auto model = loader.load();
-	if ( model != nullptr ) {
-		scene->attachNode( model );
-		scene->attachComponent( crimild::alloc< RotationComponent >( Vector3f::UNIT_Y, 0.1f ) );
-	}
-    
+
+    scene->attachNode( buildBackground() );
+
+    auto pivot = crimild::alloc< Group >();
+    pivot->attachNode( buildFloor() );
+    pivot->attachNode( buildWall() );
+    pivot->attachNode( buildTeapot() );
+    pivot->attachNode( buildPillar( -8.0f * Vector3f::UNIT_X ) );
+    pivot->attachNode( buildPillar( 8.0f * Vector3f::UNIT_X ) );
+    pivot->attachNode( buildPillar( -8.0f * Vector3f::UNIT_Z ) );
+    pivot->attachNode( buildPillar( 8.0f * Vector3f::UNIT_Z ) );
+    pivot->attachComponent( crimild::alloc< RotationComponent >( Vector3f::UNIT_Y, 0.1f ) );
+    scene->attachNode( pivot );
+
     return scene;
 }
 
 int main( int argc, char **argv )
 {
+	crimild::init();
+
     auto settings = crimild::alloc< Settings >( argc, argv );
+    settings->set( "video.width", 1280 );
+    settings->set( "video.height", 720 );
     settings->set( "video.show_frame_time", true );
-    auto sim = crimild::alloc< sdl::SDLSimulation >( "Shadows", settings );
+	CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< sdl::SDLSimulation >( "Shadows", settings );
 
 	auto scene = crimild::alloc< Group >();
     scene->attachNode( loadScene() );
@@ -93,6 +198,7 @@ int main( int argc, char **argv )
 	{
 		auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
 		light->local().rotate().fromEulerAngles( -1.0f, Numericf::HALF_PI, 0.0f );
+        light->setColor( 0.5f * RGBAColorf::ONE );
 		light->setCastShadows( true );
 		scene->attachNode( light );
 	}
@@ -100,8 +206,9 @@ int main( int argc, char **argv )
 	{
 		auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
 		light->local().rotate().fromEulerAngles( -0.5f, Numericf::PI, 0.0f );
+        light->setColor( 0.5f * RGBAColorf::ONE );
 		light->setCastShadows( true );
-		scene->attachNode( light );
+        scene->attachNode( light );
 	}
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );

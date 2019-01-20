@@ -57,7 +57,7 @@ int main( int argc, char **argv )
     geometry->attachPrimitive( primitive );
     auto material = crimild::alloc< Material >();
 	material->setDiffuse( RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ) );
-	material->setProgram( crimild::alloc< UnlitShaderProgram >() );
+	material->setProgram( crimild::alloc< VertexColorShaderProgram >() );
     material->getCullFaceState()->setEnabled( false );
     geometry->getComponent< MaterialComponent >()->attachMaterial( material );
     geometry->attachComponent< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f * Numericf::HALF_PI );

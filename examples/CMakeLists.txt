@@ -13,5 +13,6 @@ ELSE ()
 	 ADD_SUBDIRECTORY( Triangle )
 	 ADD_SUBDIRECTORY( Lighting )
 	 ADD_SUBDIRECTORY( Spotlight )
+	 ADD_SUBDIRECTORY( Shadows )
 ENDIF ()
 
