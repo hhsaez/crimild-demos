@@ -85,6 +85,7 @@ SharedPointer< Node > buildBackground( void )
     auto material = crimild::alloc< Material >();
     material->setDiffuse( COLOR_BACKGROUND );
     material->setProgram( crimild::alloc< UnlitShaderProgram >() );
+    material->setCastShadows( false );
     geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
     background->attachNode( geometry );
@@ -152,7 +153,7 @@ SharedPointer< Node > buildTeapot( void )
 {
 	auto geometry = crimild::alloc< Geometry >();
 	geometry->attachPrimitive( crimild::alloc< NewellTeapotPrimitive >() );
-	geometry->local().setScale( 0.25f );
+    geometry->local().setScale( 0.25f );
 
     auto material = crimild::alloc< Material >();
     material->setAmbient( RGBAColorf::ONE );
@@ -195,21 +196,19 @@ int main( int argc, char **argv )
 	auto scene = crimild::alloc< Group >();
     scene->attachNode( loadScene() );
 
-	{
-		auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-		light->local().rotate().fromEulerAngles( -1.0f, Numericf::HALF_PI, 0.0f );
+    auto buildLight = []( crimild::Real32 yaw, crimild::Real32 pitch, crimild::Real32 roll ) {
+        auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+        light->local().rotate().fromEulerAngles( yaw, pitch, roll );
         light->setColor( 0.5f * RGBAColorf::ONE );
-		light->setCastShadows( true );
-		scene->attachNode( light );
-	}
+        light->setCastShadows( true );
+        light->getShadowMap()->setCullFaceState( CullFaceState::DISABLED );
+        light->getShadowMap()->setMinBias( 0.005f );
+        light->getShadowMap()->setMaxBias( 0.05f );
+        return light;
+    };
 
-	{
-		auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-		light->local().rotate().fromEulerAngles( -0.5f, Numericf::PI, 0.0f );
-        light->setColor( 0.5f * RGBAColorf::ONE );
-		light->setCastShadows( true );
-        scene->attachNode( light );
-	}
+    scene->attachNode( buildLight( -1.0f, Numericf::HALF_PI, 0.0f ) );
+    scene->attachNode( buildLight( -0.5f, Numericf::PI, 0.0f ) );
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 1.0f, 15.0f, 35.0f );
