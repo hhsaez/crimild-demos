@@ -47,13 +47,35 @@ using namespace crimild;
 using namespace crimild::rendergraph;
 using namespace crimild::rendergraph::passes;
 
-SharedPointer< RenderGraph > createRenderGraph( void )
+SharedPointer< RenderGraph > createRenderGraph( crimild::Bool debugEnabled = false )
 {
-	auto graph = crimild::alloc< RenderGraph >();
-	auto scenePass = graph->createPass< passes::ForwardLightingPass >();
-	graph->setOutput( scenePass->getColorOutput() );
+    auto graph = crimild::alloc< RenderGraph >();
 
-	return graph;
+    auto scenePass = graph->createPass< ForwardLightingPass >();
+    auto shadowPass = graph->createPass< ShadowPass >();
+
+    scenePass->setShadowInput( shadowPass->getShadowOutput() );
+
+    graph->setOutput( scenePass->getColorOutput() );
+
+    if ( debugEnabled ) {
+        auto depthPass = graph->createPass< DepthPass >();
+        scenePass->setDepthInput( depthPass->getDepthOutput() );
+
+        auto linearizeDepthPass = graph->createPass< LinearizeDepthPass >();
+        linearizeDepthPass->setInput( depthPass->getDepthOutput() );
+
+        auto shadowMap = graph->createPass< TextureColorPass >( TextureColorPass::Mode::RED );
+        shadowMap->setInput( shadowPass->getShadowOutput() );
+
+        auto debugPass = graph->createPass< FrameDebugPass >();
+        debugPass->addInput( shadowMap->getOutput() );
+        debugPass->addInput( scenePass->getColorOutput() );
+        debugPass->addInput( linearizeDepthPass->getOutput() );
+        graph->setOutput( debugPass->getOutput() );
+    }
+
+    return graph;
 }
 
 SharedPointer< Node > buildAmbientLight( const RGBAColorf &color )
@@ -63,21 +85,26 @@ SharedPointer< Node > buildAmbientLight( const RGBAColorf &color )
 	return light;
 }
 
-SharedPointer< Node > buildSpotlight( void )
+SharedPointer< Node > buildSpotlight( const Vector3f &position )
 {
 	auto light = crimild::alloc< Light >( Light::Type::SPOT );
-	light->setInnerCutoff( Numericf::DEG_TO_RAD * 17.0f );
-	light->setOuterCutoff( Numericf::DEG_TO_RAD * 25.0f );
+	light->setInnerCutoff( Numericf::DEG_TO_RAD * 25.0f );
+	light->setOuterCutoff( Numericf::DEG_TO_RAD * 50.0f );
 
 	light->setColor( RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ) );
 
-	return light;
+    light->setCastShadows( true );
+
+    light->local().setTranslate( position );
+    light->local().lookAt( Vector3f::ZERO );
+
+    return light;
 }
 
-SharedPointer< Node > buildCube( const Vector3f &position )
+SharedPointer< Node > buildCube( const Vector3f &position, const Vector3f size = Vector3f::ONE )
 {
 	auto geometry = crimild::alloc< Geometry >();
-	geometry->attachPrimitive( crimild::alloc< BoxPrimitive >( 1.0f, 1.0f, 1.0f, VertexFormat::VF_P3_N3 ) );
+	geometry->attachPrimitive( crimild::alloc< BoxPrimitive >( size.x(), size.y(), size.z(), VertexFormat::VF_P3_N3 ) );
 
 	auto material = crimild::alloc< Material >();
 	material->setAmbient( RGBAColorf::ONE );
@@ -98,20 +125,31 @@ int main( int argc, char **argv )
 
     auto scene = crimild::alloc< Group >();
 
-	scene->attachNode( buildCube( Vector3f( 0.0f, 0.5f, -1.0f ) ) );
-	scene->attachNode( buildCube( Vector3f( -1.0f, 0.5f, 1.0f ) ) );
-	scene->attachNode( buildCube( Vector3f( 1.0f, -0.5f, 1.0f ) ) );
+    scene->attachNode( buildCube( Vector3f( 0.0f, -2.0f, -100.0f ), Vector3f( 50.0f, 0.1f, 500.0f ) ) );
+    scene->attachNode( buildCube( Vector3f( -25.0f, 50.0f, -100.0f ), Vector3f( 0.1f, 200.0f, 500.0f ) ) );
+
+    scene->attachNode( buildCube( Vector3f( -2.0f, 0.75f, -3.0f ), 1.25f * Vector3f::ONE ) );
+    scene->attachNode( buildCube( Vector3f( -2.5f, 0.5f, 0.0f ), 1.5f * Vector3f::ONE ) );
+	scene->attachNode( buildCube( Vector3f( -1.0f, 0.25f, 3.0f ), Vector3f::ONE ) );
+
+    scene->attachNode( buildCube( Vector3f( 0.5f, 0.35f, -3.0f ) ) );
+    scene->attachNode( buildCube( Vector3f( 0.0f, 0.0f, 0.0f ) ) );
+    scene->attachNode( buildCube( Vector3f( 0.75f, 0.5f, 3.0f ) ) );
+
+    scene->attachNode( buildCube( Vector3f( 4.0f, 0.5f, -3.0f ) ) );
+    scene->attachNode( buildCube( Vector3f( 3.3f, 0.25f, 0.0f ) ) );
+    scene->attachNode( buildCube( Vector3f( 3.0f, 0.75f, 3.0f ) ) );
+
+    scene->attachNode( buildAmbientLight( RGBAColorf( 0.15f, 0.0f, 0.1f, 1.0f ) ) );
+    scene->attachNode( buildSpotlight( Vector3f( -5.0f, 3.0f, 5.0f ) ) );
 
 	auto camera = crimild::alloc< Camera >();
-	camera->local().setTranslate( 0.0f, 3.0f, 3.0f );
-	camera->local().lookAt( Vector3f::ZERO );
+	camera->local().setTranslate( 20.0f, 5.0f, 10.0f );
+    camera->local().lookAt( Vector3f( 0.0f, 0.0f, -10.0f ) );
     auto renderGraph = createRenderGraph();
     camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
 	scene->attachNode( camera );
     
-	scene->attachNode( buildAmbientLight( RGBAColorf( 0.1f, 0.0f, 0.05f, 1.0f ) ) );
-	camera->attachNode( buildSpotlight() );
-
     sim->setScene( scene );
 	
 	return sim->run();
