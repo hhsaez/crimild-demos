@@ -1916,8 +1916,8 @@ function _emscripten_asm_const_iiii(code, a0, a1, a2) {
 
 STATIC_BASE = GLOBAL_BASE;
 
-STATICTOP = STATIC_BASE + 870656;
-/* global initializers */  __ATINIT__.push({ func: function() { __GLOBAL__I_000101() } }, { func: function() { __GLOBAL__sub_I_MaterialComponent_cpp() } }, { func: function() { __GLOBAL__sub_I_Log_cpp() } }, { func: function() { ___cxx_global_var_init_3() } }, { func: function() { ___cxx_global_var_init_4() } }, { func: function() { ___cxx_global_var_init_5() } }, { func: function() { ___cxx_global_var_init_14_313() } }, { func: function() { __GLOBAL__sub_I_Primitive_cpp() } }, { func: function() { __GLOBAL__sub_I_AlphaState_cpp() } }, { func: function() { __GLOBAL__sub_I_DepthState_cpp() } }, { func: function() { __GLOBAL__sub_I_Image_cpp() } }, { func: function() { __GLOBAL__sub_I_IndexBufferObject_cpp() } }, { func: function() { __GLOBAL__sub_I_Material_cpp() } }, { func: function() { ___cxx_global_var_init_3_511() } }, { func: function() { __GLOBAL__sub_I_Texture_cpp() } }, { func: function() { __GLOBAL__sub_I_VertexBufferObject_cpp() } }, { func: function() { __GLOBAL__sub_I_VertexFormat_cpp() } }, { func: function() { __GLOBAL__sub_I_Geometry_cpp() } }, { func: function() { __GLOBAL__sub_I_Group_cpp() } }, { func: function() { __GLOBAL__sub_I_Node_cpp() } }, { func: function() { __GLOBAL__sub_I_Trigger_cpp() } }, { func: function() { ___cxx_global_var_init_1_1686() } }, { func: function() { ___cxx_global_var_init_2_1711() } }, { func: function() { __GLOBAL__sub_I_RenderStateComponent_cpp() } }, { func: function() { __GLOBAL__sub_I_ColorMaskState_cpp() } }, { func: function() { __GLOBAL__sub_I_CullFaceState_cpp() } }, { func: function() { ___cxx_global_var_init_20() } }, { func: function() { ___cxx_global_var_init_21() } }, { func: function() { ___cxx_global_var_init_1_2256() } }, { func: function() { __GLOBAL__sub_I_DefaultLogger_cpp() } }, { func: function() { __GLOBAL__sub_I_ComputeUVMappingProcess_cpp() } }, { func: function() { __GLOBAL__sub_I_DXFLoader_cpp() } }, { func: function() { __GLOBAL__sub_I_IRRShared_cpp() } }, { func: function() { __GLOBAL__sub_I_ObjFileParser_cpp() } }, { func: function() { __GLOBAL__sub_I_OgreBinarySerializer_cpp() } }, { func: function() { __GLOBAL__sub_I_OgreXmlSerializer_cpp() } }, { func: function() { __GLOBAL__sub_I_OgreMaterial_cpp() } }, { func: function() { __GLOBAL__sub_I_OpenGEXImporter_cpp() } }, { func: function() { __GLOBAL__sub_I_BlenderLoader_cpp() } }, { func: function() { __GLOBAL__sub_I_IFCLoader_cpp() } }, { func: function() { __GLOBAL__sub_I_IFCReaderGen_cpp() } }, { func: function() { __GLOBAL__sub_I_XGLLoader_cpp() } }, { func: function() { __GLOBAL__sub_I_FBXImporter_cpp() } }, { func: function() { __GLOBAL__sub_I_DDLNode_cpp() } }, { func: function() { __GLOBAL__sub_I_Value_cpp() } }, { func: function() { __GLOBAL__sub_I_ObjFileMtlImporter_cpp() } }, { func: function() { ___emscripten_environ_constructor() } }, { func: function() { ___cxx_global_var_init() } }, { func: function() { __GLOBAL__sub_I_iostream_cpp() } });
+STATICTOP = STATIC_BASE + 874112;
+/* global initializers */  __ATINIT__.push({ func: function() { __GLOBAL__I_000101() } }, { func: function() { __GLOBAL__sub_I_MaterialComponent_cpp() } }, { func: function() { __GLOBAL__sub_I_Log_cpp() } }, { func: function() { ___cxx_global_var_init_3() } }, { func: function() { ___cxx_global_var_init_4() } }, { func: function() { ___cxx_global_var_init_5() } }, { func: function() { ___cxx_global_var_init_14_313() } }, { func: function() { __GLOBAL__sub_I_Primitive_cpp() } }, { func: function() { __GLOBAL__sub_I_AlphaState_cpp() } }, { func: function() { __GLOBAL__sub_I_DepthState_cpp() } }, { func: function() { __GLOBAL__sub_I_Image_cpp() } }, { func: function() { __GLOBAL__sub_I_IndexBufferObject_cpp() } }, { func: function() { __GLOBAL__sub_I_Material_cpp() } }, { func: function() { ___cxx_global_var_init_3_511() } }, { func: function() { ___cxx_global_var_init_15() } }, { func: function() { __GLOBAL__sub_I_Texture_cpp() } }, { func: function() { __GLOBAL__sub_I_VertexBufferObject_cpp() } }, { func: function() { __GLOBAL__sub_I_VertexFormat_cpp() } }, { func: function() { __GLOBAL__sub_I_Geometry_cpp() } }, { func: function() { __GLOBAL__sub_I_Group_cpp() } }, { func: function() { __GLOBAL__sub_I_Node_cpp() } }, { func: function() { __GLOBAL__sub_I_Trigger_cpp() } }, { func: function() { ___cxx_global_var_init_1_1696() } }, { func: function() { ___cxx_global_var_init_2_1721() } }, { func: function() { __GLOBAL__sub_I_RenderStateComponent_cpp() } }, { func: function() { __GLOBAL__sub_I_ColorMaskState_cpp() } }, { func: function() { __GLOBAL__sub_I_CullFaceState_cpp() } }, { func: function() { ___cxx_global_var_init_21() } }, { func: function() { ___cxx_global_var_init_22() } }, { func: function() { __GLOBAL__sub_I_DefaultLogger_cpp() } }, { func: function() { __GLOBAL__sub_I_ComputeUVMappingProcess_cpp() } }, { func: function() { __GLOBAL__sub_I_DXFLoader_cpp() } }, { func: function() { __GLOBAL__sub_I_IRRShared_cpp() } }, { func: function() { __GLOBAL__sub_I_ObjFileParser_cpp() } }, { func: function() { __GLOBAL__sub_I_OgreBinarySerializer_cpp() } }, { func: function() { __GLOBAL__sub_I_OgreXmlSerializer_cpp() } }, { func: function() { __GLOBAL__sub_I_OgreMaterial_cpp() } }, { func: function() { __GLOBAL__sub_I_OpenGEXImporter_cpp() } }, { func: function() { __GLOBAL__sub_I_BlenderLoader_cpp() } }, { func: function() { __GLOBAL__sub_I_IFCLoader_cpp() } }, { func: function() { __GLOBAL__sub_I_IFCReaderGen_cpp() } }, { func: function() { __GLOBAL__sub_I_XGLLoader_cpp() } }, { func: function() { __GLOBAL__sub_I_FBXImporter_cpp() } }, { func: function() { __GLOBAL__sub_I_DDLNode_cpp() } }, { func: function() { __GLOBAL__sub_I_Value_cpp() } }, { func: function() { __GLOBAL__sub_I_ObjFileMtlImporter_cpp() } }, { func: function() { ___cxx_global_var_init_41_10081() } }, { func: function() { ___emscripten_environ_constructor() } }, { func: function() { ___cxx_global_var_init() } }, { func: function() { __GLOBAL__sub_I_iostream_cpp() } });
 
 
 
@@ -1925,7 +1925,7 @@ STATICTOP = STATIC_BASE + 870656;
 
 
 
-var STATIC_BUMP = 870656;
+var STATIC_BUMP = 874112;
 Module["STATIC_BASE"] = STATIC_BASE;
 Module["STATIC_BUMP"] = STATIC_BUMP;
 
@@ -15123,22 +15123,16 @@ var real____cxx_global_var_init_14_313 = asm["___cxx_global_var_init_14_313"]; a
   return real____cxx_global_var_init_14_313.apply(null, arguments);
 };
 
-var real____cxx_global_var_init_1_1686 = asm["___cxx_global_var_init_1_1686"]; asm["___cxx_global_var_init_1_1686"] = function() {
+var real____cxx_global_var_init_15 = asm["___cxx_global_var_init_15"]; asm["___cxx_global_var_init_15"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return real____cxx_global_var_init_1_1686.apply(null, arguments);
+  return real____cxx_global_var_init_15.apply(null, arguments);
 };
 
-var real____cxx_global_var_init_1_2256 = asm["___cxx_global_var_init_1_2256"]; asm["___cxx_global_var_init_1_2256"] = function() {
+var real____cxx_global_var_init_1_1696 = asm["___cxx_global_var_init_1_1696"]; asm["___cxx_global_var_init_1_1696"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return real____cxx_global_var_init_1_2256.apply(null, arguments);
-};
-
-var real____cxx_global_var_init_20 = asm["___cxx_global_var_init_20"]; asm["___cxx_global_var_init_20"] = function() {
-  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
-  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return real____cxx_global_var_init_20.apply(null, arguments);
+  return real____cxx_global_var_init_1_1696.apply(null, arguments);
 };
 
 var real____cxx_global_var_init_21 = asm["___cxx_global_var_init_21"]; asm["___cxx_global_var_init_21"] = function() {
@@ -15147,10 +15141,16 @@ var real____cxx_global_var_init_21 = asm["___cxx_global_var_init_21"]; asm["___c
   return real____cxx_global_var_init_21.apply(null, arguments);
 };
 
-var real____cxx_global_var_init_2_1711 = asm["___cxx_global_var_init_2_1711"]; asm["___cxx_global_var_init_2_1711"] = function() {
+var real____cxx_global_var_init_22 = asm["___cxx_global_var_init_22"]; asm["___cxx_global_var_init_22"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return real____cxx_global_var_init_2_1711.apply(null, arguments);
+  return real____cxx_global_var_init_22.apply(null, arguments);
+};
+
+var real____cxx_global_var_init_2_1721 = asm["___cxx_global_var_init_2_1721"]; asm["___cxx_global_var_init_2_1721"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return real____cxx_global_var_init_2_1721.apply(null, arguments);
 };
 
 var real____cxx_global_var_init_3 = asm["___cxx_global_var_init_3"]; asm["___cxx_global_var_init_3"] = function() {
@@ -15169,6 +15169,12 @@ var real____cxx_global_var_init_4 = asm["___cxx_global_var_init_4"]; asm["___cxx
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
   return real____cxx_global_var_init_4.apply(null, arguments);
+};
+
+var real____cxx_global_var_init_41_10081 = asm["___cxx_global_var_init_41_10081"]; asm["___cxx_global_var_init_41_10081"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return real____cxx_global_var_init_41_10081.apply(null, arguments);
 };
 
 var real____cxx_global_var_init_5 = asm["___cxx_global_var_init_5"]; asm["___cxx_global_var_init_5"] = function() {
@@ -15535,26 +15541,26 @@ var ___cxx_global_var_init_14_313 = Module["___cxx_global_var_init_14_313"] = fu
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
   return Module["asm"]["___cxx_global_var_init_14_313"].apply(null, arguments) };
-var ___cxx_global_var_init_1_1686 = Module["___cxx_global_var_init_1_1686"] = function() {
+var ___cxx_global_var_init_15 = Module["___cxx_global_var_init_15"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["___cxx_global_var_init_1_1686"].apply(null, arguments) };
-var ___cxx_global_var_init_1_2256 = Module["___cxx_global_var_init_1_2256"] = function() {
+  return Module["asm"]["___cxx_global_var_init_15"].apply(null, arguments) };
+var ___cxx_global_var_init_1_1696 = Module["___cxx_global_var_init_1_1696"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["___cxx_global_var_init_1_2256"].apply(null, arguments) };
-var ___cxx_global_var_init_20 = Module["___cxx_global_var_init_20"] = function() {
-  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
-  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["___cxx_global_var_init_20"].apply(null, arguments) };
+  return Module["asm"]["___cxx_global_var_init_1_1696"].apply(null, arguments) };
 var ___cxx_global_var_init_21 = Module["___cxx_global_var_init_21"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
   return Module["asm"]["___cxx_global_var_init_21"].apply(null, arguments) };
-var ___cxx_global_var_init_2_1711 = Module["___cxx_global_var_init_2_1711"] = function() {
+var ___cxx_global_var_init_22 = Module["___cxx_global_var_init_22"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["___cxx_global_var_init_2_1711"].apply(null, arguments) };
+  return Module["asm"]["___cxx_global_var_init_22"].apply(null, arguments) };
+var ___cxx_global_var_init_2_1721 = Module["___cxx_global_var_init_2_1721"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["___cxx_global_var_init_2_1721"].apply(null, arguments) };
 var ___cxx_global_var_init_3 = Module["___cxx_global_var_init_3"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
@@ -15567,6 +15573,10 @@ var ___cxx_global_var_init_4 = Module["___cxx_global_var_init_4"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
   return Module["asm"]["___cxx_global_var_init_4"].apply(null, arguments) };
+var ___cxx_global_var_init_41_10081 = Module["___cxx_global_var_init_41_10081"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["___cxx_global_var_init_41_10081"].apply(null, arguments) };
 var ___cxx_global_var_init_5 = Module["___cxx_global_var_init_5"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
