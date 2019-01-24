@@ -47,6 +47,37 @@ using namespace crimild;
 using namespace crimild::rendergraph;
 using namespace crimild::rendergraph::passes;
 
+class FloatingComponent : public NodeComponent {
+public:
+    FloatingComponent( void )
+    {
+
+    }
+
+    virtual ~FloatingComponent( void )
+    {
+
+    }
+
+    virtual void start( void ) override
+    {
+        _position = getNode()->getLocal().getTranslate();
+        _theta = Random::generate< crimild::Real32 >( Numericf::PI );
+        _speed = Random::generate< crimild::Real32 >( 0.5f, 2.0f );
+    }
+
+    virtual void update( const Clock &c ) override
+    {
+        _theta += _speed * c.getDeltaTime();
+        getNode()->local().setTranslate( _position + Numericf::sin( _theta ) * Vector3f::UNIT_Y );
+    }
+
+private:
+    Vector3f _position;
+    crimild::Real32 _theta;
+    crimild::Real32 _speed;
+};
+
 SharedPointer< RenderGraph > createRenderGraph( crimild::Bool debugEnabled = false )
 {
     auto graph = crimild::alloc< RenderGraph >();
@@ -101,7 +132,7 @@ SharedPointer< Node > buildSpotlight( const Vector3f &position )
     return light;
 }
 
-SharedPointer< Node > buildCube( const Vector3f &position, const Vector3f size = Vector3f::ONE )
+SharedPointer< Node > buildCube( const Vector3f &position, const Vector3f size = Vector3f::ONE, crimild::Bool animated = true )
 {
 	auto geometry = crimild::alloc< Geometry >();
 	geometry->attachPrimitive( crimild::alloc< BoxPrimitive >( size.x(), size.y(), size.z(), VertexFormat::VF_P3_N3 ) );
@@ -112,6 +143,10 @@ SharedPointer< Node > buildCube( const Vector3f &position, const Vector3f size =
 	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
 
 	geometry->local().setTranslate( position );
+
+    if ( animated ) {
+        geometry->attachComponent< FloatingComponent >();
+    }
 
 	return geometry;
 }
@@ -125,8 +160,8 @@ int main( int argc, char **argv )
 
     auto scene = crimild::alloc< Group >();
 
-    scene->attachNode( buildCube( Vector3f( 0.0f, -2.0f, -100.0f ), Vector3f( 50.0f, 0.1f, 500.0f ) ) );
-    scene->attachNode( buildCube( Vector3f( -25.0f, 50.0f, -100.0f ), Vector3f( 0.1f, 200.0f, 500.0f ) ) );
+    scene->attachNode( buildCube( Vector3f( 0.0f, -2.0f, -100.0f ), Vector3f( 50.0f, 0.1f, 500.0f ), false ) );
+    scene->attachNode( buildCube( Vector3f( -25.0f, 50.0f, -100.0f ), Vector3f( 0.1f, 200.0f, 500.0f ), false ) );
 
     scene->attachNode( buildCube( Vector3f( -2.0f, 0.75f, -3.0f ), 1.25f * Vector3f::ONE ) );
     scene->attachNode( buildCube( Vector3f( -2.5f, 0.5f, 0.0f ), 1.5f * Vector3f::ONE ) );
