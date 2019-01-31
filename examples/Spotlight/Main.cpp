@@ -151,17 +151,35 @@ SharedPointer< Node > buildCube( const Vector3f &position, const Vector3f size =
 	return geometry;
 }
 
+SharedPointer< Node > buildWall( const Vector3f &position, const Vector3f size = Vector3f::ONE )
+{
+    auto geometry = crimild::alloc< Geometry >();
+    geometry->attachPrimitive( crimild::alloc< BoxPrimitive >( size.x(), size.y(), size.z(), VertexFormat::VF_P3_N3 ) );
+
+    auto material = crimild::alloc< Material >();
+    material->setAmbient( RGBAColorf::ONE );
+    material->setDiffuse( RGBAColorf::ZERO );
+    material->setSpecular( RGBAColorf::ZERO );
+    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+
+    geometry->local().setTranslate( position );
+
+    return geometry;
+}
+
 int main( int argc, char **argv )
 {
 	crimild::init();
 	
     auto settings = crimild::alloc< Settings >( argc, argv );
+    settings->set( "video.show_frame_time", true );
     CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< sdl::SDLSimulation >( "Spotlight", settings );
 
     auto scene = crimild::alloc< Group >();
 
     scene->attachNode( buildCube( Vector3f( 0.0f, -2.0f, -100.0f ), Vector3f( 50.0f, 0.1f, 500.0f ), false ) );
-    scene->attachNode( buildCube( Vector3f( -25.0f, 50.0f, -100.0f ), Vector3f( 0.1f, 200.0f, 500.0f ), false ) );
+    scene->attachNode( buildWall( Vector3f( -25.0f, 50.0f, -100.0f ), Vector3f( 0.1f, 200.0f, 500.0f ) ) );
+    scene->attachNode( buildWall( Vector3f( 0.0f, 0.0f, -500.0f ), Vector3f( 500.1f, 500.0f, 0.1f ) ) );
 
     scene->attachNode( buildCube( Vector3f( -2.0f, 0.75f, -3.0f ), 1.25f * Vector3f::ONE ) );
     scene->attachNode( buildCube( Vector3f( -2.5f, 0.5f, 0.0f ), 1.5f * Vector3f::ONE ) );
