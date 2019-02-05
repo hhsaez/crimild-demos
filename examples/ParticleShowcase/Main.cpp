@@ -31,30 +31,36 @@
 
 using namespace crimild;
 using namespace crimild::sdl;
+using namespace crimild::rendergraph;
 
-SharedPointer< Node > room( void )
-{
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/room.obj" ) );
-	auto model = loader.load();
-	return model;
-}
+namespace crimild {
 
-SharedPointer< Group > loadModel( std::string filename )
-{
-	SharedPointer< Group > model;
-	auto modelPath = FileSystem::getInstance().pathForResource( filename );
-	FileStream is( modelPath, FileStream::OpenMode::READ );
-	is.load();
-	if ( is.getObjectCount() > 0 ) {
-		model = is.getObjectAt< Group >( 0 );
-	}
-	
-	return model;
+    namespace examples {
+
+        class CameraSettings : public NodeComponent {
+            CRIMILD_IMPLEMENT_RTTI( crimild::examples::CameraSettings )
+        public:
+            CameraSettings( void ) { }
+            virtual ~CameraSettings( void ) { }
+
+            virtual void onAttach( void ) override
+            {
+                auto graph = crimild::alloc< RenderGraph >();
+                auto scenePass = graph->createPass< passes::ForwardLightingPass >();
+                graph->setOutput( scenePass->getColorOutput() );
+                getNode< Camera >()->setRenderPass( crimild::alloc< RenderGraphRenderPass >( graph ) );
+            }
+        };
+
+    }
+
 }
 
 int main( int argc, char **argv )
 {
 	crimild::init();
+
+    CRIMILD_REGISTER_OBJECT_BUILDER( crimild::examples::CameraSettings );
 	
     auto sim = crimild::alloc< SDLSimulation >( "Particle Showcase", crimild::alloc< Settings >( argc, argv ) );
 

@@ -49,15 +49,9 @@ function animated_fire( x, y, z )
 					},
 				},
 				updaters = {
-					{
-						type = 'crimild::EulerParticleUpdater',
-					},
-					{
-						type = 'crimild::TimeParticleUpdater',
-					},
-					{
-						type = 'crimild::CameraSortParticleUpdater',
-					},
+					{ type = 'crimild::EulerParticleUpdater', },
+					{ type = 'crimild::TimeParticleUpdater', },
+					{ type = 'crimild::CameraSortParticleUpdater', },
 				},
 				renderers = {
 					{
@@ -66,9 +60,11 @@ function animated_fire( x, y, z )
 							type = 'crimild::Material',
 							colorMap = {
 								type = 'crimild::Texture',
-								image = {
-									type = 'crimild::ImageTGA',
-									imageFileName = 'assets/textures/flames.tga',
+								images = {
+									{
+										type = 'crimild::ImageTGA',
+										imageFileName = 'assets/textures/flames.tga',
+									},
 								},
 							},
 						},

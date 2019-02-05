@@ -55,6 +55,9 @@ function fire( x, y, z )
 					{
 						type = 'crimild::TimeParticleUpdater',
 					},
+					{
+						type = 'crimild::CameraSortParticleUpdater',
+					},
 				},
 				renderers = {
 					{
@@ -63,9 +66,11 @@ function fire( x, y, z )
 							type = 'crimild::Material',
 							colorMap = {
 								type = 'crimild::Texture',
-								image = {
-									type = 'crimild::ImageTGA',
-									imageFileName = 'assets/textures/fire.tga',
+								images = {
+									{
+										type = 'crimild::ImageTGA',
+										imageFileName = 'assets/textures/fire.tga',
+									},
 								},
 							},
 						},
