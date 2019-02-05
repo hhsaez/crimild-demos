@@ -49,7 +49,6 @@ scene = {
 		camera,
 
 		animated_fire( -10.0, 0.5, 0.0 ),
-		
 		fire( -10.0, 0.5, -10.0 ),
 		flowers( -10.0, 1.0, -20.0 ),
 		sprinklers( -10.0, 2.0, -20.0 ),
@@ -62,7 +61,7 @@ scene = {
 		smoke( 15.0, 5.0, -50.0, true ),
 		sparkles( 15.0, 10.0, -30.0 ),
 
-		--walkers( 0.0, 0.0, -40.0 ),
-		--handsOnFire( 0.0, 0.0, -60.0 ),
+		walkers( 0.0, 0.0, -40.0 ),
+		handsOnFire( 0.0, 0.0, -60.0 ),
 	},
 }
