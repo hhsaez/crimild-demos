@@ -92,15 +92,6 @@ SharedPointer< Node > buildAtmosphere( float x, float y, float z )
 	return geometry;
 }
 
-SharedPointer< RenderGraph > createRenderGraph( void )
-{
-	auto graph = crimild::alloc< RenderGraph >();
-	auto scenePass = graph->createPass< passes::ForwardLightingPass >();
-	graph->setOutput( scenePass->getColorOutput() );
-
-	return graph;
-}
-
 int main( int argc, char **argv )
 {
 	auto sim = crimild::alloc< SDLSimulation >( "Blending", crimild::alloc< Settings >( argc, argv ) );
@@ -112,7 +103,6 @@ int main( int argc, char **argv )
 
 	auto camera = crimild::alloc< Camera >();
 	camera->local().setTranslate( -0.5f, 0.0f, 1.5f );
-    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( createRenderGraph() ) );
 	scene->attachNode( camera );
 
 	{

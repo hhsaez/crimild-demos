@@ -42,15 +42,15 @@ SharedPointer< RenderGraph > createRenderGraph( void )
 	auto depthPass = graph->createPass< DepthPass >();
 	auto scenePass = graph->createPass< ForwardLightingPass >();
 	auto skyboxPass = graph->createPass< SkyboxPass >();
-	auto blend = graph->createPass< BlendPass >( );
+	auto blend = graph->createPass< BlendPass >();
 
 	scenePass->setDepthInput( depthPass->getDepthOutput() );
-	skyboxPass->setDepthInput( depthPass->getDepthOutput() );
+    skyboxPass->setDepthInput( depthPass->getDepthOutput() );
 
 	blend->addInput( scenePass->getColorOutput() );
 	blend->addInput( skyboxPass->getColorOutput() );
 	
-	graph->setOutput( blend->getOutput() );
+    graph->setOutput( blend->getOutput() );
 
 	return graph;
 }
@@ -92,7 +92,7 @@ int main( int argc, char **argv )
 	auto camera = crimild::alloc< Camera >();
 	camera->local().setTranslate( 0.f, 0.0f, 5.0f );
 	camera->attachComponent< FreeLookCameraComponent >();
-    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( createRenderGraph() ) );
+    camera->setRenderGraph( createRenderGraph() );
 	scene->attachNode( camera );
 
 	sim->setScene( scene );

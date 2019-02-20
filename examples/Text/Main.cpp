@@ -50,9 +50,9 @@ int main( int argc, char **argv )
     auto sim = crimild::alloc< SDLSimulation >( "Rendering text", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
-    
-    auto font = crimild::alloc< Font >( FileSystem::getInstance().pathForResource( "Arial.txt" ) );
-    
+
+    auto font = crimild::alloc< Font >( FileSystem::getInstance().pathForResource( "Verdana.txt" ) );
+
     std::string lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.\nInteger egestas sit amet arcu at laoreet.";
     
     auto texts = crimild::alloc< Group >();
@@ -75,10 +75,6 @@ int main( int argc, char **argv )
 
     auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 10.0f ) );
-    auto renderGraph = crimild::alloc< RenderGraph >();
-    auto forwardPass = renderGraph->createPass< passes::ForwardLightingPass >();
-    renderGraph->setOutput( forwardPass->getColorOutput() );
-    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
 
 	scene->attachNode( camera );
 

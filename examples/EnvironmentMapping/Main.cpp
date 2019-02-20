@@ -114,7 +114,7 @@ int main( int argc, char **argv )
 	auto camera = crimild::alloc< Camera >();
 	camera->local().setTranslate( 0.f, 0.0f, 5.0f );
 	camera->attachComponent< FreeLookCameraComponent >();
-    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( createRenderGraph() ) );
+    camera->setRenderGraph( createRenderGraph() );
 	scene->attachNode( camera );
 
 	sim->setScene( scene );

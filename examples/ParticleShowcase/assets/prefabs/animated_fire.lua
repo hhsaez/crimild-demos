@@ -1,5 +1,5 @@
 function animated_fire( x, y, z )
-	local MAX_PARTICLES = 300
+	local MAX_PARTICLES = 50
 	
 	return {
 		type = 'crimild::Group',

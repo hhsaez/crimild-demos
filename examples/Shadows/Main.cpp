@@ -213,7 +213,7 @@ int main( int argc, char **argv )
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 1.0f, 15.0f, 35.0f );
     camera->local().lookAt( Vector3f( 0.0f, 5.0f, 0.0 ), Vector3f( 0.0f, 1.0f, 0.0f ) );
-	camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( createRenderGraph() ) );
+	camera->setRenderGraph( createRenderGraph() );
 	scene->attachNode( camera );
 
 	sim->setScene( scene );
@@ -223,31 +223,17 @@ int main( int argc, char **argv )
 			case CRIMILD_INPUT_KEY_Q:
 				crimild::concurrency::sync_frame( [ camera ]() {
 					std::cout << "Full" << std::endl;
-					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
-					auto renderGraph = createRenderGraph( false );
-					camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
+                    camera->setRenderGraph( createRenderGraph( false ) );
 				});
 				break;
 				
 			case CRIMILD_INPUT_KEY_W:
 				crimild::concurrency::sync_frame( [ camera ]() {
 					std::cout << "Debug" << std::endl;
-					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
-					auto renderGraph = createRenderGraph( true );
-					camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
+                    camera->setRenderGraph( createRenderGraph( true ) );
 				});
 				break;
 
-			case CRIMILD_INPUT_KEY_A:
-				crimild::concurrency::sync_frame( [ camera ]() {
-					std::cout << "Legacy" << std::endl;
-					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
-					auto renderPass = crimild::alloc< CompositeRenderPass >();
-					renderPass->attachRenderPass( crimild::alloc< ShadowRenderPass >() );
-					renderPass->attachRenderPass( crimild::alloc< StandardRenderPass >() );
-					camera->setRenderPass( renderPass );
-				});
-				break;
 		}
 	});
 	return sim->run();

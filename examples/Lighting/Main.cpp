@@ -102,10 +102,6 @@ int main( int argc, char **argv )
 
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-	auto graph = crimild::alloc< RenderGraph >();
-	auto scenePass = graph->createPass< passes::ForwardLightingPass >();
-	graph->setOutput( scenePass->getColorOutput() );
-    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( graph ) );
 	scene->attachNode( camera );
 
 	sim->setScene( scene );

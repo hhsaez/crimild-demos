@@ -33,35 +33,10 @@ using namespace crimild;
 using namespace crimild::sdl;
 using namespace crimild::rendergraph;
 
-namespace crimild {
-
-    namespace examples {
-
-        class CameraSettings : public NodeComponent {
-            CRIMILD_IMPLEMENT_RTTI( crimild::examples::CameraSettings )
-        public:
-            CameraSettings( void ) { }
-            virtual ~CameraSettings( void ) { }
-
-            virtual void onAttach( void ) override
-            {
-                auto graph = crimild::alloc< RenderGraph >();
-                auto scenePass = graph->createPass< passes::ForwardLightingPass >();
-                graph->setOutput( scenePass->getColorOutput() );
-                getNode< Camera >()->setRenderPass( crimild::alloc< RenderGraphRenderPass >( graph ) );
-            }
-        };
-
-    }
-
-}
-
 int main( int argc, char **argv )
 {
 	crimild::init();
 
-    CRIMILD_REGISTER_OBJECT_BUILDER( crimild::examples::CameraSettings );
-	
     auto sim = crimild::alloc< SDLSimulation >( "Particle Showcase", crimild::alloc< Settings >( argc, argv ) );
 
 	sim->loadScene( FileSystem::getInstance().pathForResource( "assets/scenes/main.lua" ) );

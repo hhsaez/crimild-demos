@@ -21,9 +21,6 @@ local camera = {
 		{
 			type = 'crimild::FreeLookCameraComponent',
 		},
-        {
-            type = 'crimild::examples::CameraSettings',
-        },
 	},
 }
 

@@ -65,7 +65,7 @@ int main( int argc, char **argv )
 	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 1.0f, 3000.0f );
 	camera->local().setTranslate( 0.0f, 200.0f, 400.0f );
 	camera->local().rotate().fromEulerAngles( 0.0f, -0.5f * Numericf::PI, 0.0f );
-    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( createRenderGraph() ) );
+    camera->setRenderGraph( createRenderGraph() );
 	scene->attachNode( camera );
 
 	sim->setScene( scene );

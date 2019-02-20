@@ -47,15 +47,6 @@ using namespace crimild;
 using namespace crimild::rendergraph;
 using namespace crimild::rendergraph::passes;
 
-SharedPointer< RenderGraph > createRenderGraph( crimild::Bool useDebugPass )
-{
-	auto graph = crimild::alloc< RenderGraph >();
-	auto scenePass = graph->createPass< passes::ForwardLightingPass >();
-	graph->setOutput( scenePass->getColorOutput() );
-
-	return graph;
-}
-
 SharedPointer< Node > buildAmbientLight( const RGBAColorf &color )
 {
 	auto light = crimild::alloc< Light >( Light::Type::AMBIENT );
@@ -131,36 +122,9 @@ int main( int argc, char **argv )
 
 	auto camera = crimild::alloc< Camera >();
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-    auto renderGraph = createRenderGraph( true );
-    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
 	scene->attachNode( camera );
     
     sim->setScene( scene );
-
-	sim->registerMessageHandler< crimild::messaging::KeyReleased >( [ camera ]( crimild::messaging::KeyReleased const &msg ) {
-		switch ( msg.key ) {
-			case CRIMILD_INPUT_KEY_Q:
-				crimild::concurrency::sync_frame( [ camera ]() {
-					std::cout << "Normal" << std::endl;
-					Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
-					auto renderGraph = createRenderGraph( false );
-					camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
-				});
-				break;
-
-            case CRIMILD_INPUT_KEY_W:
-                crimild::concurrency::sync_frame( [ camera ]() {
-                    std::cout << "Debug" << std::endl;
-                    Renderer::getInstance()->setFrameBuffer( RenderPass::S_BUFFER_NAME, nullptr );
-                    auto renderGraph = createRenderGraph( true );
-                    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
-                });
-                break;
-
-			default:
-				break;
-		}
-	});
 	
 	return sim->run();
 }
