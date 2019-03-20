@@ -44,12 +44,12 @@ SharedPointer< RenderGraph > createRenderGraph( void )
 	auto skyboxPass = graph->createPass< SkyboxPass >();
 	auto blend = graph->createPass< BlendPass >();
 
-	scenePass->setDepthInput( depthPass->getDepthOutput() );
+    scenePass->setDepthInput( depthPass->getDepthOutput() );
     skyboxPass->setDepthInput( depthPass->getDepthOutput() );
 
-	blend->addInput( scenePass->getColorOutput() );
-	blend->addInput( skyboxPass->getColorOutput() );
-	
+    blend->addInput( scenePass->getColorOutput() );
+    blend->addInput( skyboxPass->getColorOutput() );
+
     graph->setOutput( blend->getOutput() );
 
 	return graph;
@@ -73,9 +73,10 @@ int main( int argc, char **argv )
 	scene->attachNode( sun );
 
 	auto ambient = crimild::alloc< Light >( Light::Type::AMBIENT );
-	ambient->setAmbient( RGBAColorf( 0.0f, 0.0f, 0.1f, 1.0f ) );
+    ambient->setAmbient( RGBAColorf( 0.1f, 0.1f, 0.25f, 1.0f ) );
 	scene->attachNode( ambient );
 
+#if 1
 	scene->attachNode(
 		crimild::alloc< Skybox >(
 			containers::Array< SharedPointer< Image >> {
@@ -88,6 +89,7 @@ int main( int argc, char **argv )
 			}
 		)
 	);
+#endif
 
 	auto camera = crimild::alloc< Camera >();
 	camera->local().setTranslate( 0.f, 0.0f, 5.0f );

@@ -188,8 +188,8 @@ int main( int argc, char **argv )
 	crimild::init();
 
     auto settings = crimild::alloc< Settings >( argc, argv );
-    settings->set( "video.width", 1280 );
-    settings->set( "video.height", 720 );
+//    settings->set( "video.width", 1280 );
+//    settings->set( "video.height", 720 );
     settings->set( "video.show_frame_time", true );
 	CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< sdl::SDLSimulation >( "Shadows", settings );
 

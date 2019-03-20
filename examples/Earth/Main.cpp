@@ -115,10 +115,10 @@ int main( int argc, char **argv )
     auto scene = crimild::alloc< Group >();
 
 	scene->attachNode( buildEarth( Vector3f( 0.0f, 0.0f, -2.0f ) ) );
-	scene->attachNode( buildMoon( Vector3f( -0.1f, -1.1f, 2.5f ) ) );
+    scene->attachNode( buildMoon( Vector3f( -0.1f, -1.1f, 2.5f ) ) );
 
-	scene->attachNode( buildAmbientLight( RGBAColorf( 0.0f, 0.0f, 0.05f, 1.0f ) ) );
-	scene->attachNode( buildDirectionalLight( RGBAColorf( 1.0f, 0.95f, 0.85f, 1.0f ), Vector3f( -0.25f * Numericf::PI, 0.25f * Numericf::PI, 0.0f ) ) );
+    scene->attachNode( buildAmbientLight( RGBAColorf( 0.0f, 0.0f, 0.05f, 1.0f ) ) );
+    scene->attachNode( buildDirectionalLight( RGBAColorf( 1.0f, 0.95f, 0.85f, 1.0f ), Vector3f( -0.25f * Numericf::PI, 0.25f * Numericf::PI, 0.0f ) ) );
 
 	auto camera = crimild::alloc< Camera >();
 	camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
