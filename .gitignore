@@ -99,3 +99,5 @@ examples/Skybox/Skybox
 examples/EnvironmentMapping/EnvironmentMapping
 examples/Depth/Depth
 build-web
+libvulkan.*
+COPYONLY
