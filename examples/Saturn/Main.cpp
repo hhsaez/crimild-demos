@@ -30,10 +30,12 @@
 
 using namespace crimild;
 using namespace crimild::rendergraph;
+using namespace crimild::rendergraph::passes;
 
 #define OPTION_NO_INSTANCING 0
 #define OPTION_INSTANCING_LIT 1
 #define OPTION_INSTANCING_UNLIT 2
+#define OPTION_PARTICLES 3
 
 SharedPointer< Node > buildPlanet( void )
 {
@@ -45,8 +47,28 @@ SharedPointer< Node > buildPlanet( void )
 	}
 
     model->local().setScale( 5.0f );
+	model->local().setTranslate( 0.0f, -6.0f, 0.0f );
 		
 	return model;
+}
+
+SharedPointer< Node > buildAsteroids( void )
+{
+	auto modelFileName = "assets/models/rock.obj";
+	OBJLoader loader( FileSystem::getInstance().pathForResource( modelFileName ) );
+	auto asteroids = loader.load();
+
+	auto particles = crimild::alloc< ParticleData >( 6000 );
+	auto ps = asteroids->attachComponent< ParticleSystemComponent >( particles );
+    ps->setEmitRate( particles->getParticleCount() );
+    ps->setBurst( true );
+	ps->addGenerator( crimild::alloc< OrbitPositionParticleGenerator >( 25.0f, 0.5f, 5.0f, Vector3f( 1.25f, 1.0f, 1.0f ) ) );
+	ps->addGenerator( crimild::alloc< UniformScaleParticleGenerator >( 0.025f, 0.15f ) );
+	ps->addGenerator( crimild::alloc< EulerAnglesParticleGenerator >() );
+	ps->addUpdater( crimild::alloc< CameraSortParticleUpdater >() );
+	ps->addRenderer( crimild::alloc< InstancedParticleRenderer >() );
+
+	return asteroids;
 }
 
 SharedPointer< Node > buildAsteroids( int options )
@@ -56,22 +78,6 @@ SharedPointer< Node > buildAsteroids( int options )
 	if ( model == nullptr ) {
 		return nullptr;
 	}
-
-	/*
-	auto asteroids = crimild::alloc< Group >();
-	auto ps = asteroids->attachComponent< ParticleSystem >();
-
-	ps->addGenerator(
-		ParticleAttrib::TRANSFORM,
-		[]( Node *, ParticleData *, ParticleAttribs *positions, ParticleId start, ParticleId end ) {
-			
-		}
-	);
-
-	ps->addRenderer(
-		[ model ]( Node *, crimild::Real64, ParticleData *particles, 
-	);
-	*/
 
 	auto group = crimild::alloc< Group >();
 
@@ -147,12 +153,33 @@ SharedPointer< Group > buildScene( int options )
 {
     auto scene = crimild::alloc< Group >();
 
-	scene->attachNode( buildPlanet() );
-	scene->attachNode( buildAsteroids( options ) );
+	if ( options == OPTION_PARTICLES ) {
+		scene->attachNode( buildAsteroids() );
+	}
+	else {
+		scene->attachNode( buildAsteroids( options ) );
+	}
 
+	scene->attachNode( buildPlanet() );
+
+	scene->attachNode(
+		crimild::alloc< Skybox >(
+			containers::Array< SharedPointer< Image >> {
+				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/right.tga" ) ),
+				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/left.tga" ) ),
+				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/top.tga" ) ),
+				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/bottom.tga" ) ),
+				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/back.tga" ) ),
+				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/front.tga" ) ),
+			}
+		)
+	);
+	
 	scene->attachNode( [] {
 		auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
 		light->setColor( RGBAColorf( 1.0f, 1.0f, 0.8f, 1.0f ) );
+		light->local().rotate().fromEulerAngles( -0.25f, -Numericf::HALF_PI, 0.0f );
+		light->setCastShadows( true );
 		return light;
 	}());
 
@@ -161,6 +188,42 @@ SharedPointer< Group > buildScene( int options )
 		camera->local().setTranslate( Vector3f( 0.0f, 30.0f, 100.0f ) );
 		camera->local().lookAt( Vector3f::ZERO );
 		camera->attachComponent< FreeLookCameraComponent >();
+
+		auto graph = crimild::alloc< RenderGraph >();
+        auto depthPass = graph->createPass< DepthPass >();
+		auto scenePass = graph->createPass< passes::ForwardLightingPass >();
+        auto shadowPass = graph->createPass< passes::ShadowPass >();
+		auto skyboxPass = graph->createPass< SkyboxPass >();
+
+        scenePass->setDepthInput( depthPass->getDepthOutput() );
+		scenePass->setShadowInput( shadowPass->getShadowOutput() );
+		skyboxPass->setDepthInput( depthPass->getDepthOutput() );
+		
+		auto blend = graph->createPass< BlendPass >();
+		blend->addInput( skyboxPass->getColorOutput() );
+		blend->addInput( scenePass->getColorOutput() );
+		
+		graph->setOutput( blend->getOutput() );
+
+		auto debugMode = false;
+		if ( debugMode ) {
+			auto linearizeDepthPass = graph->createPass< LinearizeDepthPass >();
+			linearizeDepthPass->setInput( depthPass->getDepthOutput() );
+			
+			auto shadowMap = graph->createPass< TextureColorPass >( TextureColorPass::Mode::RED );
+			shadowMap->setInput( shadowPass->getShadowOutput() );
+			
+			auto debugPass = graph->createPass< FrameDebugPass >();
+			debugPass->addInput( graph->getOutput() );
+			debugPass->addInput( shadowMap->getOutput() );
+			debugPass->addInput( scenePass->getColorOutput() );
+			debugPass->addInput( linearizeDepthPass->getOutput() );
+			debugPass->addInput( skyboxPass->getColorOutput() );
+			graph->setOutput( debugPass->getOutput() );
+		}
+		
+		camera->setRenderGraph( graph );
+		
 		return camera;
 	}());
 
@@ -172,15 +235,24 @@ int main( int argc, char **argv )
 	crimild::init();
 	
     auto settings = crimild::alloc< Settings >( argc, argv );
+	settings->set( "video.width", 1920 );
+	settings->set( "video.height", 1080 );
+	settings->set( "video.fullscreen", true );
     settings->set( "video.show_frame_time", true );
 	
     CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< sdl::SDLSimulation >( "Saturn", settings );
 
-    auto scene = buildScene( OPTION_INSTANCING_LIT );
+    auto scene = buildScene( OPTION_PARTICLES );
     sim->setScene( scene );
 
 	sim->registerMessageHandler< crimild::messaging::KeyReleased >( []( crimild::messaging::KeyReleased const &msg ) {
 		switch ( msg.key ) {
+			case CRIMILD_INPUT_KEY_U:
+				crimild::concurrency::sync_frame( [] {
+					Simulation::getInstance()->setScene( buildScene( OPTION_PARTICLES ) );
+				});
+				break;
+
 			case CRIMILD_INPUT_KEY_I:
 				crimild::concurrency::sync_frame( [] {
 					Simulation::getInstance()->setScene( buildScene( OPTION_NO_INSTANCING ) );
