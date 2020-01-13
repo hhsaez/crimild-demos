@@ -100,3 +100,5 @@ examples/EnvironmentMapping/EnvironmentMapping
 examples/Depth/Depth
 build-web
 examples/Saturn/Saturn
+libvulkan.*
+COPYONLY
