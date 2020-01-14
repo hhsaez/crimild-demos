@@ -114,7 +114,7 @@ public:
             return pipeline;
         }();
 
-        auto renderableBuilder = [ this, swapchain ]( const Vector3f &position ) {
+        auto renderableBuilder = [ this ]( const Vector3f &position ) {
             auto node = crimild::alloc< Node >();
 
             auto renderable = node->attachComponent< Renderable >();
@@ -127,7 +127,7 @@ public:
                     },
                     {
                         .position = Vector2f( -0.5f, -0.5f ),
-                        .color = RGBColorf( 1.0f, 1.0f, 1.0f ),
+                        .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
                     },
                     {
                         .position = Vector2f( 0.5f, -0.5f ),
@@ -135,14 +135,14 @@ public:
                     },
                     {
                         .position = Vector2f( 0.5f, 0.5f ),
-                        .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
+                        .color = RGBColorf( 1.0f, 1.0f, 1.0f ),
                     },
                 }
             );
             renderable->ibo = crimild::alloc< IndexUInt32Buffer >(
                 containers::Array< crimild::UInt32 > {
                     0, 1, 2,
-                	0, 2, 3,
+                	//0, 2, 3,
                 }
             );
             renderable->ubo = [] () -> SharedPointer< UniformBuffer > {
@@ -163,8 +163,11 @@ public:
                 return descriptorSet;
             }();
 
+            auto startAngle = Random::generate< crimild::Real32 >( 0, Numericf::TWO_PI );
+            auto speed = Random::generate< crimild::Real32 >( -1.0f, 1.0f );
+
             node->attachComponent< LambdaComponent >(
-            	[ renderable, position ]( Node *node, const Clock &clock ) {
+            	[ renderable, position, startAngle, speed ]( Node *node, const Clock &clock ) {
                     auto settings = Simulation::getInstance()->getSettings();
                     auto width = settings->get< crimild::Int32 >( "video.width", 0 );
                     auto height = settings->get< crimild::Int32 >( "video.height", 0 );
@@ -173,15 +176,15 @@ public:
 
                     ubo->setData(
                      	ModelViewProjUniform {
-                         	.model = []( crimild::Real32 time, const crimild::Vector3f &position ) {
+                         	.model = []( crimild::Real32 time, const crimild::Vector3f &position, crimild::Real32 startAngle, crimild::Real32 speed ) {
                              	Transformation t;
                              	t.setTranslate( position );
-                             	t.rotate().fromAxisAngle( Vector3f::UNIT_Z, time * -90.0f * Numericf::DEG_TO_RAD );
+                             	t.rotate().fromAxisAngle( Vector3f::UNIT_Z, startAngle + ( speed * time * -90.0f * Numericf::DEG_TO_RAD ) );
                              	return t.computeModelMatrix();
-                         	}( time, position ),
+                         	}( time, position, startAngle, speed ),
                          	.view = [] {
                                 Transformation t;
-                             	t.setTranslate( 4.0f, 4.0f, 4.0f );
+                             	t.setTranslate( 5.0f, 4.0f, 5.0f );
                              	t.lookAt( Vector3f::ZERO, Vector3f::UNIT_Y );
                              	return t.computeModelMatrix().getInverse();
                          	}(),
@@ -217,9 +220,11 @@ public:
 
         m_scene = [ renderableBuilder ] {
             auto group = crimild::alloc< Group >();
-            group->attachNode( renderableBuilder( Vector3f( 0.0f, 0.0f, -1.0f ) ) );
-            group->attachNode( renderableBuilder( Vector3f::ZERO ) );
-            group->attachNode( renderableBuilder( Vector3f( 0.0f, 0.0f, 1.0f ) ) );
+            for ( auto x = -5.0f; x <= 5.0f; x += 1.0f ) {
+                for ( auto z = -5.0f; z <= 5.0f; z += 1.0f ) {
+                    group->attachNode( renderableBuilder( Vector3f( x, 0.0f, z ) ) );
+                }
+            }
             return group;
         }();
 
@@ -298,7 +303,7 @@ int main( int argc, char **argv )
 
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 	
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Triangle", crimild::alloc< Settings >( argc, argv ) );
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Triangles", crimild::alloc< Settings >( argc, argv ) );
 	sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
 
 //    auto scene = [] {
