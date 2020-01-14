@@ -169,7 +169,7 @@ public:
                     auto width = settings->get< crimild::Int32 >( "video.width", 0 );
                     auto height = settings->get< crimild::Int32 >( "video.height", 0 );
                 	auto ubo = static_cast< ModelViewProjUniformBuffer * >( crimild::get_ptr( renderable->ubo ) );
-                	auto time = 0.1f * clock.getAccumTime();
+                	auto time = clock.getAccumTime();
 
                     ubo->setData(
                      	ModelViewProjUniform {
