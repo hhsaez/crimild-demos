@@ -164,11 +164,12 @@ public:
             }();
 
             node->attachComponent< LambdaComponent >(
-            	[ renderable, swapchain, position ]( Node *node, const Clock &clock ) {
+            	[ renderable, position ]( Node *node, const Clock &clock ) {
+                    auto settings = Simulation::getInstance()->getSettings();
+                    auto width = settings->get< crimild::Int32 >( "video.width", 0 );
+                    auto height = settings->get< crimild::Int32 >( "video.height", 0 );
                 	auto ubo = static_cast< ModelViewProjUniformBuffer * >( crimild::get_ptr( renderable->ubo ) );
-                	auto width = swapchain->extent.width;
-                	auto height = swapchain->extent.height;
-                	auto time = clock.getAccumTime();
+                	auto time = 0.1f * clock.getAccumTime();
 
                     ubo->setData(
                      	ModelViewProjUniform {
@@ -204,6 +205,10 @@ public:
                          	}( width, height ),
                      	}
                  	);
+
+                	auto pipeline = renderable->pipeline;
+                    pipeline->viewport = Rectf( 0, 0, width, height );
+                    pipeline->scissor = Rectf( 0, 0, width, height );
             	}
             );
 
@@ -212,8 +217,8 @@ public:
 
         m_scene = [ renderableBuilder ] {
             auto group = crimild::alloc< Group >();
-            group->attachNode( renderableBuilder( Vector3f::ZERO ) );
             group->attachNode( renderableBuilder( Vector3f( 0.0f, 0.0f, -1.0f ) ) );
+            group->attachNode( renderableBuilder( Vector3f::ZERO ) );
             group->attachNode( renderableBuilder( Vector3f( 0.0f, 0.0f, 1.0f ) ) );
             return group;
         }();
