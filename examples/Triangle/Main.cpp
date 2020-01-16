@@ -51,23 +51,13 @@ namespace crimild {
         virtual ~Renderable( void ) noexcept = default;
 
         SharedPointer< Pipeline > pipeline;
-        SharedPointer< Buffer > vbo;
+        SharedPointer< VertexBuffer > vbo;
         SharedPointer< Buffer > ibo;
         SharedPointer< UniformBuffer > ubo;
         SharedPointer< DescriptorSetLayout > descriptorSetLayout;
         SharedPointer< DescriptorPool > descriptorPool;
         SharedPointer< DescriptorSet > descriptorSet;
         SharedPointer< Primitive > primitive;
-
-        virtual void recordCommands( CommandBuffer *commandBuffer ) noexcept
-        {
-            commandBuffer->bindGraphicsPipeline( crimild::get_ptr( pipeline ) );
-//            commandBuffer->bindPrimitive( crimild::get_ptr( m_primitive ) );
-            commandBuffer->bindVertexBuffer( crimild::get_ptr( vbo ) );
-            commandBuffer->bindIndexBuffer( crimild::get_ptr( ibo ) );
-            commandBuffer->bindUniformBuffer( crimild::get_ptr( ubo ) );
-            commandBuffer->drawIndexed( primitive->getIndexBuffer()->getIndexCount() );
-        }
     };
 
 }
