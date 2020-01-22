@@ -49,9 +49,8 @@ namespace crimild {
         SharedPointer< DescriptorPool > descriptorPool;
         SharedPointer< DescriptorSet > descriptorSet;
         SharedPointer< Primitive > primitive;
+        SharedPointer< Texture > texture;
     };
-
-    
 
 }
 
@@ -65,6 +64,10 @@ public:
 
         auto swapchain = getSwapchain();
 
+        auto texture = Texture::CHECKERBOARD;
+
+        getRenderDevice()->bind( crimild::get_ptr( texture ) );
+
         m_descriptorSetLayout = [] {
             auto descriptorSetLayout = crimild::alloc< DescriptorSetLayout >();
             descriptorSetLayout->bindings = {
@@ -73,6 +76,11 @@ public:
                     .descriptorCount = 1,
                     .stage = Shader::Stage::VERTEX,
                 },
+                {
+                    .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                    .descriptorCount = 1,
+                    .stage = Shader::Stage::FRAGMENT,
+                }
             };
             return descriptorSetLayout;
         }();
@@ -83,52 +91,57 @@ public:
                 containers::Array< SharedPointer< Shader >> {
                     crimild::alloc< Shader >(
                         Shader::Stage::VERTEX,
-                        FileSystem::getInstance().readResourceFile( "assets/shaders/triangle.vert.spv" )
+                        FileSystem::getInstance().readResourceFile( "assets/shaders/textures.vert.spv" )
                     ),
                     crimild::alloc< Shader >(
                         Shader::Stage::FRAGMENT,
-                        FileSystem::getInstance().readResourceFile( "assets/shaders/triangle.frag.spv" )
+                        FileSystem::getInstance().readResourceFile( "assets/shaders/textures.frag.spv" )
                     ),
                 }
             );
             pipeline->primitiveType = Primitive::Type::TRIANGLES;
             pipeline->viewport = Rectf( 0, 0, swapchain->extent.width, swapchain->extent.height );
             pipeline->scissor = Rectf( 0, 0, swapchain->extent.width, swapchain->extent.height );
-            pipeline->attributeDescriptions = VertexP2C3::getAttributeDescriptions( 0 );
-            pipeline->bindingDescription = VertexP2C3::getBindingDescription( 0 );
-//            pipeline->renderPass = crimild::get_ptr( renderPass );
+            pipeline->attributeDescriptions = VertexP2C3TC2::getAttributeDescriptions( 0 );
+            pipeline->bindingDescription = VertexP2C3TC2::getBindingDescription( 0 );
             pipeline->descriptorSetLayout = m_descriptorSetLayout;
             return pipeline;
         }();
 
-        auto renderableBuilder = [ this ]( const Vector3f &position ) {
+        auto renderableBuilder = [ this ]( const Vector3f &position, SharedPointer< Texture > const &texture ) {
             auto node = crimild::alloc< Node >();
 
             auto renderable = node->attachComponent< Renderable >();
             renderable->pipeline = m_pipeline;
-			renderable->vbo = crimild::alloc< VertexP2C3Buffer >(
-                containers::Array< VertexP2C3 > {
+            renderable->texture = texture;
+			renderable->vbo = crimild::alloc< VertexP2C3TC2Buffer >(
+                containers::Array< VertexP2C3TC2 > {
                     {
                         .position = Vector2f( -0.5f, 0.5f ),
                         .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
+                        .texCoord = Vector2f( 0.0f, 1.0f ),
                     },
                     {
                         .position = Vector2f( -0.5f, -0.5f ),
                         .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
+                        .texCoord = Vector2f( 0.0f, 0.0f ),
                     },
                     {
                         .position = Vector2f( 0.5f, -0.5f ),
                         .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
+                        .texCoord = Vector2f( 1.0f, 0.0f ),
                     },
                     {
                         .position = Vector2f( 0.5f, 0.5f ),
                         .color = RGBColorf( 1.0f, 1.0f, 1.0f ),
+                        .texCoord = Vector2f( 1.0f, 1.0f ),
                     },
                 }
             );
             renderable->ibo = crimild::alloc< IndexUInt32Buffer >(
                 containers::Array< crimild::UInt32 > {
                     0, 1, 2,
+                	0, 2, 3,
                 }
             );
             renderable->ubo = [] () -> SharedPointer< UniformBuffer > {
@@ -150,6 +163,10 @@ public:
                         .descriptorType = DescriptorType::UNIFORM_BUFFER,
                         .buffer = crimild::get_ptr( renderable->ubo ),
                     },
+                    {
+                        .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                        .texture = crimild::get_ptr( renderable->texture ),
+                    },
                 };
                 return descriptorSet;
             }();
@@ -163,7 +180,7 @@ public:
                     auto width = settings->get< crimild::Int32 >( "video.width", 0 );
                     auto height = settings->get< crimild::Int32 >( "video.height", 0 );
                 	auto ubo = static_cast< ModelViewProjUniformBuffer * >( crimild::get_ptr( renderable->ubo ) );
-                	auto time = clock.getAccumTime();
+                    auto time = clock.getAccumTime();
 
                     ubo->setData(
                      	ModelViewProjUniform {
@@ -175,7 +192,7 @@ public:
                          	}( time, position, startAngle, speed ),
                          	.view = [] {
                                 Transformation t;
-                             	t.setTranslate( 5.0f, 4.0f, 5.0f );
+                             	t.setTranslate( 4.0f, 2.0f, 4.0f );
                              	t.lookAt( Vector3f::ZERO, Vector3f::UNIT_Y );
                              	return t.computeModelMatrix().getInverse();
                          	}(),
@@ -209,11 +226,11 @@ public:
             return node;
         };
 
-        m_scene = [ renderableBuilder ] {
+        m_scene = [ renderableBuilder, texture ] {
             auto group = crimild::alloc< Group >();
             for ( auto x = -5.0f; x <= 5.0f; x += 1.0f ) {
                 for ( auto z = -5.0f; z <= 5.0f; z += 1.0f ) {
-                    group->attachNode( renderableBuilder( Vector3f( x, 0.0f, z ) ) );
+                    group->attachNode( renderableBuilder( Vector3f( x, 0.0f, z ), texture ) );
                 }
             }
             return group;
@@ -326,7 +343,7 @@ int main( int argc, char **argv )
 
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 	
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Triangles", crimild::alloc< Settings >( argc, argv ) );
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Textures", crimild::alloc< Settings >( argc, argv ) );
 	sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
 
 //    auto scene = [] {

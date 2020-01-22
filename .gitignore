@@ -102,3 +102,4 @@ build-web
 examples/Saturn/Saturn
 libvulkan.*
 COPYONLY
+examples/Textures/Textures
