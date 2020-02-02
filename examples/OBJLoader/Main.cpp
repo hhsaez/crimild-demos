@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2002 - present, H. Hernan Saez
  * All rights reserved.
- *
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
@@ -12,7 +12,7 @@
  *     * Neither the name of the copyright holder nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -41,7 +41,7 @@ public:
             return false;
         }
 
-        auto program = ShaderProgramLibrary::getInstance()->get( constants::SHADER_PROGRAM_UNLIT_P2C3_COLOR );
+        auto program = ShaderProgramLibrary::getInstance()->get( constants::SHADER_PROGRAM_UNLIT_P2C3TC2_TEXTURE_COLOR );
 
         auto pipeline = [&] {
             auto pipeline = crimild::alloc< Pipeline >();
@@ -49,23 +49,27 @@ public:
             return pipeline;
         }();
 
-        auto vbo = crimild::alloc< VertexP2C3Buffer >(
-            containers::Array< VertexP2C3 > {
+        auto vbo = crimild::alloc< VertexP2C3TC2Buffer >(
+            containers::Array< VertexP2C3TC2 > {
                 {
                     .position = Vector2f( -0.5f, 0.5f ),
                     .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
+                    .texCoord = Vector2f( 0.0f, 1.0f ),
                 },
                 {
                     .position = Vector2f( -0.5f, -0.5f ),
                     .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
+                    .texCoord = Vector2f( 0.0f, 0.0f ),
                 },
                 {
                     .position = Vector2f( 0.5f, -0.5f ),
                     .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
+                    .texCoord = Vector2f( 1.0f, 0.0f ),
                 },
                 {
                     .position = Vector2f( 0.5f, 0.5f ),
                     .color = RGBColorf( 1.0f, 1.0f, 1.0f ),
+                    .texCoord = Vector2f( 1.0f, 1.0f ),
                 },
             }
         );
@@ -73,13 +77,14 @@ public:
         auto ibo = crimild::alloc< IndexUInt32Buffer >(
             containers::Array< crimild::UInt32 > {
                 0, 1, 2,
+                0, 2, 3,
             }
         );
 
 
         auto texture = Texture::CHECKERBOARD;
 
-        auto triBuilder = [&]( const Vector3f &position ) {
+        auto quadBuilder = [&]( const Vector3f &position ) {
             auto node = crimild::alloc< Node >();
 
             auto renderable = node->attachComponent< RenderStateComponent >();
@@ -114,7 +119,7 @@ public:
             auto scene = crimild::alloc< Group >();
             for ( auto x = -5.0f; x <= 5.0f; x += 1.0f ) {
                 for ( auto z = -5.0f; z <= 5.0f; z += 1.0f ) {
-                    scene->attachNode( triBuilder( Vector3f( x, 0.0f, z + ( 0.1f * x / 10.0f ) ) ) );
+                    scene->attachNode( quadBuilder( Vector3f( x, 0.0f, z + ( 0.1f * x / 5.0f ) ) ) );
                 }
             }
             scene->attachNode([] {
@@ -129,6 +134,17 @@ public:
             }());
             return scene;
         }();
+
+//        auto path = FilePath {
+//            .path = "assets/models/house.obj",
+//        };
+//        auto scene = OBJLoader( path.getAbsolutePath() ).load();
+//        if ( scene != nullptr ) {
+//            scene->perform( ApplyToGeometries( [ this ]( Geometry *g ) {
+//                auto renderable = g->attachComponent< UnlitTextureRenderable >();
+//                renderable->pipeline = m_pipeline;
+//            }));
+//        }
 
         auto commandBuffer = [ this ] {
             auto commandBuffer = crimild::alloc< CommandBuffer >();
@@ -179,13 +195,13 @@ private:
 
 int main( int argc, char **argv )
 {
-    crimild::init();
+	crimild::init();
     crimild::vulkan::init();
 
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Triangles", crimild::alloc< Settings >( argc, argv ) );
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-    return sim->run();
+	
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "OBJ Loader", crimild::alloc< Settings >( argc, argv ) );
+	sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
+	return sim->run();
 }
 
