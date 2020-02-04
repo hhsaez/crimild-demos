@@ -41,110 +41,35 @@ public:
             return false;
         }
 
-        auto program = ShaderProgramLibrary::getInstance()->get( constants::SHADER_PROGRAM_UNLIT_P2C3TC2_TEXTURE_COLOR );
-
-        auto pipeline = [&] {
-            auto pipeline = crimild::alloc< Pipeline >();
-            pipeline->program = crimild::retain( program );
-            return pipeline;
-        }();
-
-        auto vbo = crimild::alloc< VertexP2C3TC2Buffer >(
-            containers::Array< VertexP2C3TC2 > {
-                {
-                    .position = Vector2f( -0.5f, 0.5f ),
-                    .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
-                    .texCoord = Vector2f( 0.0f, 1.0f ),
-                },
-                {
-                    .position = Vector2f( -0.5f, -0.5f ),
-                    .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
-                    .texCoord = Vector2f( 0.0f, 0.0f ),
-                },
-                {
-                    .position = Vector2f( 0.5f, -0.5f ),
-                    .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
-                    .texCoord = Vector2f( 1.0f, 0.0f ),
-                },
-                {
-                    .position = Vector2f( 0.5f, 0.5f ),
-                    .color = RGBColorf( 1.0f, 1.0f, 1.0f ),
-                    .texCoord = Vector2f( 1.0f, 1.0f ),
-                },
-            }
-        );
-
-        auto ibo = crimild::alloc< IndexUInt32Buffer >(
-            containers::Array< crimild::UInt32 > {
-                0, 1, 2,
-                0, 2, 3,
-            }
-        );
-
-
-        auto texture = Texture::CHECKERBOARD;
-
-        auto quadBuilder = [&]( const Vector3f &position ) {
-            auto node = crimild::alloc< Node >();
-
-            auto renderable = node->attachComponent< RenderStateComponent >();
-            renderable->pipeline = pipeline;
-            renderable->vbo = vbo;
-            renderable->ibo = ibo;
-            renderable->uniforms = {
-                [&] {
-                    auto ubo = crimild::alloc< ModelViewProjectionUniformBuffer >();
-                    ubo->node = crimild::get_ptr( node );
-                    return ubo;
-                }(),
-            };
-            renderable->textures = { texture };
-
-            node->local().setTranslate( position );
-
-            auto startAngle = Random::generate< crimild::Real32 >( 0, Numericf::TWO_PI );
-            auto speed = Random::generate< crimild::Real32 >( -1.0f, 1.0f );
-
-            node->attachComponent< LambdaComponent >(
-                [ startAngle, speed ]( Node *node, const Clock &clock ) {
-                    auto time = clock.getAccumTime();
-                    node->local().rotate().fromAxisAngle( Vector3f::UNIT_Z, startAngle + ( speed * time * -90.0f * Numericf::DEG_TO_RAD ) );
-                }
-            );
-
-            return node;
-        };
-
         m_scene = [&] {
             auto scene = crimild::alloc< Group >();
-            for ( auto x = -5.0f; x <= 5.0f; x += 1.0f ) {
-                for ( auto z = -5.0f; z <= 5.0f; z += 1.0f ) {
-                    scene->attachNode( quadBuilder( Vector3f( x, 0.0f, z + ( 0.1f * x / 5.0f ) ) ) );
+
+            scene->attachNode( [] {
+                auto path = FilePath {
+                    .path = "assets/models/bunny.obj",
+                };
+                auto group = crimild::alloc< Group >();
+                OBJLoader loader( path.getAbsolutePath() );
+                if ( auto model = loader.load() ) {
+                    group->attachNode( model );
                 }
-            }
+                group->attachComponent< RotationComponent >( Vector3f::UNIT_Y, 0.1f );
+                return group;
+            }());
+
             scene->attachNode([] {
                 auto settings = Simulation::getInstance()->getSettings();
                 auto width = settings->get< crimild::Real32 >( "video.width", 0 );
                 auto height = settings->get< crimild::Real32 >( "video.height", 1 );
                 auto camera = crimild::alloc< Camera >( 45.0f, width / height, 0.1f, 100.0f );
-                camera->local().setTranslate( 5.0f, 10.0f, 10.0f );
-                camera->local().lookAt( Vector3f::ZERO );
+                camera->local().setTranslate( 0.0f, 5.0f, 5.0f );
+                camera->local().lookAt( 0.75 * Vector3f::UNIT_Y );
                 Camera::setMainCamera( camera );
                 return camera;
             }());
+
             return scene;
         }();
-
-//        auto path = FilePath {
-//            .path = "assets/models/house.obj",
-//        };
-//        auto scene = OBJLoader( path.getAbsolutePath() ).load();
-//        if ( scene != nullptr ) {
-//            scene->perform( ApplyToGeometries( [ this ]( Geometry *g ) {
-//                auto renderable = g->attachComponent< UnlitTextureRenderable >();
-//                renderable->pipeline = m_pipeline;
-//            }));
-//        }
 
         auto commandBuffer = [ this ] {
             auto commandBuffer = crimild::alloc< CommandBuffer >();
