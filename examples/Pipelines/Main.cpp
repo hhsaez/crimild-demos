@@ -71,36 +71,41 @@ public:
             return scene;
         }();
 
+        auto textureProgram = crimild::retain( ShaderProgramLibrary::getInstance()->get( constants::SHADER_PROGRAM_UNLIT_TEXTURE_P3N3TC2 ) );
+        auto debugProgram = crimild::retain( ShaderProgramLibrary::getInstance()->get( constants::SHADER_PROGRAM_DEBUG_POSITION_P3N3TC2 ) );
+
+        auto createPipeline = [&]( SharedPointer< ShaderProgram > program, SharedPointer< PolygonState > polygonState ) {
+            auto pipeline = crimild::alloc< Pipeline >();
+            pipeline->program = program;
+            pipeline->descriptorSetLayout = program->descriptorSetLayout;
+            pipeline->attributeDescriptions = program->attributeDescriptions;
+            pipeline->bindingDescription = program->bindingDescription;
+            pipeline->viewport.scalingMode = ViewportDimensions::ScalingMode::DYNAMIC;
+            pipeline->scissor.scalingMode = ViewportDimensions::ScalingMode::DYNAMIC;
+            pipeline->polygonState = polygonState;
+            return pipeline;
+        };
+
         m_pipelines = std::vector< SharedPointer< Pipeline >> {
-            [] {
-                auto program = crimild::retain( ShaderProgramLibrary::getInstance()->get( constants::SHADER_PROGRAM_UNLIT_TEXTURE_P3N3TC2 ) );
-                auto pipeline = crimild::alloc< Pipeline >();
-                pipeline->program = program;
-                pipeline->descriptorSetLayout = program->descriptorSetLayout;
-                pipeline->attributeDescriptions = program->attributeDescriptions;
-                pipeline->bindingDescription = program->bindingDescription;
-                pipeline->viewport.dimensions = Rectf( 0.0f, 0.0f, 0.5f, 1.0f );
-                return pipeline;
-            }(),
-            [] {
-                auto program = crimild::retain( ShaderProgramLibrary::getInstance()->get( constants::SHADER_PROGRAM_UNLIT_TEXTURE_P3N3TC2 ) );
-                auto pipeline = crimild::alloc< Pipeline >();
-                pipeline->program = program;
-                pipeline->descriptorSetLayout = program->descriptorSetLayout;
-                pipeline->attributeDescriptions = program->attributeDescriptions;
-                pipeline->bindingDescription = program->bindingDescription;
-                pipeline->viewport.dimensions = Rectf( 0.5f, 0.0f, 0.5f, 1.0f );
-                return pipeline;
-            }(),
+            createPipeline( textureProgram, PolygonState::FILL ),
+            createPipeline( textureProgram, PolygonState::LINE ),
+            createPipeline( textureProgram, PolygonState::POINT ),
+            createPipeline( debugProgram, PolygonState::FILL ),
         };
 
         auto renderables = std::vector< RenderStateComponent * > { };
         m_scene->perform( Apply( [&]( Node *node ) {
             if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-                renderState->prepare( crimild::get_ptr( m_pipelines[ 0 ]->descriptorSetLayout ) );
                 renderables.push_back( renderState );
             }
         }));
+
+        ViewportDimensions viewports[] = {
+			{ .dimensions = Rectf( 0.0f, 0.0f, 0.5f, 0.5f ) },
+            { .dimensions = Rectf( 0.5f, 0.0f, 0.5f, 0.5f ) },
+            { .dimensions = Rectf( 0.0f, 0.5f, 0.5f, 0.5f ) },
+            { .dimensions = Rectf( 0.5f, 0.5f, 0.5f, 0.5f ) },
+        };
 
         auto commandBuffer = [&] {
             auto commandBuffer = crimild::alloc< CommandBuffer >();
@@ -108,25 +113,21 @@ public:
             commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
             commandBuffer->beginRenderPass( nullptr );
 
-            auto viewport = ViewportDimensions { };
-            viewport.dimensions.width() = 1.0f / crimild::Real32( m_pipelines.size() );
-
             for ( auto i = 0l; i < m_pipelines.size(); i++ ) {
-                auto &p = m_pipelines[ i ];
+                auto &pipeline = m_pipelines[ i ];
 
-                viewport.dimensions.x() = i * viewport.dimensions.width();
-
-                commandBuffer->setViewport( viewport );
+                commandBuffer->setViewport( viewports[ i ] );
+                commandBuffer->setScissor( viewports[ i ] );
+                commandBuffer->bindGraphicsPipeline( crimild::get_ptr( pipeline ) );
 
                 for ( auto &r : renderables ) {
                     auto vbo = crimild::get_ptr( r->vbo );
                     auto ibo = crimild::get_ptr( r->ibo );
-                    auto descriptors = crimild::get_ptr( r->descriptorSet );
+                    auto descriptors = r->createDescriptorSet( crimild::get_ptr( pipeline->descriptorSetLayout ) );
 
-                    commandBuffer->bindGraphicsPipeline( crimild::get_ptr( p ) );
                     commandBuffer->bindVertexBuffer( vbo );
                     commandBuffer->bindIndexBuffer( ibo );
-                    commandBuffer->bindDescriptorSet( descriptors );
+                    commandBuffer->bindDescriptorSet( crimild::get_ptr( descriptors ) );
 
                     crimild::UInt32 indexCount = ibo->getSize() /  ibo->getStride();
                     commandBuffer->drawIndexed( indexCount );
@@ -146,9 +147,11 @@ public:
 
     void update( void ) override
     {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
+        if ( m_scene != nullptr ) {
+        	auto clock = Simulation::getInstance()->getSimulationClock();
+        	m_scene->perform( UpdateComponents( clock ) );
+        	m_scene->perform( UpdateWorldState() );
+        }
 
         GLFWVulkanSystem::update();
     }
