@@ -46,7 +46,7 @@ public:
 
             scene->attachNode( [] {
                 auto path = FilePath {
-                    .path = "assets/models/bunny.obj",
+                    .path = "assets/models/bunny/bunny.obj",
                 };
                 auto group = crimild::alloc< Group >();
                 OBJLoader loader( path.getAbsolutePath() );

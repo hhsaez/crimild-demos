@@ -82,7 +82,7 @@ public:
         );
 
 
-        auto texture = Texture::CHECKERBOARD;
+        auto texture = Texture::CHECKERBOARD_8;
 
         auto quadBuilder = [&]( const Vector3f &position ) {
             auto node = crimild::alloc< Node >();

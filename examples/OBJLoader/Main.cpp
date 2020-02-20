@@ -46,7 +46,7 @@ public:
 
             scene->attachNode( [] {
                 auto path = FilePath {
-                    .path = "assets/models/bunny.obj",
+                    .path = "assets/models/bunny/bunny.obj",
                 };
                 auto group = crimild::alloc< Group >();
                 OBJLoader loader( path.getAbsolutePath() );
@@ -62,7 +62,7 @@ public:
                 auto width = settings->get< crimild::Real32 >( "video.width", 0 );
                 auto height = settings->get< crimild::Real32 >( "video.height", 1 );
                 auto camera = crimild::alloc< Camera >( 45.0f, width / height, 0.1f, 100.0f );
-                camera->local().setTranslate( 0.0f, 5.0f, 5.0f );
+                camera->local().setTranslate( 0.0f, 3.0f, 8.0f );
                 camera->local().lookAt( 0.75 * Vector3f::UNIT_Y );
                 Camera::setMainCamera( camera );
                 return camera;
