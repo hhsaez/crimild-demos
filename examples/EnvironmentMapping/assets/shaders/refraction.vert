@@ -22,7 +22,6 @@ void main()
 	outWorldPos = worldPos.xyz;
 	
 	outWorldNormal = transpose( inverse( mat3( ubo.model ) ) ) * inNormal;
-	outWorldNormal.y *= -1.0;
 
 	mat4 invView = inverse( ubo.view );
 	outWorldEye = vec3( invView[ 3 ].x, invView[ 3 ].y, invView[ 3 ].z );
