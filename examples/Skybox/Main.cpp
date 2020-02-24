@@ -76,7 +76,7 @@ public:
                 auto width = settings->get< crimild::Real32 >( "video.width", 0 );
                 auto height = settings->get< crimild::Real32 >( "video.height", 1 );
                 auto camera = crimild::alloc< Camera >( 45.0f, width / height, 0.1f, 100.0f );
-                camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
+                camera->local().setTranslate( 0.0f, 1.0f, 10.0f );
                 camera->attachComponent< FreeLookCameraComponent >();
                 Camera::setMainCamera( camera );
                 return camera;
