@@ -155,7 +155,7 @@ public:
                 auto width = settings->get< crimild::Real32 >( "video.width", 0 );
                 auto height = settings->get< crimild::Real32 >( "video.height", 1 );
                 auto camera = crimild::alloc< Camera >( 45.0f, width / height, 0.1f, 100.0f );
-                camera->local().setTranslate( 0.0f, 0.0f, 10.0f );
+                camera->local().setTranslate( 0.0f, 0.0f, 12.0f );
                 camera->local().lookAt( Vector3f::ZERO );
                 Camera::setMainCamera( camera );
 
@@ -226,7 +226,11 @@ int main( int argc, char **argv )
 
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Environment Map: Reflection & Refraction", crimild::alloc< Settings >( argc, argv ) );
+    auto settings = crimild::alloc< Settings >( argc, argv );
+    settings->set( "video.width", 720 );
+    settings->set( "video.height", 720 );
+
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Environment Map: Reflection & Refraction", settings );
 
     SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
 

@@ -13,6 +13,10 @@ void main()
 {
 	vec3 I = normalize( inWorldPos - inWorldEye );
 	vec3 R = reflect( I, normalize( inWorldNormal ) );
+
+	// Is this needed because of vulkan?
+	R.y *= -1.0;
+	
 	outColor = vec4( texture( texSampler, R ).rgb, 1.0 );
 }
 

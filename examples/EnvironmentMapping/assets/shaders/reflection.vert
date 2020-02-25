@@ -21,7 +21,7 @@ void main()
 	gl_Position = ubo.proj * ubo.view * worldPos;
 	outWorldPos = worldPos.xyz;
 	
-	outWorldNormal = transpose( inverse( mat3( ubo.model ) ) ) * inNormal;
+	outWorldNormal = normalize( mat3( transpose( inverse( ubo.model ) ) ) * inNormal );
 
 	mat4 invView = inverse( ubo.view );
 	outWorldEye = vec3( invView[ 3 ].x, invView[ 3 ].y, invView[ 3 ].z );
