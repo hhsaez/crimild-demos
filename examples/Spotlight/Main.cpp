@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2002-present, H. Hernán Saez
+ * Copyright (c) 2002 - present, H. Hernan Saez
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
@@ -9,14 +9,14 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the <organization> nor the
+ *     * Neither the name of the copyright holder nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDER BE LIABLE FOR ANY
  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
  * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -26,184 +26,268 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_SDL.hpp>
-#include <Crimild_OpenGL.hpp>
-
-#include "Rendering/RenderGraph/RenderGraph.hpp"
-#include "Rendering/RenderGraph/RenderGraphPass.hpp"
-#include "Rendering/RenderGraph/RenderGraphAttachment.hpp"
-#include "Rendering/RenderGraph/Passes/ForwardLightingPass.hpp"
-#include "Rendering/RenderGraph/Passes/ScreenPass.hpp"
-#include "Rendering/RenderGraph/Passes/DepthPass.hpp"
-#include "Rendering/RenderGraph/Passes/BlendPass.hpp"
-#include "Rendering/RenderGraph/Passes/DepthToRGBPass.hpp"
-#include "Rendering/RenderGraph/Passes/FrameDebugPass.hpp"
-#include "Rendering/RenderGraph/Passes/OpaquePass.hpp"
-#include "Rendering/RenderGraph/Passes/LightAccumulationPass.hpp"
-#include "Rendering/RenderGraph/Passes/TextureColorPass.hpp"
-#include "Rendering/RenderGraph/Passes/DeferredLightingPass.hpp"
+#include <Crimild_Vulkan.hpp>
+#include <Crimild_GLFW.hpp>
+#include <Crimild_STB.hpp>
 
 using namespace crimild;
-using namespace crimild::rendergraph;
-using namespace crimild::rendergraph::passes;
+using namespace crimild::glfw;
 
-class FloatingComponent : public NodeComponent {
+class ExampleVulkanSystem : public GLFWVulkanSystem {
 public:
-    FloatingComponent( void )
+    crimild::Bool start( void ) override
     {
+        if ( !GLFWVulkanSystem::start() ) {
+            return false;
+        }
 
+        m_scene = [&] {
+            auto scene = crimild::alloc< Group >();
+
+            std::vector< SharedPointer< Light >> lights;
+
+            scene->attachNode(
+                [&] {
+                    auto light = crimild::alloc< Light >( Light::Type::SPOT );
+                    light->setAmbient( RGBAColorf( 0.1f, 0.0f, 0.0f, 0.0f ) );
+                    light->setInnerCutoff( Numericf::DEG_TO_RAD * 25.0f );
+                    light->setOuterCutoff( Numericf::DEG_TO_RAD * 50.0f );
+                    light->setColor( RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ) );
+//                        light->setCastShadows( true );
+                    light->local().setTranslate( -5.0f, 3.0f, 5.0f );
+                    light->local().lookAt( Vector3f::ZERO );
+                    lights.push_back( light );
+                    return light;
+                }()
+            );
+
+            scene->attachNode(
+              	[&] {
+                	auto group = crimild::alloc< Group >();
+
+                    auto pipeline = [&] {
+                        auto pipeline = crimild::alloc< Pipeline >();
+                        pipeline->program = [&] {
+                            auto program = crimild::alloc< ShaderProgram >(
+                                containers::Array< SharedPointer< Shader >> {
+                                    crimild::alloc< Shader >(
+                                        Shader::Stage::VERTEX,
+                                        FileSystem::getInstance().readFile(
+                                            FilePath {
+                                                .path = "assets/shaders/phong.vert.spv",
+                                            }.getAbsolutePath()
+                                        )
+                                    ),
+                                    crimild::alloc< Shader >(
+                                        Shader::Stage::FRAGMENT,
+                                        FileSystem::getInstance().readFile(
+                                            FilePath {
+                                                .path = "assets/shaders/phong.frag.spv",
+                                            }.getAbsolutePath()
+                                        )
+                                    ),
+                                }
+                            );
+                            program->attributeDescriptions = VertexP3N3TC2::getAttributeDescriptions( 0 );
+                            program->bindingDescription = VertexP3N3TC2::getBindingDescription( 0 );
+                            program->descriptorSetLayout = [] {
+                                auto layout = crimild::alloc< DescriptorSetLayout >();
+                                layout->bindings = {
+                                    {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .stage = Shader::Stage::VERTEX,
+                                    },
+                                    {
+                                        .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                                        .stage = Shader::Stage::FRAGMENT,
+                                    },
+                                    {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .stage = Shader::Stage::FRAGMENT,
+                                    },
+                                };
+                                return layout;
+                            }();
+                            return program;
+                        }();
+                        return pipeline;
+                    }();
+
+                	auto buildModel = [&]( const Vector3f &position, crimild::Real32 scale = 1.0f )
+                    {
+                        auto group = crimild::alloc< Group >();
+
+                        auto path = FilePath {
+                            .path = "assets/models/cube.obj",
+                        };
+                        OBJLoader loader( path.getAbsolutePath() );
+                        loader.pipeline = pipeline;
+                        if ( auto model = loader.load() ) {
+                            model->perform(
+                                Apply(
+                                    [&]( Node *node ) {
+                                        if ( auto rs = node->getComponent< RenderStateComponent >() ) {
+                                            rs->uniforms = {
+                                                [&] {
+                                                    auto ubo = crimild::alloc< ModelViewProjectionUniformBuffer >();
+                                                    ubo->node = crimild::get_ptr( model );
+                                                    return ubo;
+                                                }(),
+                                                [&] {
+                                                    struct LightData {
+                                                        RGBAColorf ambient = RGBAColorf::ZERO;
+                                                        RGBAColorf diffuse = RGBAColorf::ONE;
+                                                        RGBAColorf specular = RGBAColorf::ONE;
+                                                        Vector4f position = Vector4f::ZERO;
+                                                        Vector4f direction = -Vector4f::UNIT_Z;
+                                                        Vector4f attenuation = Vector4f::UNIT_X;
+                                                        Vector4f cutoffs = Vector4f::ZERO;
+                                                    };
+
+                                                    auto light = lights[ 0 ];
+                                                    light->perform( UpdateWorldState() );
+
+                                                    return crimild::alloc< UniformBufferImpl< LightData > >(
+                                                    	LightData {
+                                                            .ambient = light->getAmbient().rgba(),
+                                                        	.diffuse = light->getColor().rgba(),
+                                                        	.specular = light->getColor().rgba(),
+															.position = light->getWorld().getTranslate().xyzw(),
+															.direction = light->getDirection().xyzw(),
+                                                        	.attenuation = light->getAttenuation().xyzw(),
+                                                        	.cutoffs = Vector4f(
+                                                            	Numericf::cos( light->getInnerCutoff() ),
+                                                                Numericf::cos( light->getOuterCutoff() ),
+                                                                0.0f,
+                                                            	0.0f
+                                                            ),
+                                                    	}
+                                                  	);
+                                                }(),
+                                            };
+                                            rs->textures = {
+                                                Texture::ONE
+                                            };
+                                        }
+                                    }
+                                )
+                            );
+                            group->attachNode( model );
+                        }
+
+                        group->local().setTranslate( position );
+                        group->local().setScale( scale );
+
+                        return group;
+                    };
+
+                	auto buildAnimatedModel = [&]( const Vector3f &position, crimild::Real32 size = 1.0f ) {
+                        auto model = buildModel( position, size );
+                        model->attachComponent< LambdaComponent >(
+                            [
+                            	position,
+                                speed = Random::generate< crimild::Real32 >( 0.5f, 2.0f )
+                            ]( Node *node, const Clock &c ) {
+                                auto theta = speed * c.getAccumTime();
+                                node->local().setTranslate( position + Numericf::sin( theta ) * Vector3f::UNIT_Y );
+                            }
+                        );
+                        return model;
+                    };
+
+                    group->attachNode( buildModel( Vector3f( 0.0f, -52.0f, 0.0f ), 100.0f ) );
+//                    group->attachNode( buildModel( Vector3f( -50.0f, 0.0f, 0.0f ), 50.0f ) );
+//                    group->attachNode( buildModel( Vector3f( 0.0f, 0.0f, -50.0f ), 50.0f ) );
+
+                	group->attachNode( buildAnimatedModel( Vector3f( -2.0f, 0.75f, -3.0f ), 1.25f ) );
+                    group->attachNode( buildAnimatedModel( Vector3f( -2.5f, 0.5f, 0.0f ), 1.5f ) );
+                    group->attachNode( buildAnimatedModel( Vector3f( -1.0f, 0.25f, 3.0f ) ) );
+
+                    group->attachNode( buildAnimatedModel( Vector3f( 0.5f, 0.35f, -3.0f ) ) );
+                    group->attachNode( buildAnimatedModel( Vector3f( 0.0f, 0.0f, 0.0f ) ) );
+                    group->attachNode( buildAnimatedModel( Vector3f( 0.75f, 0.5f, 3.0f ) ) );
+
+                    group->attachNode( buildAnimatedModel( Vector3f( 4.0f, 0.5f, -3.0f ) ) );
+                    group->attachNode( buildAnimatedModel( Vector3f( 3.3f, 0.25f, 0.0f ) ) );
+                    group->attachNode( buildAnimatedModel( Vector3f( 3.0f, 0.75f, 3.0f ) ) );
+
+
+                	return group;
+            	}()
+          	);
+
+            scene->attachNode([] {
+                auto camera = crimild::alloc< Camera >();
+                camera->local().setTranslate( 20.0f, 5.0f, 12.0f );
+                camera->local().lookAt( Vector3f( 0.0f, 0.0f, -10.0f ) );
+                Camera::setMainCamera( camera );
+                return camera;
+            }());
+
+            return scene;
+        }();
+
+        m_scene->perform( StartComponents() );
+
+        auto commandBuffer = [ this ] {
+            auto commandBuffer = crimild::alloc< CommandBuffer >();
+
+            commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
+            commandBuffer->beginRenderPass( nullptr );
+
+            m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
+                if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
+                    renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
+                }
+            }));
+
+            commandBuffer->endRenderPass( nullptr );
+            commandBuffer->end();
+
+            return commandBuffer;
+        }();
+
+        setCommandBuffers( { commandBuffer } );
+
+        return true;
     }
 
-    virtual ~FloatingComponent( void )
+    void update( void ) override
     {
+        auto clock = Simulation::getInstance()->getSimulationClock();
+        m_scene->perform( UpdateComponents( clock ) );
+        m_scene->perform( UpdateWorldState() );
 
+        GLFWVulkanSystem::update();
     }
 
-    virtual void start( void ) override
+    void stop( void ) override
     {
-        _position = getNode()->getLocal().getTranslate();
-        _theta = Random::generate< crimild::Real32 >( Numericf::PI );
-        _speed = Random::generate< crimild::Real32 >( 0.5f, 2.0f );
-    }
+        if ( auto renderDevice = getRenderDevice() ) {
+            renderDevice->waitIdle();
+        }
 
-    virtual void update( const Clock &c ) override
-    {
-        _theta += _speed * c.getDeltaTime();
-        getNode()->local().setTranslate( _position + Numericf::sin( _theta ) * Vector3f::UNIT_Y );
+        m_scene = nullptr;
+
+        GLFWVulkanSystem::stop();
     }
 
 private:
-    Vector3f _position;
-    crimild::Real32 _theta;
-    crimild::Real32 _speed;
+    SharedPointer< Node > m_scene;
 };
-
-SharedPointer< RenderGraph > createRenderGraph( crimild::Bool debugEnabled = false )
-{
-    auto graph = crimild::alloc< RenderGraph >();
-
-    auto scenePass = graph->createPass< ForwardLightingPass >();
-    auto shadowPass = graph->createPass< ShadowPass >();
-
-    scenePass->setShadowInput( shadowPass->getShadowOutput() );
-
-    graph->setOutput( scenePass->getColorOutput() );
-
-    if ( debugEnabled ) {
-        auto depthPass = graph->createPass< DepthPass >();
-        scenePass->setDepthInput( depthPass->getDepthOutput() );
-
-        auto linearizeDepthPass = graph->createPass< LinearizeDepthPass >();
-        linearizeDepthPass->setInput( depthPass->getDepthOutput() );
-
-        auto shadowMap = graph->createPass< TextureColorPass >( TextureColorPass::Mode::RED );
-        shadowMap->setInput( shadowPass->getShadowOutput() );
-
-        auto debugPass = graph->createPass< FrameDebugPass >();
-        debugPass->addInput( shadowMap->getOutput() );
-        debugPass->addInput( scenePass->getColorOutput() );
-        debugPass->addInput( linearizeDepthPass->getOutput() );
-        graph->setOutput( debugPass->getOutput() );
-    }
-
-    return graph;
-}
-
-SharedPointer< Node > buildAmbientLight( const RGBAColorf &color )
-{
-	auto light = crimild::alloc< Light >( Light::Type::AMBIENT );
-	light->setAmbient( color );
-	return light;
-}
-
-SharedPointer< Node > buildSpotlight( const Vector3f &position )
-{
-	auto light = crimild::alloc< Light >( Light::Type::SPOT );
-	light->setInnerCutoff( Numericf::DEG_TO_RAD * 25.0f );
-	light->setOuterCutoff( Numericf::DEG_TO_RAD * 50.0f );
-
-	light->setColor( RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ) );
-
-    light->setCastShadows( true );
-
-    light->local().setTranslate( position );
-    light->local().lookAt( Vector3f::ZERO );
-
-    return light;
-}
-
-SharedPointer< Node > buildCube( const Vector3f &position, const Vector3f size = Vector3f::ONE, crimild::Bool animated = true )
-{
-	auto geometry = crimild::alloc< Geometry >();
-	geometry->attachPrimitive( crimild::alloc< BoxPrimitive >( size.x(), size.y(), size.z(), VertexFormat::VF_P3_N3 ) );
-
-	auto material = crimild::alloc< Material >();
-	material->setAmbient( RGBAColorf::ONE );
-	material->setDiffuse( RGBAColorf::ONE );
-	geometry->getComponent< MaterialComponent >()->attachMaterial( material );
-
-	geometry->local().setTranslate( position );
-
-    if ( animated ) {
-        geometry->attachComponent< FloatingComponent >();
-    }
-
-	return geometry;
-}
-
-SharedPointer< Node > buildWall( const Vector3f &position, const Vector3f size = Vector3f::ONE )
-{
-    auto geometry = crimild::alloc< Geometry >();
-    geometry->attachPrimitive( crimild::alloc< BoxPrimitive >( size.x(), size.y(), size.z(), VertexFormat::VF_P3_N3 ) );
-
-    auto material = crimild::alloc< Material >();
-    material->setAmbient( RGBAColorf::ONE );
-    material->setDiffuse( RGBAColorf::ZERO );
-    material->setSpecular( RGBAColorf::ZERO );
-    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
-
-    geometry->local().setTranslate( position );
-
-    return geometry;
-}
 
 int main( int argc, char **argv )
 {
-	crimild::init();
-	
-    auto settings = crimild::alloc< Settings >( argc, argv );
-    settings->set( "video.show_frame_time", true );
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< sdl::SDLSimulation >( "Spotlight", settings );
+    crimild::init();
+    crimild::vulkan::init();
 
-    auto scene = crimild::alloc< Group >();
+    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 
-    scene->attachNode( buildCube( Vector3f( 0.0f, -2.0f, -100.0f ), Vector3f( 50.0f, 0.1f, 500.0f ), false ) );
-    scene->attachNode( buildWall( Vector3f( -25.0f, 50.0f, -100.0f ), Vector3f( 0.1f, 200.0f, 500.0f ) ) );
-    scene->attachNode( buildWall( Vector3f( 0.0f, 0.0f, -500.0f ), Vector3f( 500.1f, 500.0f, 0.1f ) ) );
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Spotlight", crimild::alloc< Settings >( argc, argv ) );
 
-    scene->attachNode( buildCube( Vector3f( -2.0f, 0.75f, -3.0f ), 1.25f * Vector3f::ONE ) );
-    scene->attachNode( buildCube( Vector3f( -2.5f, 0.5f, 0.0f ), 1.5f * Vector3f::ONE ) );
-	scene->attachNode( buildCube( Vector3f( -1.0f, 0.25f, 3.0f ), Vector3f::ONE ) );
+    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
 
-    scene->attachNode( buildCube( Vector3f( 0.5f, 0.35f, -3.0f ) ) );
-    scene->attachNode( buildCube( Vector3f( 0.0f, 0.0f, 0.0f ) ) );
-    scene->attachNode( buildCube( Vector3f( 0.75f, 0.5f, 3.0f ) ) );
-
-    scene->attachNode( buildCube( Vector3f( 4.0f, 0.5f, -3.0f ) ) );
-    scene->attachNode( buildCube( Vector3f( 3.3f, 0.25f, 0.0f ) ) );
-    scene->attachNode( buildCube( Vector3f( 3.0f, 0.75f, 3.0f ) ) );
-
-    scene->attachNode( buildAmbientLight( RGBAColorf( 0.15f, 0.0f, 0.1f, 1.0f ) ) );
-    scene->attachNode( buildSpotlight( Vector3f( -5.0f, 3.0f, 5.0f ) ) );
-
-	auto camera = crimild::alloc< Camera >();
-	camera->local().setTranslate( 20.0f, 5.0f, 10.0f );
-    camera->local().lookAt( Vector3f( 0.0f, 0.0f, -10.0f ) );
-    camera->setRenderGraph( createRenderGraph() );
-	scene->attachNode( camera );
-    
-    sim->setScene( scene );
-	
-	return sim->run();
+    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
+    return sim->run();
 }
 
