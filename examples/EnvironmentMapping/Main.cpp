@@ -90,12 +90,12 @@ public:
             auto skybox = [] {
                 return crimild::alloc< Skybox >(
                     containers::Array< SharedPointer< Image >> {
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/right.png" } ),
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/left.png" } ),
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/top.png" } ),
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/bottom.png" } ),
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/back.png" } ),
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/front.png" } ),
+                    	crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/right.png" } } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/left.png" } } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/top.png" } } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/bottom.png" } } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/back.png" } } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/front.png" } } ),
                     }
                 );
             }();
@@ -151,17 +151,12 @@ public:
             }());
 
             pivot->attachNode([] {
-                auto settings = Simulation::getInstance()->getSettings();
-                auto width = settings->get< crimild::Real32 >( "video.width", 0 );
-                auto height = settings->get< crimild::Real32 >( "video.height", 1 );
-                auto camera = crimild::alloc< Camera >( 45.0f, width / height, 0.1f, 100.0f );
-                camera->local().setTranslate( 0.0f, 0.0f, 12.0f );
+                auto camera = crimild::alloc< Camera >();
+                camera->local().setTranslate( 0.0f, 0.0f, 7.0f );
                 camera->local().lookAt( Vector3f::ZERO );
                 Camera::setMainCamera( camera );
-
-                auto pivot = crimild::alloc< Group >();
-                pivot->attachNode( camera );
-                return pivot;
+                camera->attachComponent< FreeLookCameraComponent >();
+                return camera;
             }());
 
             pivot->attachComponent< RotationComponent >( Vector3f::UNIT_Y, .0125f );
@@ -226,11 +221,7 @@ int main( int argc, char **argv )
 
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 
-    auto settings = crimild::alloc< Settings >( argc, argv );
-    settings->set( "video.width", 720 );
-    settings->set( "video.height", 720 );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Environment Map: Reflection & Refraction", settings );
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Environment Map: Reflection & Refraction", crimild::alloc< Settings >( argc, argv ) );
 
     SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
 

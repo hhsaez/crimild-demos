@@ -15,9 +15,8 @@ void main()
 	vec3 I = normalize( inWorldPos - inWorldEye );
 	vec3 R = refract( I, normalize( inWorldNormal ), ratio );
 
-	// Because of Vulkan
 	R.y *= -1.0;
-	
+
 	outColor = vec4( texture( texSampler, R ).rgb, 1.0 );
 }
 

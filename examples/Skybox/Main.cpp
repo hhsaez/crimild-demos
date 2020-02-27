@@ -48,12 +48,12 @@ public:
             scene->attachNode( [] {
 				return crimild::alloc< Skybox >(
                     containers::Array< SharedPointer< Image >> {
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/right.tga" } ),
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/left.tga" } ),
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/top.tga" } ),
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/bottom.tga" } ),
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/back.tga" } ),
-                        crimild::ImageManager::getInstance()->loadImage( { .filePath = "assets/textures/front.tga" } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/right.tga" } } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/left.tga" } } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/top.tga" } } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/bottom.tga" } } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/back.tga" } } ),
+                        crimild::ImageManager::getInstance()->loadImage( { .filePath = { .path = "assets/textures/front.tga" } } ),
                     }
                 );
             }());
@@ -72,11 +72,8 @@ public:
             }());
 
             scene->attachNode([] {
-                auto settings = Simulation::getInstance()->getSettings();
-                auto width = settings->get< crimild::Real32 >( "video.width", 0 );
-                auto height = settings->get< crimild::Real32 >( "video.height", 1 );
-                auto camera = crimild::alloc< Camera >( 45.0f, width / height, 0.1f, 100.0f );
-                camera->local().setTranslate( 0.0f, 1.0f, 10.0f );
+                auto camera = crimild::alloc< Camera >();
+                camera->local().setTranslate( 0.0f, 1.0f, 5.0f );
                 camera->attachComponent< FreeLookCameraComponent >();
                 Camera::setMainCamera( camera );
                 return camera;

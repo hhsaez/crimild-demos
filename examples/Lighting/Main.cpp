@@ -282,16 +282,10 @@ public:
             }());
 
             scene->attachNode([] {
-                auto settings = Simulation::getInstance()->getSettings();
-                auto width = settings->get< crimild::Real32 >( "video.width", 0 );
-                auto height = settings->get< crimild::Real32 >( "video.height", 1 );
-                auto camera = crimild::alloc< Camera >( 45.0f, width / height, 0.1f, 100.0f );
-                camera->local().setTranslate( 0.0f, 0.5f, 8.0f );
+                auto camera = crimild::alloc< Camera >();
+                camera->local().setTranslate( 0.0f, 0.5f, 5.0f );
                 Camera::setMainCamera( camera );
-
-                auto pivot = crimild::alloc< Group >();
-                pivot->attachNode( camera );
-                return pivot;
+                return camera;
             }());
 
             return scene;

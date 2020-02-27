@@ -28,10 +28,10 @@
 #include <Crimild.hpp>
 #include <Crimild_Vulkan.hpp>
 #include <Crimild_GLFW.hpp>
+#include <Crimild_STB.hpp>
 
 using namespace crimild;
 using namespace crimild::glfw;
-using namespace crimild::vulkan;
 
 class ExampleVulkanSystem : public GLFWVulkanSystem {
 public:
@@ -58,11 +58,8 @@ public:
             }());
 
             scene->attachNode([] {
-                auto settings = Simulation::getInstance()->getSettings();
-                auto width = settings->get< crimild::Real32 >( "video.width", 0 );
-                auto height = settings->get< crimild::Real32 >( "video.height", 1 );
-                auto camera = crimild::alloc< Camera >( 45.0f, width / height, 0.1f, 100.0f );
-                camera->local().setTranslate( 0.0f, 3.0f, 8.0f );
+                auto camera = crimild::alloc< Camera >();
+                camera->local().setTranslate( 0.0f, 3.0f, 3.0f );
                 camera->local().lookAt( 0.75 * Vector3f::UNIT_Y );
                 Camera::setMainCamera( camera );
                 return camera;
@@ -126,7 +123,11 @@ int main( int argc, char **argv )
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 	
     CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "OBJ Loader", crimild::alloc< Settings >( argc, argv ) );
+
+    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
+
 	sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-	return sim->run();
+
+    return sim->run();
 }
 

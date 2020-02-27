@@ -28,10 +28,10 @@
 #include <Crimild.hpp>
 #include <Crimild_Vulkan.hpp>
 #include <Crimild_GLFW.hpp>
+#include <Crimild_STB.hpp>
 
 using namespace crimild;
 using namespace crimild::glfw;
-using namespace crimild::vulkan;
 
 class ExampleVulkanSystem : public GLFWVulkanSystem {
 public:
@@ -82,52 +82,41 @@ public:
         );
 
 
-        auto texture = Texture::CHECKERBOARD_8;
-
-        auto quadBuilder = [&]( const Vector3f &position ) {
-            auto node = crimild::alloc< Node >();
-
-            auto renderable = node->attachComponent< RenderStateComponent >();
-            renderable->pipeline = pipeline;
-            renderable->vbo = vbo;
-            renderable->ibo = ibo;
-            renderable->uniforms = {
-                [&] {
-                    auto ubo = crimild::alloc< ModelViewProjectionUniformBuffer >();
-                    ubo->node = crimild::get_ptr( node );
-                    return ubo;
-                }(),
-            };
-            renderable->textures = { texture };
-
-            node->local().setTranslate( position );
-
-            auto startAngle = Random::generate< crimild::Real32 >( 0, Numericf::TWO_PI );
-            auto speed = Random::generate< crimild::Real32 >( -1.0f, 1.0f );
-
-            node->attachComponent< LambdaComponent >(
-                [ startAngle, speed ]( Node *node, const Clock &clock ) {
-                    auto time = clock.getAccumTime();
-                    node->local().rotate().fromAxisAngle( Vector3f::UNIT_Z, startAngle + ( speed * time * -90.0f * Numericf::DEG_TO_RAD ) );
-                }
-            );
-
-            return node;
-        };
+        auto texture = crimild::alloc< Texture >(
+        	ImageManager::getInstance()->loadImage(
+        		{
+                    .filePath = {
+                        .path = "assets/textures/vulkan.png"
+                    },
+        		}
+            )
+        );
 
         m_scene = [&] {
             auto scene = crimild::alloc< Group >();
-            for ( auto x = -5.0f; x <= 5.0f; x += 1.0f ) {
-                for ( auto z = -5.0f; z <= 5.0f; z += 1.0f ) {
-                    scene->attachNode( quadBuilder( Vector3f( x, 0.0f, z + ( 0.1f * x / 5.0f ) ) ) );
-                }
-            }
+            scene->attachNode(
+                [&] {
+                    auto node = crimild::alloc< Node >();
+
+                    auto renderable = node->attachComponent< RenderStateComponent >();
+                    renderable->pipeline = pipeline;
+                    renderable->vbo = vbo;
+                    renderable->ibo = ibo;
+                    renderable->uniforms = {
+                        [&] {
+                            auto ubo = crimild::alloc< ModelViewProjectionUniformBuffer >();
+                            ubo->node = crimild::get_ptr( node );
+                            return ubo;
+                        }(),
+                    };
+                    renderable->textures = { texture };
+
+                    return node;
+                }()
+            );
             scene->attachNode([] {
-                auto settings = Simulation::getInstance()->getSettings();
-                auto width = settings->get< crimild::Real32 >( "video.width", 0 );
-                auto height = settings->get< crimild::Real32 >( "video.height", 1 );
-                auto camera = crimild::alloc< Camera >( 45.0f, width / height, 0.1f, 100.0f );
-                camera->local().setTranslate( 5.0f, 10.0f, 10.0f );
+                auto camera = crimild::alloc< Camera >();
+                camera->local().setTranslate( 0.0f, 0.0f, 2.0f );
                 camera->local().lookAt( Vector3f::ZERO );
                 Camera::setMainCamera( camera );
                 return camera;
@@ -190,7 +179,11 @@ int main( int argc, char **argv )
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 
     CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Textures", crimild::alloc< Settings >( argc, argv ) );
+
+    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
+
     sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
+
     return sim->run();
 }
 
