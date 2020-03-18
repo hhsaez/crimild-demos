@@ -52,23 +52,23 @@ public:
         auto vbo = crimild::alloc< VertexP2C3TC2Buffer >(
             containers::Array< VertexP2C3TC2 > {
                 {
-                    .position = Vector2f( -0.5f, 0.5f ),
-                    .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
+                    .position = Vector2f( -1.0f, 1.0f ),
+                    .color = RGBColorf::ONE,
                     .texCoord = Vector2f( 0.0f, 1.0f ),
                 },
                 {
-                    .position = Vector2f( -0.5f, -0.5f ),
-                    .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
+                    .position = Vector2f( -1.0f, -1.0f ),
+                    .color = RGBColorf::ONE,
                     .texCoord = Vector2f( 0.0f, 0.0f ),
                 },
                 {
-                    .position = Vector2f( 0.5f, -0.5f ),
-                    .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
+                    .position = Vector2f( 1.0f, -1.0f ),
+                    .color = RGBColorf::ONE,
                     .texCoord = Vector2f( 1.0f, 0.0f ),
                 },
                 {
-                    .position = Vector2f( 0.5f, 0.5f ),
-                    .color = RGBColorf( 1.0f, 1.0f, 1.0f ),
+                    .position = Vector2f( 1.0f, 1.0f ),
+                    .color = RGBColorf::ONE,
                     .texCoord = Vector2f( 1.0f, 1.0f ),
                 },
             }
@@ -82,15 +82,20 @@ public:
         );
 
 
-        auto texture = crimild::alloc< Texture >(
-        	ImageManager::getInstance()->loadImage(
-        		{
-                    .filePath = {
-                        .path = "assets/textures/vulkan.png"
-                    },
-        		}
-            )
-        );
+        auto texture = [] {
+            auto texture = crimild::alloc< Texture >(
+        		ImageManager::getInstance()->loadImage(
+        			{
+                    	.filePath = {
+                        	.path = "assets/textures/test.png"
+                    	},
+        			}
+            	)
+        	);
+            texture->setMinFilter( Texture::Filter::NEAREST );
+            texture->setMagFilter( Texture::Filter::NEAREST );
+            return texture;
+        }();
 
         m_scene = [&] {
             auto scene = crimild::alloc< Group >();
@@ -116,7 +121,7 @@ public:
             );
             scene->attachNode([] {
                 auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 0.0f, 0.0f, 2.0f );
+                camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
                 camera->local().lookAt( Vector3f::ZERO );
                 Camera::setMainCamera( camera );
                 return camera;
