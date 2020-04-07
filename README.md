@@ -5,6 +5,9 @@ A repository for crimild-based demos and code examples
 ## Table of Contents
 + [Cloning](#Cloning)
 + [Building](#Building)
++ [Examples](#Examples)
+    + [Basics](#Basics)
+    + [Advanced](#Advanced)
 
 ## <a name="Cloning">Cloning</a>
 ```
@@ -43,5 +46,14 @@ cd build-web
 cmake .. -DCMAKE_TOOLCHAIN_FILE=#{EMSCRIPTEN_HOME}/cmake/Modules/Platform/Emscripten.cmake 
 make clean all -j8
 ```
-(Ignore SDL_Mixer2 warning)
+It's safe to ignore SDL_Mixer2 warnings, if any.
+
+## <a name="Examples">Examples</a>
+
+### <a name="Basics">Basics</a>
+
+#### [Triangle](examples/Triangle/)
+Basic and explicit example for rendering a single colored triangle using Crimild. This shows the most important concepts and tools in the engine.
+
+### <a name="Advanced">Advanced</a>
 
