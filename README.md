@@ -1,50 +1,59 @@
-crimild-demos
-=============
+# Crimild Demos and Examples
 
-A repository for crimild-based demos
+A repository for crimild-based demos and code examples
 
-Checkout
---------
+## Table of Contents
++ [Cloning](#Cloning)
++ [Building](#Building)
++ [Examples](#Examples)
+    + [Basics](#Basics)
+    + [Advanced](#Advanced)
 
-  git clone <REPO_URL> --recursive
+## <a name="Cloning">Cloning</a>
+```
+git clone --recursive https://github.com/hhsaez/crimild-demos.git
+```
 
-Project setup (Makefile)
-------------------------
+### Updating existing code
+```
+git pull origin <BRANCH_NAME>
+git submodule update --init --recursive
+cmake .
+```
 
-  cmake .
+## <a name="Building">Building</a>
 
-Building (Makefile)
--------------------
+### Unix Makefiles
+```
+cmake .
+make clean all test -j4
+```
 
-All: 
+### Xcode
+```
+cmake . -G Xcode
+```
 
-  make clean all test -j4
+### Visual Studio
+```
+cmake . -G "Visual Studio 2014"
+```
 
-Project setup (Xcode)
----------------------
-
-  cmake . -G Xcode
-
-Project setup (Visual Studio)
------------------------------
-
-  cmake . -G "Visual Studio 2014"
-
-Updating code
--------------
-
-  git pull origin devel
-  git submodule update --recursive
-  cmake .
-  make all -j4
-
-Build web demos
----------------
-
-mkdir build-web
-cd build-web
-cmake .. -DCMAKE_TOOLCHAIN_FILE=#{EMSCRIPTEN_HOME}/cmake/Modules/Platform/Emscripten.cmake
+### Web (Wasm/WebGL)
+```
+mkdir build-web 
+cd build-web 
+cmake .. -DCMAKE_TOOLCHAIN_FILE=#{EMSCRIPTEN_HOME}/cmake/Modules/Platform/Emscripten.cmake 
 make clean all -j8
+```
+It's safe to ignore SDL_Mixer2 warnings, if any.
 
-(Ignore SDL_Mixer2 warning)
+## <a name="Examples">Examples</a>
+
+### <a name="Basics">Basics</a>
+
+#### [Triangle](examples/Triangle/)
+Basic and explicit example for rendering a single colored triangle using Crimild. This shows the most important concepts and tools in the engine.
+
+### <a name="Advanced">Advanced</a>
 
