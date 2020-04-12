@@ -29,38 +29,6 @@
 #include <Crimild_Vulkan.hpp>
 #include <Crimild_GLFW.hpp>
 
-namespace crimild {
-
-    enum MemoryDomain {
-        /**
-         	\brief Owned by Device
-         	No need to allocate memory on the Host since resources may be created
-         	directly on the Device.
-         	If resources are created on Host first, their data might be cleaned
-         	after it has been uplaoded to Device.
-         	In any case, if we need to access data for a resource from Host, it
-         	must be transfered first from Device.
-         */
-        DEVICE,
-        /**
-         	\brief Owned by Host
-         	Resources are created on Host and might be uploaded to a Device in
-         	a later stage. If so, data will not be cleaned.
-         	Data is already accessible from Host. Data changed on Host must be
-         	uploaded to Device again as soon as possible.
-         */
-        HOST,
-        /**
-         	\brief Owned by Device. Cached on Host
-         	Resources are created on Host and their data is trasfer to Device memory,
-         	but we need a copy of the data still accessible on Host. Data changed on
-         	Host is ignored by Device.
-         */
-        CACHED_HOST,
-    };
-
-}
-
 using namespace crimild;
 using namespace crimild::glfw;
 using namespace crimild::vulkan;
@@ -133,93 +101,47 @@ public:
             return scene;
         }();
 
-        auto framebuffer = [&] {
-            auto framebuffer = crimild::alloc< Framebuffer >();
-            framebuffer->extent.scalingMode = ScalingMode::SWAPCHAIN_RELATIVE;
-			framebuffer->attachments = {
-                [&] {
-                    auto imageView = crimild::alloc< ImageView >();
-                    imageView->type = ImageView::Type::IMAGE_VIEW_SWAPCHAIN;
-                    return imageView;
-                }(),
-                [&] {
-                    auto imageView = crimild::alloc< ImageView >();
-                    imageView->type = ImageView::Type::IMAGE_VIEW_2D;
-                    imageView->image = [&] {
-                        auto image = crimild::alloc< Image >();
-                        image->extent.scalingMode = ScalingMode::SWAPCHAIN_RELATIVE;
-                        image->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
-                        image->usage = Image::Usage::DEPTH_STENCIL_ATTACHMENT;
-                        return image;
-                    }();
-                    imageView->format = imageView->image->format;
-                    return imageView;
-                }(),
-            };
-            return framebuffer;
-        }();
+        m_frameGraph = [&] {
+            auto graph = crimild::alloc< FrameGraph >();
 
-        auto renderPass = [&] {
-            auto createAttachment = [&]( Format format, Image::Usage usage ) {
-                auto att = crimild::alloc< Attachment >();
-                att->format = format;
+            auto createAttachment = [&]( auto usage, auto format ) {
+                auto att = graph->create< Attachment >();
                 att->usage = usage;
+                att->format = format;
                 return att;
             };
-			
-            auto colorAtt = createAttachment(
-            	Format::COLOR_SWAPCHAIN_OPTIMAL,
-            	Image::Usage::COLOR_ATTACHMENT | Image::Usage::PRESENTATION
-            );
-            auto depthStencilAtt = createAttachment(
-                Format::DEPTH_STENCIL_DEVICE_OPTIMAL,
-            	Image::Usage::DEPTH_STENCIL_ATTACHMENT
-            );
-			
-            auto pass = crimild::alloc< RenderPass >();
-            pass->attachments = {
-                colorAtt,
-                depthStencilAtt,
-            };
-            pass->subpasses = {
-                [&] {
-                    auto subpass = crimild::alloc< RenderSubpass >();
-                    subpass->colorAttachments = { colorAtt };
-                    subpass->depthStencilAttachment = depthStencilAtt;
-                    subpass->commands = [&] {
-                        auto commandBuffer = crimild::alloc< CommandBuffer >();
-                        m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
-                            if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-                                renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
-                            }
-                        }));
-                        return commandBuffer;
-                    }();
-                    return subpass;
-                }(),
-            };
-            return pass;
+
+            auto color = createAttachment( Image::Usage::COLOR_ATTACHMENT, Format::COLOR_SWAPCHAIN_OPTIMAL );
+            auto depth = createAttachment( Image::Usage::DEPTH_STENCIL_ATTACHMENT, Format::DEPTH_STENCIL_DEVICE_OPTIMAL );
+
+            auto subpass = [&] {
+                auto subpass = graph->create< RenderSubpass >();
+                subpass->outputs = { color, depth };
+                subpass->commands = [&] {
+                    auto commandBuffer = crimild::alloc< CommandBuffer >();
+                    m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
+                        if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
+                            renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
+                        }
+                    }));
+                    return commandBuffer;
+                }();
+                return subpass;
+            }();
+
+            auto renderPass = graph->create< RenderPass >();
+            renderPass->attachments = { color, depth };
+            renderPass->subpasses = { subpass };
+
+            graph->setOutput( crimild::get_ptr( color ) );
+
+            return graph;
         }();
 
-        auto commandBuffer = [&] {
-            auto commandBuffer = crimild::alloc< CommandBuffer >();
-            commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-            commandBuffer->beginRenderPass( crimild::get_ptr( renderPass ), crimild::get_ptr( framebuffer ) );
-            auto count = renderPass->subpasses.size();
-            for ( auto i = 0l; i < count; i++ ) {
-                if ( auto commands = crimild::get_ptr( renderPass->subpasses[ i ]->commands ) ) {
-                    commandBuffer->bindCommandBuffer( commands );
-                    if ( i < count - 1 ) {
-//                        commandBuffer->nextSubpass();
-                    }
-                }
-            }
-            commandBuffer->endRenderPass( crimild::get_ptr( renderPass ) );
-            commandBuffer->end();
-            return commandBuffer;
-        }();
-
-        setCommandBuffers( { commandBuffer } );
+        if ( m_frameGraph->compile() ) {
+            auto commands = m_frameGraph->recordCommands();
+            setCommandBuffers( { commands } );
+        }
 
         return true;
     }
@@ -240,12 +162,14 @@ public:
         }
 
         m_scene = nullptr;
+        m_frameGraph = nullptr;
 
         GLFWVulkanSystem::stop();
     }
 
 private:
     SharedPointer< Node > m_scene;
+    SharedPointer< FrameGraph > m_frameGraph;
 };
 
 int main( int argc, char **argv )

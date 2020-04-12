@@ -6,8 +6,6 @@ layout ( location = 1 ) in vec3 inWorldNormal;
 layout ( location = 2 ) in vec3 inWorldEye;
 layout ( location = 3 ) in vec2 inTexCoord;
 
-layout ( binding = 1 ) uniform sampler2D colorMap;
-
 struct LightData {
 	vec4 ambient;
 	vec4 diffuse;
@@ -18,7 +16,7 @@ struct LightData {
 	vec4 cutoffs;
 };
 
-layout ( binding = 2 ) uniform LightDataUniform {
+layout ( binding = 1 ) uniform LightDataUniform {
 	LightData light;
 };
 
@@ -66,7 +64,7 @@ vec3 calcPhongSpotlight( LightData light, vec3 P, vec3 N, vec3 E )
 
 void main()
 {
-	vec3 albedo = texture( colorMap, inTexCoord ).rgb;
+	vec3 albedo = vec4( 1.0 ).rgb;
 
 	vec3 P = inWorldPosition;
 	vec3 N = normalize( inWorldNormal );

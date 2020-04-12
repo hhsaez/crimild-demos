@@ -98,10 +98,6 @@ public:
                                         .stage = Shader::Stage::VERTEX,
                                     },
                                     {
-                                        .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
-                                        .stage = Shader::Stage::FRAGMENT,
-                                    },
-                                    {
                                         .descriptorType = DescriptorType::UNIFORM_BUFFER,
                                         .stage = Shader::Stage::FRAGMENT,
                                     },
@@ -165,9 +161,6 @@ public:
                                                   	);
                                                 }(),
                                             };
-                                            rs->textures = {
-                                                Texture::ONE
-                                            };
                                         }
                                     }
                                 )
@@ -229,25 +222,93 @@ public:
 
         m_scene->perform( StartComponents() );
 
-        auto commandBuffer = [ this ] {
+        auto framebuffer = [&] {
+            auto framebuffer = crimild::alloc< Framebuffer >();
+            framebuffer->extent.scalingMode = ScalingMode::SWAPCHAIN_RELATIVE;
+            framebuffer->attachments = {
+                [&] {
+                    auto imageView = crimild::alloc< ImageView >();
+                    imageView->type = ImageView::Type::IMAGE_VIEW_SWAPCHAIN;
+                    return imageView;
+                }(),
+                [&] {
+                    auto imageView = crimild::alloc< ImageView >();
+                    imageView->type = ImageView::Type::IMAGE_VIEW_2D;
+                    imageView->image = [&] {
+                        auto image = crimild::alloc< Image >();
+                        image->extent.scalingMode = ScalingMode::SWAPCHAIN_RELATIVE;
+                        image->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+                        image->usage = Image::Usage::DEPTH_STENCIL_ATTACHMENT;
+                        return image;
+                    }();
+                    imageView->format = imageView->image->format;
+                    return imageView;
+                }(),
+            };
+            return framebuffer;
+        }();
+
+        auto renderPass = [&] {
+            auto createAttachment = [&]( Format format, Image::Usage usage ) {
+                auto att = crimild::alloc< Attachment >();
+                att->format = format;
+                att->usage = usage;
+                return att;
+            };
+
+            auto colorAtt = createAttachment(
+                Format::COLOR_SWAPCHAIN_OPTIMAL,
+                Image::Usage::COLOR_ATTACHMENT
+            );
+            auto depthStencilAtt = createAttachment(
+                Format::DEPTH_STENCIL_DEVICE_OPTIMAL,
+                Image::Usage::DEPTH_STENCIL_ATTACHMENT
+            );
+
+            auto pass = crimild::alloc< RenderPass >();
+            pass->attachments = {
+                colorAtt,
+                depthStencilAtt,
+            };
+            pass->subpasses = {
+                [&] {
+                    auto subpass = crimild::alloc< RenderSubpass >();
+                    subpass->colorAttachments = { colorAtt };
+                    subpass->depthStencilAttachment = depthStencilAtt;
+                    subpass->commands = [&] {
+                        auto commandBuffer = crimild::alloc< CommandBuffer >();
+                        m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
+                            if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
+                                renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
+                            }
+                        }));
+                        return commandBuffer;
+                    }();
+                    return subpass;
+                }(),
+            };
+            return pass;
+        }();
+
+        auto commandBuffer = [&] {
             auto commandBuffer = crimild::alloc< CommandBuffer >();
-
             commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-            commandBuffer->beginRenderPass( nullptr );
-
-            m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
-                if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-                    renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
+            commandBuffer->beginRenderPass( crimild::get_ptr( renderPass ), crimild::get_ptr( framebuffer ) );
+            auto count = renderPass->subpasses.size();
+            for ( auto i = 0l; i < count; i++ ) {
+                if ( auto commands = crimild::get_ptr( renderPass->subpasses[ i ]->commands ) ) {
+                    commandBuffer->bindCommandBuffer( commands );
+                    if ( i < count - 1 ) {
+//                        commandBuffer->nextSubpass();
+                    }
                 }
-            }));
-
-            commandBuffer->endRenderPass( nullptr );
+            }
+            commandBuffer->endRenderPass( crimild::get_ptr( renderPass ) );
             commandBuffer->end();
-
             return commandBuffer;
         }();
 
-        setCommandBuffers( { commandBuffer } );
+        setCommandBuffers({ commandBuffer });
 
         return true;
     }
