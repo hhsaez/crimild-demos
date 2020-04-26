@@ -133,7 +133,8 @@ public:
             renderPass->attachments = { color, depth };
             renderPass->subpasses = { subpass };
 
-            graph->setOutput( crimild::get_ptr( color ) );
+            auto presentPass = graph->create< PresentPass >();
+            presentPass->colorAttachment = color;
 
             return graph;
         }();
