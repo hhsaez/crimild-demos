@@ -77,8 +77,6 @@ public:
         );
 
 
-        auto texture = Texture::CHECKERBOARD;
-
         auto triBuilder = [&]( const Vector3f &position ) {
             auto node = crimild::alloc< Node >();
 
@@ -93,7 +91,7 @@ public:
                     return ubo;
                 }(),
             };
-            renderable->textures = { texture };
+            renderable->textures = {};
 
             node->local().setTranslate( position );
 
@@ -130,25 +128,51 @@ public:
             return scene;
         }();
 
-        auto commandBuffer = [ this ] {
-            auto commandBuffer = crimild::alloc< CommandBuffer >();
+		m_frameGraph = [&] {
+			auto graph = crimild::alloc< FrameGraph >();
 
-            commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-            commandBuffer->beginRenderPass( nullptr );
+			auto color = [&] {
+				auto attachment = graph->create< Attachment >();
+				attachment->usage = Image::Usage::COLOR_ATTACHMENT;
+				attachment->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
+				return attachment;
+			}();
 
-            m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
-                if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-                    renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
-                }
-            }));
+			auto depth = [&] {
+				auto attachment = graph->create< Attachment >();
+				attachment->usage = Image::Usage::DEPTH_STENCIL_ATTACHMENT;
+				attachment->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+				return attachment;
+			}();
 
-            commandBuffer->endRenderPass( nullptr );
-            commandBuffer->end();
+			auto renderPass = graph->create< RenderPass >();
+			renderPass->attachments = { color, depth };
+			renderPass->commands = [&] {
+				auto commands = crimild::alloc< CommandBuffer >();
+				m_scene->perform(
+					Apply(
+						[&]( Node *node ) {
+							if ( auto renderable = node->getComponent< RenderStateComponent > () ) {
+								renderable->commandRecorder(
+									crimild::get_ptr( commands )
+								);
+							}
+						}
+					)
+				);
+				return commands;
+			}();
 
-            return commandBuffer;
-        }();
+			auto master = graph->create< PresentationMaster >();
+			master->colorAttachment = color;
+			
+			return graph;
+		}();
 
-        setCommandBuffers( { commandBuffer } );
+		if ( m_frameGraph->compile() ) {
+			auto commands = m_frameGraph->recordCommands();
+			setCommandBuffers( { commands } );
+		}
 
         return true;
     }
@@ -175,6 +199,7 @@ public:
 
 private:
     SharedPointer< Node > m_scene;
+	SharedPointer< FrameGraph > m_frameGraph;
 };
 
 int main( int argc, char **argv )

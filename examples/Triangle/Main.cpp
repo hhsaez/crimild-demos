@@ -104,37 +104,31 @@ public:
         m_frameGraph = [&] {
             auto graph = crimild::alloc< FrameGraph >();
 
-            auto createAttachment = [&]( auto usage, auto format ) {
-                auto att = graph->create< Attachment >();
-                att->usage = usage;
-                att->format = format;
-                return att;
-            };
-
-            auto color = createAttachment( Image::Usage::COLOR_ATTACHMENT, Format::COLOR_SWAPCHAIN_OPTIMAL );
-            auto depth = createAttachment( Image::Usage::DEPTH_STENCIL_ATTACHMENT, Format::DEPTH_STENCIL_DEVICE_OPTIMAL );
-
-            auto subpass = [&] {
-                auto subpass = graph->create< RenderSubpass >();
-                subpass->outputs = { color, depth };
-                subpass->commands = [&] {
-                    auto commandBuffer = crimild::alloc< CommandBuffer >();
-                    m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
-                        if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-                            renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
-                        }
-                    }));
-                    return commandBuffer;
-                }();
-                return subpass;
-            }();
+            auto color = [&] {
+				auto att = graph->create< Attachment >();
+				att->usage = Image::Usage::COLOR_ATTACHMENT;
+				att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
+				return att;
+			}();
 
             auto renderPass = graph->create< RenderPass >();
-            renderPass->attachments = { color, depth };
-            renderPass->subpasses = { subpass };
+            renderPass->attachments = { color };
+			renderPass->commands = [&] {
+				auto commandBuffer = crimild::alloc< CommandBuffer >();
+				m_scene->perform(
+					Apply(
+						[ commandBuffer ]( Node *node ) {
+							if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
+								renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
+							}
+						}
+					)
+				);
+				return commandBuffer;
+			}();
 
-            auto presentPass = graph->create< PresentPass >();
-            presentPass->colorAttachment = color;
+            auto master = graph->create< PresentationMaster >();
+            master->colorAttachment = color;
 
             return graph;
         }();
