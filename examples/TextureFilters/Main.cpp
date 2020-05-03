@@ -82,19 +82,25 @@ public:
         );
 
 
-        auto textureBuilder = []( Texture::Filter minFilter, Texture::Filter magFilter ) {
-            // We cannot modify the shared texture
-            // TODO: This is why we need Sampler as first class object
-            auto checkerboard = Texture::CHECKERBOARD_8;
-            auto image = checkerboard->getImage();
-            auto texture = crimild::alloc< Texture >( crimild::retain( image ) );
-            texture->setWrapMode( Texture::WrapMode::CLAMP_TO_BORDER );
-            texture->setMinFilter( minFilter );
-            texture->setMagFilter( magFilter );
+        auto textureBuilder = []( Sampler::Filter minFilter, Sampler::Filter magFilter ) {
+            auto texture = crimild::alloc< Texture >();
+            texture->imageView = [&] {
+                auto imageView = crimild::alloc< ImageView >();
+                imageView->image = Image::CHECKERBOARD_32;
+                return imageView;
+            }();
+            texture->sampler = [&] {
+                auto sampler = crimild::alloc< Sampler >();
+                sampler->setMinFilter( minFilter );
+                sampler->setMagFilter( magFilter );
+                sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                sampler->setMaxLod( texture->imageView->image->getMipLevels() );
+                return sampler;
+            }();
             return texture;
         };
 
-        auto quadBuilder = [&]( const Vector3f &position, Texture::Filter minFilter, Texture::Filter magFilter ) {
+        auto quadBuilder = [&]( const Vector3f &position, Sampler::Filter minFilter, Sampler::Filter magFilter ) {
             auto node = crimild::alloc< Node >();
 
             auto renderable = node->attachComponent< RenderStateComponent >();
@@ -119,39 +125,57 @@ public:
 
         m_scene = [&] {
             auto scene = crimild::alloc< Group >();
-            scene->attachNode( quadBuilder( Vector3f( -1.15f, +1.15f, 0.0 ), Texture::Filter::NEAREST, Texture::Filter::NEAREST ) );
-            scene->attachNode( quadBuilder( Vector3f( +1.15f, +1.15f, 0.0 ), Texture::Filter::NEAREST, Texture::Filter::LINEAR ) );
-            scene->attachNode( quadBuilder( Vector3f( -1.15f, -1.15f, 0.0 ), Texture::Filter::NEAREST_MIPMAP_NEAREST, Texture::Filter::LINEAR ) );
-            scene->attachNode( quadBuilder( Vector3f( +1.15f, -1.15f, 0.0 ), Texture::Filter::LINEAR_MIPMAP_LINEAR, Texture::Filter::LINEAR ) );
+            scene->attachNode( quadBuilder( Vector3f( -1.15f, +1.15f, 0.0 ), Sampler::Filter::NEAREST, Sampler::Filter::NEAREST ) );
+            scene->attachNode( quadBuilder( Vector3f( +1.15f, +1.15f, 0.0 ), Sampler::Filter::NEAREST, Sampler::Filter::LINEAR ) );
+            scene->attachNode( quadBuilder( Vector3f( -1.15f, -1.15f, 0.0 ), Sampler::Filter::NEAREST_MIPMAP_NEAREST, Sampler::Filter::LINEAR ) );
+            scene->attachNode( quadBuilder( Vector3f( +1.15f, -1.15f, 0.0 ), Sampler::Filter::LINEAR_MIPMAP_LINEAR, Sampler::Filter::LINEAR ) );
             scene->attachNode([] {
                 auto camera = crimild::alloc< Camera >();
                 camera->local().setTranslate( 0.0f, 0.0f, 6.0f );
-                camera->local().lookAt( Vector3f::ZERO );
                 Camera::setMainCamera( camera );
                 return camera;
             }());
             return scene;
         }();
 
-        auto commandBuffer = [ this ] {
-            auto commandBuffer = crimild::alloc< CommandBuffer >();
+        m_frameGraph = [&] {
+            auto graph = crimild::alloc< FrameGraph >();
 
-            commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-            commandBuffer->beginRenderPass( nullptr );
+            auto color = [&] {
+                auto attachment = graph->create< Attachment >();
+                attachment->usage = Attachment::Usage::COLOR_ATTACHMENT;
+                attachment->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
+                return attachment;
+            }();
 
-            m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
-                if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-                    renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
-                }
-            }));
+            auto renderPass = graph->create< RenderPass >();
+            renderPass->attachments = { color };
+            renderPass->commands = [&] {
+                auto commands = crimild::alloc< CommandBuffer >();
+                m_scene->perform(
+                    Apply(
+                        [&]( Node *node ) {
+                            if ( auto renderable = node->getComponent< RenderStateComponent > () ) {
+                                renderable->commandRecorder(
+                                    crimild::get_ptr( commands )
+                                );
+                            }
+                        }
+                    )
+                );
+                return commands;
+            }();
 
-            commandBuffer->endRenderPass( nullptr );
-            commandBuffer->end();
+            auto master = graph->create< PresentationMaster >();
+            master->colorAttachment = color;
 
-            return commandBuffer;
+            return graph;
         }();
 
-        setCommandBuffers( { commandBuffer } );
+        if ( m_frameGraph->compile() ) {
+            auto commands = m_frameGraph->recordCommands();
+            setCommandBuffers( { commands } );
+        }
 
         return true;
     }
@@ -172,12 +196,14 @@ public:
         }
 
         m_scene = nullptr;
+        m_frameGraph = nullptr;
 
         GLFWVulkanSystem::stop();
     }
 
 private:
     SharedPointer< Node > m_scene;
+    SharedPointer< FrameGraph > m_frameGraph;
 };
 
 int main( int argc, char **argv )

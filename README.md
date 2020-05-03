@@ -7,6 +7,7 @@ A repository for crimild-based demos and code examples
 + [Building](#Building)
 + [Examples](#Examples)
     + [Basics](#Basics)
+	+ [Textures](#Textures)
     + [Advanced](#Advanced)
 
 ## <a name="Cloning">Cloning</a>
@@ -54,6 +55,20 @@ It's safe to ignore SDL_Mixer2 warnings, if any.
 
 #### [Triangle](examples/Triangle/)
 Basic and explicit example for rendering a single colored triangle using Crimild. This shows the most important concepts and tools in the engine.
+
+### <a name="Textures">Textures</a>
+
+#### [Textures](examples/Textures/)
+Loads an image from disk and create an image view, a sampler and a texture to display it on screen. Shows how to use primitives with texture coordinates as well.
+
+#### [Texture Mipmaps Generation](examples/TextureMipmaps/)
+Automatically generate mipmaps in runtime for a texture.
+
+#### [Texture Filters](examples/TextureFilters/)
+Create textures by using different min/mag filter options in samplers.
+
+#### [Texture Wrap Mode](examples/TextureWrapping/)
+Create textures by using different wrap modes options in samplers.
 
 ### <a name="Advanced">Advanced</a>
 

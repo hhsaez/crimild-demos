@@ -133,14 +133,14 @@ public:
 
 			auto color = [&] {
 				auto attachment = graph->create< Attachment >();
-				attachment->usage = Image::Usage::COLOR_ATTACHMENT;
+				attachment->usage = Attachment::Usage::COLOR_ATTACHMENT;
 				attachment->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
 				return attachment;
 			}();
 
 			auto depth = [&] {
 				auto attachment = graph->create< Attachment >();
-				attachment->usage = Image::Usage::DEPTH_STENCIL_ATTACHMENT;
+				attachment->usage = Attachment::Usage::DEPTH_STENCIL_ATTACHMENT;
 				attachment->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
 				return attachment;
 			}();

@@ -106,7 +106,7 @@ public:
 
             auto color = [&] {
 				auto att = graph->create< Attachment >();
-				att->usage = Image::Usage::COLOR_ATTACHMENT;
+				att->usage = Attachment::Usage::COLOR_ATTACHMENT;
 				att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
 				return att;
 			}();

@@ -81,20 +81,28 @@ public:
             }
         );
 
-
         auto texture = [] {
-            auto texture = crimild::alloc< Texture >(
-        		ImageManager::getInstance()->loadImage(
-        			{
-                    	.filePath = {
-                        	.path = "assets/textures/test.png"
-                    	},
-        			}
-            	)
-        	);
-            texture->setMinFilter( Texture::Filter::NEAREST );
-            texture->setMagFilter( Texture::Filter::NEAREST );
-            return texture;
+            auto texture = crimild::alloc< Texture >();
+			texture->imageView = [&] {
+				auto imageView = crimild::alloc< ImageView >();
+				imageView->image = [&] {
+					return ImageManager::getInstance()->loadImage(
+						{
+							.filePath = {
+								.path = "assets/textures/test.png"
+							},
+						}
+					);
+				}();
+				return imageView;
+        	}();
+			texture->sampler = [&] {
+				auto sampler = crimild::alloc< Sampler >();
+				sampler->setMinFilter( Sampler::Filter::NEAREST );
+				sampler->setMagFilter( Sampler::Filter::NEAREST );
+				return sampler;
+			}();
+			return texture;
         }();
 
         m_scene = [&] {
@@ -129,25 +137,44 @@ public:
             return scene;
         }();
 
-        auto commandBuffer = [ this ] {
-            auto commandBuffer = crimild::alloc< CommandBuffer >();
+		m_frameGraph = [&] {
+			auto graph = crimild::alloc< FrameGraph >();
 
-            commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-            commandBuffer->beginRenderPass( nullptr );
+			auto color = [&] {
+				auto attachment = graph->create< Attachment >();
+				attachment->usage = Attachment::Usage::COLOR_ATTACHMENT;
+				attachment->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
+				return attachment;
+			}();
 
-            m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
-                if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-                    renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
-                }
-            }));
+			auto renderPass = graph->create< RenderPass >();
+            renderPass->attachments = { color };
+			renderPass->commands = [&] {
+				auto commands = crimild::alloc< CommandBuffer >();
+				m_scene->perform(
+					Apply(
+						[&]( Node *node ) {
+							if ( auto renderable = node->getComponent< RenderStateComponent > () ) {
+								renderable->commandRecorder(
+									crimild::get_ptr( commands )
+								);
+							}
+						}
+					)
+				);
+				return commands;
+			}();
 
-            commandBuffer->endRenderPass( nullptr );
-            commandBuffer->end();
+			auto master = graph->create< PresentationMaster >();
+			master->colorAttachment = color;
+			
+			return graph;
+		}();
 
-            return commandBuffer;
-        }();
-
-        setCommandBuffers( { commandBuffer } );
+		if ( m_frameGraph->compile() ) {
+			auto commands = m_frameGraph->recordCommands();
+			setCommandBuffers( { commands } );
+		}
 
         return true;
     }
@@ -168,12 +195,14 @@ public:
         }
 
         m_scene = nullptr;
+        m_frameGraph = nullptr;
 
         GLFWVulkanSystem::stop();
     }
 
 private:
     SharedPointer< Node > m_scene;
+	SharedPointer< FrameGraph > m_frameGraph;
 };
 
 int main( int argc, char **argv )
