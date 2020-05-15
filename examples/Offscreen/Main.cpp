@@ -33,6 +33,31 @@ using namespace crimild;
 using namespace crimild::glfw;
 using namespace crimild::vulkan;
 
+struct Library {
+	SharedPointer< FrameGraph > frameGraph;
+	SharedPointer< PresentationMaster > master;
+
+	struct Scenes {
+		SharedPointer< Group > scene;
+		SharedPointer< Group > offscreen;
+	} scenes;
+	
+	struct Programs {
+		SharedPointer< ShaderProgram > scene;
+		SharedPointer< ShaderProgram > mirror;
+	} programs;
+
+	struct Passes {
+		struct Pass {
+			SharedPointer< RenderPass > renderPass;
+			SharedPointer< Attachment > color;
+		};
+
+		Pass offscreen;
+		Pass scene;
+	} passes;
+};
+
 class ExampleVulkanSystem : public GLFWVulkanSystem {
 public:
     crimild::Bool start( void ) override
@@ -41,9 +66,9 @@ public:
             return false;
         }
 
-		m_frameGraph = crimild::alloc< FrameGraph >();
+		m_library.frameGraph = crimild::alloc< FrameGraph >();
 
-		auto sceneProgram = [] {
+		m_library.programs.scene = [] {
 			auto createShader = []( Shader::Stage stage, std::string path ) {
 				return crimild::alloc< Shader >(
 					stage,
@@ -90,7 +115,7 @@ public:
 			return program;
 		}();
 
-        auto mirrorProgram = [] {
+        m_library.programs.mirror = [] {
             auto createShader = []( Shader::Stage stage, std::string path ) {
                 return crimild::alloc< Shader >(
                     stage,
@@ -140,7 +165,7 @@ public:
 			auto renderable = node->attachComponent< RenderStateComponent >();
 			renderable->pipeline = [&] {
 				auto pipeline = crimild::alloc< Pipeline >();
-                pipeline->program = sceneProgram;
+                pipeline->program = m_library.programs.scene;
 				pipeline->cullFaceState = CullFaceState::DISABLED;
 				return pipeline;
 			}();
@@ -221,7 +246,7 @@ public:
 			auto renderable = node->attachComponent< RenderStateComponent >();
 			renderable->pipeline = [&] {
 				auto pipeline = crimild::alloc< Pipeline >();
-                pipeline->program = mirrorProgram;
+                pipeline->program = m_library.programs.mirror;
 				pipeline->cullFaceState = CullFaceState::DISABLED;
 				return pipeline;
 			}();
@@ -287,7 +312,7 @@ public:
             return camera;
         };
 
-		m_offscreenScene = [&] {
+		m_library.scenes.offscreen = [&] {
 			auto group = crimild::alloc< Group >();
 
             auto camera = createCamera();
@@ -296,21 +321,21 @@ public:
 			return group;
 		}();
 
-		auto offscreenImageView = [&] {
-			auto color = [&] {
-				auto att = m_frameGraph->create< Attachment >();
-				att->usage = Attachment::Usage::COLOR_ATTACHMENT;
-				att->format = Format::R8G8B8A8_UNORM;
-				att->imageView = m_frameGraph->create< ImageView >();
-                att->imageView->image = m_frameGraph->create< Image >();
-				return att;
-			}();
+		m_library.passes.offscreen.color = [&] {
+			auto att = crimild::alloc< Attachment >();
+			att->usage = Attachment::Usage::COLOR_ATTACHMENT;
+			att->format = Format::R8G8B8A8_UNORM;
+			att->imageView = crimild::alloc< ImageView >();
+			att->imageView->image = crimild::alloc< Image >();
+			return att;
+		}();
 			
-			auto renderPass = m_frameGraph->create< RenderPass >();
-			renderPass->attachments = { color };
+		m_library.passes.offscreen.renderPass = [&] {
+			auto renderPass = crimild::alloc< RenderPass >();
+			renderPass->attachments = { m_library.passes.offscreen.color };
 			renderPass->commands = [&] {
 				auto commandBuffer = crimild::alloc< CommandBuffer >();
-				m_offscreenScene->perform(
+				m_library.scenes.offscreen->perform(
 					Apply(
 						[ commandBuffer ]( Node *node ) {
 							if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
@@ -324,23 +349,22 @@ public:
 //			renderPass->clearValue = {
 //				.color = RGBAColorf( 1.0, 0.0, 0.0, 0.0f ),
 //			};
-            // TODO: fixme
+			// TODO: fixme
 //            renderPass->viewport = {
 //                .scalingMode = ScalingMode::FIXED,
 //                .dimensions = Rectf( 0.0f, 0.0f, 512.0f, 512.0f ),
 //            };
-
-			return color->imageView;
+			return renderPass;
 		}();
-
-		m_scene = [&] {
+			
+		m_library.scenes.scene = [&] {
 			auto group = crimild::alloc< Group >();
-
-            auto camera = createCamera();
+			
+			auto camera = createCamera();
 			
             group->attachNode(
                 [&] {
-                    auto node = createPlane( crimild::get_ptr( camera ), offscreenImageView );
+                    auto node = createPlane( crimild::get_ptr( camera ), m_library.passes.offscreen.color->imageView );
                     node->local().setScale( 10.0f );
                     return node;
                 }()
@@ -355,19 +379,19 @@ public:
 			return group;
 		}();
 
-        {
-            auto color = [&] {
-                auto att = m_frameGraph->create< Attachment >();
-                att->usage = Attachment::Usage::COLOR_ATTACHMENT;
-                att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
-                return att;
-            }();
+		m_library.passes.scene.color = [&] {
+			auto att = crimild::alloc< Attachment >();
+			att->usage = Attachment::Usage::COLOR_ATTACHMENT;
+			att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
+			return att;
+		}();
 
-            auto renderPass = m_frameGraph->create< RenderPass >();
-            renderPass->attachments = { color };
+		m_library.passes.scene.renderPass = [&] {
+			auto renderPass = crimild::alloc< RenderPass >();
+            renderPass->attachments = { m_library.passes.scene.color };
             renderPass->commands = [&] {
                 auto commandBuffer = crimild::alloc< CommandBuffer >();
-                m_scene->perform(
+                m_library.scenes.scene->perform(
                     Apply(
                         [ commandBuffer ]( Node *node ) {
                             if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
@@ -381,13 +405,17 @@ public:
 //            renderPass->clearValue = {
 //                .color = RGBAColorf( 0.5f, 0.5f, 0.5f, 0.0f ),
 //            };
+			return renderPass;
+		}();
 
-            auto master = m_frameGraph->create< PresentationMaster >();
-            master->colorAttachment = color;
-        }
+		m_library.master = [&] {
+            auto master = crimild::alloc< PresentationMaster >();
+            master->colorAttachment = m_library.passes.scene.color;
+			return master;
+        }();
 
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
+        if ( m_library.frameGraph->compile() ) {
+            auto commands = m_library.frameGraph->recordCommands();
             setCommandBuffers( { commands } );
         }
 
@@ -397,10 +425,14 @@ public:
     void update( void ) override
     {
         auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
-        m_offscreenScene->perform( UpdateComponents( clock ) );
-        m_offscreenScene->perform( UpdateWorldState() );
+
+		auto updateScene = [&]( auto &scene ) {
+			scene->perform( UpdateComponents( clock ) );
+			scene->perform( UpdateWorldState() );
+		};
+
+		updateScene( m_library.scenes.scene );
+		updateScene( m_library.scenes.offscreen );
 
         GLFWVulkanSystem::update();
     }
@@ -411,17 +443,11 @@ public:
             renderDevice->waitIdle();
         }
 
-        m_scene = nullptr;
-        m_offscreenScene = nullptr;
-        m_frameGraph = nullptr;
-
         GLFWVulkanSystem::stop();
     }
 
 private:
-    SharedPointer< Node > m_scene;
-    SharedPointer< Node > m_offscreenScene;
-    SharedPointer< FrameGraph > m_frameGraph;
+	Library m_library;
 };
 
 int main( int argc, char **argv )
