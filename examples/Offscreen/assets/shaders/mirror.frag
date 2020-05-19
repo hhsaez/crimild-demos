@@ -5,7 +5,7 @@ layout ( location = 0 ) in vec3 inColor;
 layout ( location = 1 ) in vec2 inTextureCoord;
 layout ( location = 2 ) in vec4 inPosition;
 
-layout ( binding = 1 ) uniform sampler2D uSampler;
+layout ( set = 1, binding = 1 ) uniform sampler2D uSampler;
 
 layout ( location = 0 ) out vec4 outColor;
 
