@@ -51,12 +51,12 @@ public:
 			.view = [&] {
 				if ( camera != nullptr ) {
 					// if a camera has been specified, we use that one to get the view matrix
-					return camera->getViewMatrix() * reflect;
+					return reflect * camera->getViewMatrix();
 				}
 				
 				if ( auto camera = Camera::getMainCamera() ) {
 					// if no camera has been set, let's use whatever's the main one
-					return camera->getViewMatrix() * reflect;
+					return reflect * camera->getViewMatrix();
 				}
 				
 				// no camera
@@ -484,7 +484,6 @@ public:
                                 commandBuffer->bindIndexBuffer( crimild::get_ptr( renderState->ibo ) );
                                 commandBuffer->bindDescriptorSet( crimild::get_ptr( m_library.passes.offscreen.descriptorSet ) );
                                 commandBuffer->bindDescriptorSet( crimild::get_ptr( renderState->descriptorSet ) );
-//								renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
                                 commandBuffer->drawIndexed(
                                     renderState->ibo->getCount()
                                 );
@@ -569,7 +568,6 @@ public:
                     Apply(
                         [&]( Node *node ) {
                             if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-//                                renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
                                 commandBuffer->bindGraphicsPipeline( crimild::get_ptr( renderState->pipeline ) );
                                 commandBuffer->bindVertexBuffer( crimild::get_ptr( renderState->vbo ) );
                                 commandBuffer->bindIndexBuffer( crimild::get_ptr( renderState->ibo ) );
