@@ -107,12 +107,13 @@ struct Library {
         };
 
 		Scene scene;
-		Scene offscreen;
+        Scene screen;
 	} scenes;
 	
 	struct Programs {
 		SharedPointer< ShaderProgram > scene;
 		SharedPointer< ShaderProgram > mirror;
+        SharedPointer< ShaderProgram > screen;
 	} programs;
 
 	struct Passes {
@@ -125,7 +126,14 @@ struct Library {
 
 		Pass offscreen;
 		Pass scene;
+        Pass screen;
 	} passes;
+};
+
+class Reflective : public NodeComponent {
+    CRIMILD_IMPLEMENT_RTTI( Reflective )
+public:
+    ~Reflective( void ) = default;
 };
 
 class ExampleVulkanSystem : public GLFWVulkanSystem {
@@ -248,7 +256,9 @@ public:
             return program;
         }();
 
- 		auto createTriangle = [&] {
+        m_library.programs.screen = m_library.programs.scene;
+
+        auto createTriangle = [&] {
 			auto node = crimild::alloc< Node >();
 
 			auto renderable = node->attachComponent< RenderStateComponent >();
@@ -411,6 +421,8 @@ public:
                 return descriptorSet;
             }();
 
+            node->attachComponent< Reflective >();
+
 			return node;
 		};
 
@@ -421,18 +433,6 @@ public:
             return camera;
         };
 
-		m_library.scenes.offscreen = [&] {
-			auto group = crimild::alloc< Group >();
-
-            auto camera = createCamera();
-			group->attachNode( camera );
-            group->attachNode( createTriangle() );
-			return Library::Scenes::Scene {
-                .root = group,
-                .camera = camera,
-            };
-		}();
-
 		m_library.passes.offscreen.color = [&] {
 			auto att = crimild::alloc< Attachment >();
 			att->usage = Attachment::Usage::COLOR_ATTACHMENT;
@@ -442,10 +442,35 @@ public:
 			return att;
 		}();
 
+        m_library.scenes.scene = [&] {
+            auto group = crimild::alloc< Group >();
+
+            auto camera = createCamera();
+
+            group->attachNode(
+                [&] {
+                    auto node = createPlane( m_library.passes.offscreen.color->imageView );
+                    node->local().setScale( 10.0f );
+                    return node;
+                }()
+            );
+            group->attachNode(
+                [&] {
+                    auto node = createTriangle();
+                    return node;
+                }()
+            );
+            group->attachNode( camera );
+            return Library::Scenes::Scene {
+                .root = group,
+                .camera = camera,
+            };
+        }();
+
         m_library.passes.offscreen.uniforms = {
             [&] {
                 auto ubo = crimild::alloc< RenderPassUniformBuffer >();
-                ubo->camera = crimild::get_ptr( m_library.scenes.offscreen.camera );
+                ubo->camera = crimild::get_ptr( m_library.scenes.scene.camera );
                 ubo->reflect = Matrix4f(
                     1.0f, 0.0f, 0.0f, 0.0f,
                     0.0f, -1.0f, 0.0f, 0.0f,
@@ -475,9 +500,12 @@ public:
 			renderPass->attachments = { m_library.passes.offscreen.color };
 			renderPass->commands = [&] {
 				auto commandBuffer = crimild::alloc< CommandBuffer >();
-                m_library.scenes.offscreen.root->perform(
+                m_library.scenes.scene.root->perform(
 					Apply(
 						[&]( Node *node ) {
+                    		if ( node->getComponent< Reflective >() != nullptr ) {
+                        		return;
+                    		}
 							if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
                                 commandBuffer->bindGraphicsPipeline( crimild::get_ptr( renderState->pipeline ) );
                                 commandBuffer->bindVertexBuffer( crimild::get_ptr( renderState->vbo ) );
@@ -504,31 +532,6 @@ public:
 			return renderPass;
 		}();
 			
-		m_library.scenes.scene = [&] {
-			auto group = crimild::alloc< Group >();
-			
-			auto camera = createCamera();
-			
-            group->attachNode(
-                [&] {
-                    auto node = createPlane( m_library.passes.offscreen.color->imageView );
-                    node->local().setScale( 10.0f );
-                    return node;
-                }()
-            );
-			group->attachNode(
-				[&] {
-                    auto node = createTriangle();
-					return node;
-				}()
-			);
-            group->attachNode( camera );
-            return Library::Scenes::Scene {
-                .root = group,
-                .camera = camera,
-            };
-		}();
-
         m_library.passes.scene.uniforms = {
             [&] {
                 auto ubo = crimild::alloc< RenderPassUniformBuffer >();
@@ -555,7 +558,9 @@ public:
 		m_library.passes.scene.color = [&] {
 			auto att = crimild::alloc< Attachment >();
 			att->usage = Attachment::Usage::COLOR_ATTACHMENT;
-			att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
+            att->format = Format::R8G8B8A8_UNORM;
+            att->imageView = crimild::alloc< ImageView >();
+            att->imageView->image = crimild::alloc< Image >();
 			return att;
 		}();
 
@@ -588,9 +593,157 @@ public:
 			return renderPass;
 		}();
 
+        m_library.scenes.screen = [&] {
+            auto group = crimild::alloc< Group >();
+
+            group->attachNode(
+            	[&] {
+                    auto node = crimild::alloc< Node >();
+                    auto renderable = node->attachComponent< RenderStateComponent >();
+                    renderable->pipeline = [&] {
+                        auto pipeline = crimild::alloc< Pipeline >();
+                        pipeline->program = m_library.programs.scene;
+                        pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
+                        pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
+                        pipeline->bindingDescription = pipeline->program->bindingDescription;
+                        pipeline->cullFaceState = CullFaceState::DISABLED;
+                        return pipeline;
+                    }();
+                    renderable->vbo = crimild::alloc< VertexP3C3TC2Buffer >(
+                        containers::Array< VertexP3C3TC2 > {
+                            {
+                                .position = Vector3f( -1.0f, 1.0f, 0.0f ),
+                                .color = RGBColorf::ONE,
+                                .texCoord = Vector2f( 0.0f, 0.0f ),
+                            },
+                            {
+                                .position = Vector3f( -1.0f, -1.0f, 0.0f ),
+                                .color = RGBColorf::ONE,
+                                .texCoord = Vector2f( 0.0f, 1.0f ),
+                            },
+                            {
+                                .position = Vector3f( 1.0f, -1.0f, 0.0f ),
+                                .color = RGBColorf::ONE,
+                                .texCoord = Vector2f( 1.0f, 1.0f ),
+                            },
+                            {
+                                .position = Vector3f( 1.0f, 1.0f, 0.0f ),
+                                .color = RGBColorf::ONE,
+                                .texCoord = Vector2f( 1.0f, 0.0f ),
+                            },
+                        }
+                    );
+                    renderable->ibo = crimild::alloc< IndexUInt32Buffer >(
+                        containers::Array< crimild::UInt32 > {
+                            0, 1, 2,
+                            0, 2, 3,
+                        }
+                    );
+                    renderable->uniforms = {
+                        [&] {
+                            auto ubo = crimild::alloc< ModelUniformBuffer >();
+                            ubo->node = crimild::get_ptr( node );
+                            return ubo;
+                        }(),
+                    };
+                    renderable->textures = {
+                        [&] {
+                            auto texture = crimild::alloc< Texture >();
+                            texture->imageView = m_library.passes.scene.color->imageView;
+                            texture->sampler = [] {
+                                auto sampler = crimild::alloc< Sampler >();
+                                sampler->setMinFilter( Sampler::Filter::NEAREST );
+                                sampler->setMagFilter( Sampler::Filter::NEAREST );
+                                return sampler;
+                            }();
+                            return texture;
+                        }(),
+                    };
+                    renderable->descriptorSet = [&] {
+                        auto descriptorSet = crimild::alloc< DescriptorSet >();
+                        descriptorSet->descriptorSetLayout = m_library.programs.scene->descriptorSetLayouts[ 1 ];
+                        descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
+                        descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
+                        descriptorSet->writes = {
+                            {
+                                .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                .buffer = crimild::get_ptr( renderable->uniforms[ 0 ] ),
+                            },
+                            {
+                                .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                                .texture = crimild::get_ptr( renderable->textures[ 0 ] ),
+                            },
+                        };
+                        return descriptorSet;
+                    }();
+
+                    node->attachComponent< Reflective >();
+
+                    return node;
+                }()
+          	);
+
+            return Library::Scenes::Scene {
+                .root = group,
+            };
+        }();
+
+        m_library.passes.screen.uniforms = {
+            [&] {
+                return crimild::alloc< RenderPassUniformBuffer >();
+            }()
+        };
+
+        m_library.passes.screen.descriptorSet = [&] {
+            auto descriptorSet = crimild::alloc< DescriptorSet >();
+            descriptorSet->descriptorSetLayout = m_library.programs.screen->descriptorSetLayouts[ 0 ];
+            descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
+            descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
+            descriptorSet->writes = {
+                {
+                    .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                    .buffer = crimild::get_ptr( m_library.passes.screen.uniforms[ 0 ] ),
+                },
+            };
+            return descriptorSet;
+        }();
+
+        m_library.passes.screen.color = [&] {
+            auto att = crimild::alloc< Attachment >();
+            att->usage = Attachment::Usage::COLOR_ATTACHMENT;
+            att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
+            return att;
+        }();
+
+        m_library.passes.screen.renderPass = [&] {
+            auto renderPass = crimild::alloc< RenderPass >();
+            renderPass->attachments = { m_library.passes.screen.color };
+            renderPass->commands = [&] {
+                auto commandBuffer = crimild::alloc< CommandBuffer >();
+                m_library.scenes.screen.root->perform(
+                    Apply(
+                        [&]( Node *node ) {
+                            if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
+                                commandBuffer->bindGraphicsPipeline( crimild::get_ptr( renderState->pipeline ) );
+                                commandBuffer->bindVertexBuffer( crimild::get_ptr( renderState->vbo ) );
+                                commandBuffer->bindIndexBuffer( crimild::get_ptr( renderState->ibo ) );
+                                commandBuffer->bindDescriptorSet( crimild::get_ptr( m_library.passes.screen.descriptorSet ) );
+                                commandBuffer->bindDescriptorSet( crimild::get_ptr( renderState->descriptorSet ) );
+                                commandBuffer->drawIndexed(
+                                    renderState->ibo->getCount()
+                                );
+                            }
+                        }
+                    )
+                );
+                return commandBuffer;
+            }();
+            return renderPass;
+        }();
+
 		m_library.master = [&] {
             auto master = crimild::alloc< PresentationMaster >();
-            master->colorAttachment = m_library.passes.scene.color;
+            master->colorAttachment = m_library.passes.screen.color;
 			return master;
         }();
 
@@ -612,7 +765,7 @@ public:
 		};
 
         updateScene( m_library.scenes.scene.root );
-        updateScene( m_library.scenes.offscreen.root );
+        updateScene( m_library.scenes.screen.root );
 
         GLFWVulkanSystem::update();
     }
