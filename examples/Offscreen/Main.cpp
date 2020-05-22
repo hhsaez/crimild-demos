@@ -263,12 +263,15 @@ public:
 
 			auto renderable = node->attachComponent< RenderStateComponent >();
 			renderable->pipeline = [&] {
+#pragma mark triangle pipeline
 				auto pipeline = crimild::alloc< Pipeline >();
                 pipeline->program = m_library.programs.scene;
              	pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
                 pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
                 pipeline->bindingDescription = pipeline->program->bindingDescription;
 				pipeline->cullFaceState = CullFaceState::DISABLED;
+                pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
+                pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
 				return pipeline;
 			}();
 			renderable->vbo = crimild::alloc< VertexP3C3TC2Buffer >(
@@ -345,12 +348,15 @@ public:
 
 			auto renderable = node->attachComponent< RenderStateComponent >();
 			renderable->pipeline = [&] {
+#pragma mark plane pipieline
 				auto pipeline = crimild::alloc< Pipeline >();
                 pipeline->program = m_library.programs.mirror;
              	pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
                 pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
                 pipeline->bindingDescription = pipeline->program->bindingDescription;
 				pipeline->cullFaceState = CullFaceState::DISABLED;
+                pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
+                pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
 				return pipeline;
 			}();
 			renderable->vbo = crimild::alloc< VertexP3C3TC2Buffer >(
@@ -450,7 +456,8 @@ public:
             group->attachNode(
                 [&] {
                     auto node = createPlane( m_library.passes.offscreen.color->imageView );
-                    node->local().setScale( 10.0f );
+#pragma mark QUAD_SIZE
+                node->local().setScale( 10.0f );
                     return node;
                 }()
             );
@@ -500,6 +507,9 @@ public:
 			renderPass->attachments = { m_library.passes.offscreen.color };
 			renderPass->commands = [&] {
 				auto commandBuffer = crimild::alloc< CommandBuffer >();
+                auto viewport = ViewportDimensions { .scalingMode = ScalingMode::RELATIVE };
+                commandBuffer->setViewport( viewport );
+                commandBuffer->setScissor( viewport );
                 m_library.scenes.scene.root->perform(
 					Apply(
 						[&]( Node *node ) {
@@ -521,14 +531,12 @@ public:
 				);
 				return commandBuffer;
 			}();
-//			renderPass->clearValue = {
-//				.color = RGBAColorf( 1.0, 0.0, 0.0, 0.0f ),
-//			};
-			// TODO: fixme
-//            renderPass->viewport = {
-//                .scalingMode = ScalingMode::FIXED,
-//                .dimensions = Rectf( 0.0f, 0.0f, 512.0f, 512.0f ),
-//            };
+#pragma mark - offscreen viewport
+            renderPass->extent = {
+                .scalingMode = ScalingMode::FIXED,
+                .width = 512,
+                .height = 512,
+            };
 			return renderPass;
 		}();
 			
@@ -564,11 +572,15 @@ public:
 			return att;
 		}();
 
+#pragma mark - scene renderpass
 		m_library.passes.scene.renderPass = [&] {
 			auto renderPass = crimild::alloc< RenderPass >();
             renderPass->attachments = { m_library.passes.scene.color };
             renderPass->commands = [&] {
                 auto commandBuffer = crimild::alloc< CommandBuffer >();
+                auto viewport = ViewportDimensions { .scalingMode = ScalingMode::RELATIVE };
+                commandBuffer->setViewport( viewport );
+                commandBuffer->setScissor( viewport );
                 m_library.scenes.scene.root->perform(
                     Apply(
                         [&]( Node *node ) {
@@ -601,6 +613,7 @@ public:
                     auto node = crimild::alloc< Node >();
                     auto renderable = node->attachComponent< RenderStateComponent >();
                     renderable->pipeline = [&] {
+#pragma mark - screen pipeline
                         auto pipeline = crimild::alloc< Pipeline >();
                         pipeline->program = m_library.programs.scene;
                         pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
@@ -715,6 +728,7 @@ public:
             return att;
         }();
 
+#pragma mark - screen render pass
         m_library.passes.screen.renderPass = [&] {
             auto renderPass = crimild::alloc< RenderPass >();
             renderPass->attachments = { m_library.passes.screen.color };
