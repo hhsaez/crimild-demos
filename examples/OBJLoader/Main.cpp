@@ -33,6 +33,78 @@
 using namespace crimild;
 using namespace crimild::glfw;
 
+struct RenderPassUniform {
+    Matrix4f view;
+    Matrix4f proj;
+};
+
+class RenderPassUniformBuffer : public UniformBufferImpl< RenderPassUniform > {
+public:
+    ~RenderPassUniformBuffer( void ) = default;
+
+    Camera *camera = nullptr;
+
+    void updateIfNeeded( void ) noexcept override
+    {
+        setData({
+            .view = [&] {
+                if ( camera != nullptr ) {
+                    // if a camera has been specified, we use that one to get the view matrix
+                    return camera->getViewMatrix();
+                }
+
+                if ( auto camera = Camera::getMainCamera() ) {
+                    // if no camera has been set, let's use whatever's the main one
+                    return camera->getViewMatrix();
+                }
+
+                // no camera
+                return Matrix4f::IDENTITY;
+            }(),
+            .proj = [&] {
+                auto proj = Matrix4f::IDENTITY;
+                if ( camera != nullptr ) {
+                    proj = camera->getProjectionMatrix();
+                }
+                else if ( auto camera = Camera::getMainCamera() ) {
+                    proj = camera->getProjectionMatrix();
+                }
+                return proj;
+            }(),
+        });
+    }
+};
+
+struct Library {
+    SharedPointer< FrameGraph > frameGraph;
+    SharedPointer< PresentationMaster > master;
+
+    struct Scenes {
+        struct Scene {
+            SharedPointer< Group > root;
+            SharedPointer< Camera > camera;
+        };
+
+        Scene scene;
+    } scenes;
+
+    struct Programs {
+        SharedPointer< ShaderProgram > scene;
+    } programs;
+
+    struct Passes {
+        struct Pass {
+            SharedPointer< RenderPass > renderPass;
+            SharedPointer< Attachment > color;
+            SharedPointer< Attachment > depth;
+            SharedPointer< DescriptorSet > descriptorSet;
+            containers::Array< SharedPointer< UniformBuffer >> uniforms;
+        };
+
+        Pass scene;
+    } passes;
+};
+
 class ExampleVulkanSystem : public GLFWVulkanSystem {
 public:
     crimild::Bool start( void ) override
@@ -41,15 +113,82 @@ public:
             return false;
         }
 
-        m_scene = [&] {
+        m_library.frameGraph = crimild::alloc< FrameGraph >();
+
+        m_library.programs.scene = [] {
+            auto createShader = []( Shader::Stage stage, std::string path ) {
+                return crimild::alloc< Shader >(
+                    stage,
+                    FileSystem::getInstance().readFile(
+                        FilePath {
+                            .path = path,
+                        }.getAbsolutePath()
+                    )
+                );
+            };
+
+            auto program = crimild::alloc< ShaderProgram >(
+                containers::Array< SharedPointer< Shader >> {
+                    createShader(
+                        Shader::Stage::VERTEX,
+                        "assets/shaders/scene.vert.spv"
+                    ),
+                    createShader(
+                        Shader::Stage::FRAGMENT,
+                        "assets/shaders/scene.frag.spv"
+                    ),
+                }
+            );
+            program->attributeDescriptions = VertexP3N3TC2::getAttributeDescriptions( 0 );
+            program->bindingDescription = VertexP3N3TC2::getBindingDescription( 0 );
+            program->descriptorSetLayouts = {
+                [] {
+                    auto layout = crimild::alloc< DescriptorSetLayout >();
+                    layout->bindings = {
+                        {
+                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                            .stage = Shader::Stage::VERTEX,
+                        },
+                    };
+                    return layout;
+                }(),
+                [] {
+                    auto layout = crimild::alloc< DescriptorSetLayout >();
+                    layout->bindings = {
+                        {
+                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                            .stage = Shader::Stage::VERTEX,
+                        },
+                        {
+                            .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                            .stage = Shader::Stage::FRAGMENT,
+                        },
+                    };
+                    return layout;
+                }(),
+            };
+            return program;
+        }();
+
+        m_library.scenes.scene.root = [&] {
             auto scene = crimild::alloc< Group >();
 
-            scene->attachNode( [] {
+            scene->attachNode( [&] {
                 auto path = FilePath {
                     .path = "assets/models/bunny/bunny.obj",
                 };
                 auto group = crimild::alloc< Group >();
                 OBJLoader loader( path.getAbsolutePath() );
+                loader.pipeline = [&] {
+                    auto pipeline = crimild::alloc< Pipeline >();
+                    pipeline->program = m_library.programs.scene;
+                    pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
+                    pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
+                    pipeline->bindingDescription = pipeline->program->bindingDescription;
+                    pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
+                    pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
+                    return pipeline;
+                }();
                 if ( auto model = loader.load() ) {
                     group->attachNode( model );
                 }
@@ -68,25 +207,85 @@ public:
             return scene;
         }();
 
-        auto commandBuffer = [ this ] {
-            auto commandBuffer = crimild::alloc< CommandBuffer >();
+        m_library.passes.scene.uniforms = {
+            [&] {
+                auto ubo = crimild::alloc< RenderPassUniformBuffer >();
+                ubo->camera = crimild::get_ptr( m_library.scenes.scene.camera );
+                return ubo;
+            }()
+        };
 
-            commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-            commandBuffer->beginRenderPass( nullptr );
-
-            m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
-                if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-                    renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
-                }
-            }));
-
-            commandBuffer->endRenderPass( nullptr );
-            commandBuffer->end();
-
-            return commandBuffer;
+        m_library.passes.scene.descriptorSet = [&] {
+            auto descriptorSet = crimild::alloc< DescriptorSet >();
+            descriptorSet->descriptorSetLayout = m_library.programs.scene->descriptorSetLayouts[ 0 ];
+            descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
+            descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
+            descriptorSet->writes = {
+                {
+                    .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                    .buffer = crimild::get_ptr( m_library.passes.scene.uniforms[ 0 ] ),
+                },
+            };
+            return descriptorSet;
         }();
 
-        setCommandBuffers( { commandBuffer } );
+        m_library.passes.scene.color = [&] {
+            auto att = crimild::alloc< Attachment >();
+            att->usage = Attachment::Usage::COLOR_ATTACHMENT;
+            att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
+            return att;
+        }();
+
+        m_library.passes.scene.depth = [&] {
+            auto att = crimild::alloc< Attachment >();
+            att->usage = Attachment::Usage::DEPTH_STENCIL_ATTACHMENT;
+            att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+            return att;
+        }();
+
+#pragma mark - scene renderpass
+        m_library.passes.scene.renderPass = [&] {
+            auto renderPass = crimild::alloc< RenderPass >();
+            renderPass->attachments = {
+                m_library.passes.scene.color,
+                m_library.passes.scene.depth,
+            };
+            renderPass->commands = [&] {
+                auto commandBuffer = crimild::alloc< CommandBuffer >();
+                auto viewport = ViewportDimensions { .scalingMode = ScalingMode::RELATIVE };
+                commandBuffer->setViewport( viewport );
+                commandBuffer->setScissor( viewport );
+                m_library.scenes.scene.root->perform(
+                    Apply(
+                        [&]( Node *node ) {
+                            if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
+                                commandBuffer->bindGraphicsPipeline( crimild::get_ptr( renderState->pipeline ) );
+                                commandBuffer->bindVertexBuffer( crimild::get_ptr( renderState->vbo ) );
+                                commandBuffer->bindIndexBuffer( crimild::get_ptr( renderState->ibo ) );
+                                commandBuffer->bindDescriptorSet( crimild::get_ptr( m_library.passes.scene.descriptorSet ) );
+                                commandBuffer->bindDescriptorSet( crimild::get_ptr( renderState->descriptorSet ) );
+                                commandBuffer->drawIndexed(
+                                    renderState->ibo->getCount()
+                                );
+                            }
+                        }
+                    )
+                );
+                return commandBuffer;
+            }();
+            return renderPass;
+        }();
+
+        m_library.master = [&] {
+            auto master = crimild::alloc< PresentationMaster >();
+            master->colorAttachment = m_library.passes.scene.color;
+            return master;
+        }();
+
+        if ( m_library.frameGraph->compile() ) {
+            auto commands = m_library.frameGraph->recordCommands();
+            setCommandBuffers( { commands } );
+        }
 
         return true;
     }
@@ -94,8 +293,13 @@ public:
     void update( void ) override
     {
         auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
+
+        auto updateScene = [&]( auto &scene ) {
+            scene->perform( UpdateComponents( clock ) );
+            scene->perform( UpdateWorldState() );
+        };
+
+        updateScene( m_library.scenes.scene.root );
 
         GLFWVulkanSystem::update();
     }
@@ -106,13 +310,11 @@ public:
             renderDevice->waitIdle();
         }
 
-        m_scene = nullptr;
-
         GLFWVulkanSystem::stop();
     }
 
 private:
-    SharedPointer< Node > m_scene;
+    Library m_library;
 };
 
 int main( int argc, char **argv )

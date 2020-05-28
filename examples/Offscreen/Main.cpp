@@ -76,26 +76,6 @@ public:
 	}
 };
 
-struct ModelUniform {
-	Matrix4f model;
-};
-
-class ModelUniformBuffer : public UniformBufferImpl< ModelUniform > {
-public:
-	~ModelUniformBuffer( void ) = default;
-
-	Node *node = nullptr;
-
-	void updateIfNeeded( void ) noexcept override
-	{
-		setData({
-			.model = [&] {
-				return node != nullptr ? node->getWorld().computeModelMatrix() : Matrix4f::IDENTITY;
-			}(),
-		});
-	}
-};
-
 struct Library {
 	SharedPointer< FrameGraph > frameGraph;
 	SharedPointer< PresentationMaster > master;
@@ -120,6 +100,7 @@ struct Library {
 		struct Pass {
 			SharedPointer< RenderPass > renderPass;
 			SharedPointer< Attachment > color;
+            SharedPointer< Attachment > depth;
             SharedPointer< DescriptorSet > descriptorSet;
             containers::Array< SharedPointer< UniformBuffer >> uniforms;
 		};
@@ -263,7 +244,6 @@ public:
 
 			auto renderable = node->attachComponent< RenderStateComponent >();
 			renderable->pipeline = [&] {
-#pragma mark triangle pipeline
 				auto pipeline = crimild::alloc< Pipeline >();
                 pipeline->program = m_library.programs.scene;
              	pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
@@ -348,7 +328,6 @@ public:
 
 			auto renderable = node->attachComponent< RenderStateComponent >();
 			renderable->pipeline = [&] {
-#pragma mark plane pipieline
 				auto pipeline = crimild::alloc< Pipeline >();
                 pipeline->program = m_library.programs.mirror;
              	pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
@@ -455,15 +434,14 @@ public:
 
             group->attachNode(
                 [&] {
-                    auto node = createPlane( m_library.passes.offscreen.color->imageView );
-#pragma mark QUAD_SIZE
-                node->local().setScale( 10.0f );
+                    auto node = createTriangle();
                     return node;
                 }()
             );
             group->attachNode(
                 [&] {
-                    auto node = createTriangle();
+                    auto node = createPlane( m_library.passes.offscreen.color->imageView );
+                node->local().setScale( 10.0f );
                     return node;
                 }()
             );
@@ -502,9 +480,19 @@ public:
             return descriptorSet;
         }();
 			
+        m_library.passes.offscreen.depth = [&] {
+            auto att = crimild::alloc< Attachment >();
+            att->usage = Attachment::Usage::DEPTH_STENCIL_ATTACHMENT;
+            att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+            return att;
+        }();
+
 		m_library.passes.offscreen.renderPass = [&] {
 			auto renderPass = crimild::alloc< RenderPass >();
-			renderPass->attachments = { m_library.passes.offscreen.color };
+			renderPass->attachments = {
+                m_library.passes.offscreen.color,
+				m_library.passes.offscreen.depth,
+            };
 			renderPass->commands = [&] {
 				auto commandBuffer = crimild::alloc< CommandBuffer >();
                 auto viewport = ViewportDimensions { .scalingMode = ScalingMode::RELATIVE };
@@ -531,7 +519,6 @@ public:
 				);
 				return commandBuffer;
 			}();
-#pragma mark - offscreen viewport
             renderPass->extent = {
                 .scalingMode = ScalingMode::FIXED,
                 .width = 512,
@@ -572,10 +559,20 @@ public:
 			return att;
 		}();
 
+        m_library.passes.scene.depth = [&] {
+            auto att = crimild::alloc< Attachment >();
+            att->usage = Attachment::Usage::DEPTH_STENCIL_ATTACHMENT;
+            att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+            return att;
+        }();
+
 #pragma mark - scene renderpass
 		m_library.passes.scene.renderPass = [&] {
 			auto renderPass = crimild::alloc< RenderPass >();
-            renderPass->attachments = { m_library.passes.scene.color };
+            renderPass->attachments = {
+                m_library.passes.scene.color,
+                m_library.passes.scene.depth,
+            };
             renderPass->commands = [&] {
                 auto commandBuffer = crimild::alloc< CommandBuffer >();
                 auto viewport = ViewportDimensions { .scalingMode = ScalingMode::RELATIVE };
@@ -599,9 +596,6 @@ public:
                 );
                 return commandBuffer;
             }();
-            renderPass->clearValue = {
-                .color = RGBAColorf( 0.5f, 0.5f, 0.5f, 0.0f ),
-            };
 			return renderPass;
 		}();
 
