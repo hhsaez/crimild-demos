@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, Hernan Saez
+ * Copyright (c) 2002 - present, H. Hernan Saez
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
@@ -9,14 +9,14 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the <organization> nor the
+ *     * Neither the name of the copyright holder nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
- * 
+ *																							
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDER BE LIABLE FOR ANY
  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
  * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -26,216 +26,889 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_SDL.hpp>
-
-#include <fstream>
-#include <string>
-#include <vector>
+#include <Crimild_Vulkan.hpp>
+#include <Crimild_GLFW.hpp>
+#include <Crimild_STB.hpp>
 
 using namespace crimild;
-using namespace crimild::rendergraph;
-using namespace crimild::rendergraph::passes;
-using namespace crimild::sdl;
+using namespace crimild::glfw;
 
-const RGBAColorf COLOR_BACKGROUND = RGBAColorf( 247.0f / 255.0f, 92.0f / 255.0f, 3.0f / 255.0f, 1.0f );
-const RGBAColorf COLOR_FLOOR = RGBAColorf( 253.0f / 255.0f, 246.0f / 255.0f, 236.0f / 255.0f, 1.0f );
-const RGBAColorf COLOR_WALL = RGBAColorf( 254.0f / 255.0f, 220.0f / 255.0f, 172.0f / 255.0f, 1.0f );
-const RGBAColorf COLOR_PILLAR = RGBAColorf( 244.0f / 255.0f, 113.0f / 255.0f, 112.0f / 255.0f, 1.0f );
-const RGBAColorf COLOR_TEAPOT = RGBAColorf( 187.0f / 255.0f, 55.0f / 255.0f, 101.0f / 255.0f, 1.0f );
-
-SharedPointer< RenderGraph > createRenderGraph( crimild::Bool debugEnabled = false )
+Matrix4f computeLightSpaceMatrix( Light *light ) noexcept
 {
-	auto graph = crimild::alloc< RenderGraph >();
-
-	auto scenePass = graph->createPass< ForwardLightingPass >();
-	auto shadowPass = graph->createPass< ShadowPass >();
-
-	scenePass->setShadowInput( shadowPass->getShadowOutput() );
-
-	graph->setOutput( scenePass->getColorOutput() );
-
-	if ( debugEnabled ) {
-		auto depthPass = graph->createPass< DepthPass >();
-		scenePass->setDepthInput( depthPass->getDepthOutput() );
-		
-		auto linearizeDepthPass = graph->createPass< LinearizeDepthPass >();
-		linearizeDepthPass->setInput( depthPass->getDepthOutput() );
-
-		auto shadowMap = graph->createPass< TextureColorPass >( TextureColorPass::Mode::RED );
-		shadowMap->setInput( shadowPass->getShadowOutput() );
-
-		auto debugPass = graph->createPass< FrameDebugPass >();
-		debugPass->addInput( shadowMap->getOutput() );
-		debugPass->addInput( scenePass->getColorOutput() );
-		debugPass->addInput( linearizeDepthPass->getOutput() );
-		graph->setOutput( debugPass->getOutput() );
+	if ( light == nullptr ) {
+		return Matrix4f::IDENTITY;
 	}
 
-	return graph;
+	auto proj = Frustumf( 60.0f, 1.0f, 0.1f, 100.0f ).computeProjectionMatrix();
+	
+	Transformation lightTransform;
+	lightTransform.setRotate( light->getWorld().getRotate() );
+	lightTransform.setTranslate( -30.0f * lightTransform.computeDirection() );
+	auto view = lightTransform.computeModelMatrix().getInverse();
+
+//	return proj * view;
+    return view * proj; // WHY?!?!
 }
 
-SharedPointer< Node > buildBackground( void )
-{
-    auto background = crimild::alloc< Group >();
+class ShadowPass : public RenderPass {
+private:
+	struct Uniforms {
+		Matrix4f lightSpaceMatrix;
+	};
 
-    auto geometry = crimild::alloc< Geometry >();
-    geometry->attachPrimitive( crimild::alloc< QuadPrimitive >( 200.0f, 200.0f ) );
-    geometry->local().setTranslate( -50.0f * Vector3f::UNIT_Z );
+	class ShadowPassUniformBuffer : public UniformBufferImpl< Uniforms > {
+	public:
+		virtual ~ShadowPassUniformBuffer( void ) = default;
 
-    auto material = crimild::alloc< Material >();
-    material->setDiffuse( COLOR_BACKGROUND );
-    material->setProgram( crimild::alloc< UnlitShaderProgram >() );
-    material->setCastShadows( false );
-    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+		Light *light = nullptr;
 
-    background->attachNode( geometry );
+		void updateIfNeeded( void ) noexcept override
+		{
+			setData(
+				{
+					.lightSpaceMatrix = computeLightSpaceMatrix( light ),
+				}
+			);
+		}
+	};
+	
+public:
+	ShadowPass( Node *scene, Light *light ) noexcept
+	{
+		m_pipeline = [&] {
+			auto pipeline = crimild::alloc< Pipeline >();
+			pipeline->program = [&] {
+				auto createShader = []( Shader::Stage stage, std::string path ) {
+					return crimild::alloc< Shader >(
+						stage,
+						FileSystem::getInstance().readFile(
+							FilePath {
+								.path = path,
+							}.getAbsolutePath()
+						)
+					);
+				};
 
-    auto ambientLight = crimild::alloc< Light >( Light::Type::AMBIENT );
-    ambientLight->setAmbient( 0.1f * COLOR_BACKGROUND );
-    background->attachNode( ambientLight );
+				auto program = crimild::alloc< ShaderProgram >(
+					containers::Array< SharedPointer< Shader >> {
+						createShader(
+							Shader::Stage::VERTEX,
+							"assets/shaders/shadow.vert.spv"
+						),
+						createShader(
+							Shader::Stage::FRAGMENT,
+							"assets/shaders/shadow.frag.spv"
+						),
+						}
+				);
+				program->attributeDescriptions = VertexP3N3TC2::getAttributeDescriptions( 0 );
+				program->bindingDescription = VertexP3N3TC2::getBindingDescription( 0 );
+				program->descriptorSetLayouts = {
+					[] {
+						auto layout = crimild::alloc< DescriptorSetLayout >();
+						layout->bindings = {
+							{
+								.descriptorType = DescriptorType::UNIFORM_BUFFER,
+								.stage = Shader::Stage::VERTEX,
+							},
+						};
+						return layout;
+					}(),
+					[] {
+						auto layout = crimild::alloc< DescriptorSetLayout >();
+						layout->bindings = {
+							{
+								.descriptorType = DescriptorType::UNIFORM_BUFFER,
+								.stage = Shader::Stage::VERTEX,
+							},
+							{
+								.descriptorType = DescriptorType::UNIFORM_BUFFER,
+								.stage = Shader::Stage::FRAGMENT,
+							},
+							{
+								.descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+								.stage = Shader::Stage::FRAGMENT,
+							},
+						};
+						return layout;
+					}(),
+				};
+				return program;
+			}();
+			pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
+			pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
+			pipeline->bindingDescription = pipeline->program->bindingDescription;
+			pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
+			pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
+            pipeline->depthState = [&] {
+                auto depth = crimild::alloc< DepthState >( true );
+                depth->setBiasEnabled( true );
+                depth->setBiasConstantFactor( 1.5f );
+                depth->setBiasSlopeFactor( 2.5f );
+                return depth;
+            }();
+			return pipeline;
+		}();
+		
+        m_color = [&] {
+            auto att = crimild::alloc< Attachment >();
+            // TODO: usage should be optional. It can be derived from frame graph, right?
+            // TODO: implement automatic transition
+            att->format = Format::R8G8B8A8_UNORM;
+            att->imageView = crimild::alloc< ImageView >();
+            att->imageView->image = crimild::alloc< Image >();
+            return att;
+        }();
 
-    return background;
-}
+        m_depth = [&] {
+            auto att = crimild::alloc< Attachment >();
+            att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+			att->imageView = crimild::alloc< ImageView >();
+			att->imageView->image = crimild::alloc< Image >();
+            return att;
+        }();
 
-SharedPointer< Node > buildFloor( void )
-{
-    auto geometry = crimild::alloc< Geometry >();
-    geometry->attachPrimitive( crimild::alloc< BoxPrimitive >( 50.0f, 0.1f, 50.0f, VertexFormat::VF_P3_N3 ) );
-    geometry->local().setTranslate( -0.05f * Vector3f::UNIT_Y );
+        m_uniforms = {
+            [&] {
+                auto ubo = crimild::alloc< ShadowPassUniformBuffer >();
+                ubo->light = light;
+                return ubo;
+            }()
+        };
+		
+        m_descriptorSet = [&] {
+            auto descriptorSet = crimild::alloc< DescriptorSet >();
+            descriptorSet->descriptorSetLayout = [&] {
+				auto layout = crimild::alloc< DescriptorSetLayout >();
+				layout->bindings = {
+					{
+						.descriptorType = DescriptorType::UNIFORM_BUFFER,
+						.stage = Shader::Stage::VERTEX,
+					},
+				};
+				return layout;
+			}();
+            descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
+            descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
+            descriptorSet->writes = {
+                {
+                    .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                    .buffer = crimild::get_ptr( m_uniforms[ 0 ] ),
+                },
+            };
+            return descriptorSet;
+        }();
 
-    auto material = crimild::alloc< Material >();
-    material->setAmbient( RGBAColorf::ONE );
-    material->setDiffuse( COLOR_FLOOR );
-    material->setSpecular( RGBAColorf::ZERO );
-    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+		attachments = {
+            m_color,
+			m_depth,
+		};
+		
+		commands = [&] {
+			auto commandBuffer = crimild::alloc< CommandBuffer >();
+			auto viewport = ViewportDimensions { .scalingMode = ScalingMode::RELATIVE };
+			commandBuffer->setViewport( viewport );
+			commandBuffer->setScissor( viewport );
+			scene->perform(
+				Apply(
+					[&]( Node *node ) {
+						if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
+							commandBuffer->bindGraphicsPipeline( crimild::get_ptr( m_pipeline ) );
+							commandBuffer->bindVertexBuffer( crimild::get_ptr( renderState->vbo ) );
+							commandBuffer->bindIndexBuffer( crimild::get_ptr( renderState->ibo ) );
+							commandBuffer->bindDescriptorSet( crimild::get_ptr( m_descriptorSet ) );
+							commandBuffer->bindDescriptorSet( crimild::get_ptr( renderState->descriptorSet ) );
+							commandBuffer->drawIndexed( renderState->ibo->getCount() );
+						}
+					}
+				)
+			);
+			return commandBuffer;
+		}();
 
-    return geometry;
-}
+        extent = {
+            .scalingMode = ScalingMode::FIXED,
+            .width = 512.0f,
+            .height = 512.0f,
+        };
+		
+		clearValue = {
+			.color = RGBAColorf( 1.0f, 0.0f, 0.0f, 1.0f ),
+		};
+	}
 
-SharedPointer< Node > buildWall( void )
-{
-    auto scene = crimild::alloc< Group >();
+	virtual ~ShadowPass( void ) = default;
 
-    auto material = crimild::alloc< Material >();
-    material->setAmbient( RGBAColorf::ONE );
-    material->setDiffuse( COLOR_WALL );
+    inline Attachment *getColor( void ) noexcept { return crimild::get_ptr( m_color ); }
 
-    auto floor = crimild::alloc< Geometry >();
-    floor->attachPrimitive( crimild::alloc< BoxPrimitive >( 20.0f, 0.25f, 20.0f, VertexFormat::VF_P3_N3 ) );
-    floor->local().setTranslate( 0.125f * Vector3f::UNIT_Y );
-    floor->getComponent< MaterialComponent >()->attachMaterial( material );
-    scene->attachNode( floor );
+	inline Attachment *getDepth( void ) noexcept { return crimild::get_ptr( m_depth ); }
 
-    auto wall = crimild::alloc< Geometry >();
-    wall->attachPrimitive( crimild::alloc< BoxPrimitive >( 20.0f, 30.0f, 0.25f, VertexFormat::VF_P3_N3 ) );
-    wall->local().setTranslate( -10.0f * Vector3f::UNIT_Z );
-    wall->getComponent< MaterialComponent >()->attachMaterial( material );
-    scene->attachNode( wall );
+private:
+	SharedPointer< Pipeline > m_pipeline;
+    SharedPointer< Attachment > m_color;
+	SharedPointer< Attachment > m_depth;
+	containers::Array< SharedPointer< UniformBuffer >> m_uniforms;
+	containers::Array< SharedPointer< Texture >> m_textures;
+	SharedPointer< DescriptorSet > m_descriptorSet;
+};
 
-    return scene;
-}
+class ScenePass : public RenderPass {
+private:
+	struct Uniforms {
+		Matrix4f view;
+		Matrix4f proj;
+		Matrix4f lightSpace;
+		Vector3f lightPos;
+	};
 
-SharedPointer< Node > buildPillar( const Vector3f &position )
-{
-    auto geometry = crimild::alloc< Geometry >();
-	geometry->attachPrimitive( crimild::alloc< ConePrimitive >( Primitive::Type::TRIANGLES, 10.0f, 1.25f, VertexFormat::VF_P3_N3 ) );
-    geometry->local().setTranslate( 5.0f * Vector3f::UNIT_Y + position );
+	class UniformBuffer : public UniformBufferImpl< Uniforms > {
+	public:
+		virtual ~UniformBuffer( void ) = default;
 
-    auto material = crimild::alloc< Material >();
-    material->setAmbient( RGBAColorf::ONE );
-    material->setDiffuse( COLOR_PILLAR );
-    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+		Camera *camera = nullptr;
+		Light *light = nullptr;
 
-    return geometry;
-}
+		void updateIfNeeded( void ) noexcept override
+		{
+			setData({
+				.view = [&] {
+					if ( camera != nullptr ) {
+						// if a camera has been specified, we use that one to get the view matrix
+						return camera->getViewMatrix();
+					}
+					
+					if ( auto camera = Camera::getMainCamera() ) {
+						// if no camera has been set, let's use whatever's the main one
+						return camera->getViewMatrix();
+					}
+					
+					// no camera
+					return Matrix4f::IDENTITY;
+				}(),
+				.proj = [&] {
+					auto proj = Matrix4f::IDENTITY;
+					if ( camera != nullptr ) {
+						proj = camera->getProjectionMatrix();
+					}
+					else if ( auto camera = Camera::getMainCamera() ) {
+						proj = camera->getProjectionMatrix();
+					}
+					return proj;
+				}(),
+				.lightSpace = [&] {
+                    return computeLightSpaceMatrix( light );
+				}(),
+				.lightPos = [&] {
+					return light != nullptr
+					    ? light->getWorld().getTranslate()
+					    : Vector3f( 100.0f, 100.0f, 100.0f );
+				}(),
+			});
+		}
+	};
+	
+public:
+	ScenePass( Node *scene, Camera *camera, Light *light, Attachment *shadowMap ) noexcept
+	{
+		m_color = [&] {
+            auto att = crimild::alloc< Attachment >();
+			// TODO: usage should be optional. It can be derived from frame graph, right?
+			// TODO: implement automatic transition
+			att->format = Format::R8G8B8A8_UNORM;
+			att->imageView = crimild::alloc< ImageView >();
+			att->imageView->image = crimild::alloc< Image >();
+            return att;
+        }();
 
-SharedPointer< Node > buildTeapot( void )
-{
-	auto geometry = crimild::alloc< Geometry >();
-	geometry->attachPrimitive( crimild::alloc< NewellTeapotPrimitive >() );
-    geometry->local().setScale( 0.25f );
+        m_depth = [&] {
+            auto att = crimild::alloc< Attachment >();
+            //att->usage = Attachment::Usage::DEPTH_STENCIL_ATTACHMENT;
+            att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+			att->imageView = crimild::alloc< ImageView >();
+			att->imageView->image = crimild::alloc< Image >();
+            return att;
+        }();
 
-    auto material = crimild::alloc< Material >();
-    material->setAmbient( RGBAColorf::ONE );
-    material->setDiffuse( COLOR_TEAPOT );
-    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
+        m_uniforms = {
+            [&] {
+                auto ubo = crimild::alloc< UniformBuffer >();
+                ubo->camera = camera;
+                ubo->light = light;
+                return ubo;
+            }()
+        };
 
-    return geometry;
-}
+        m_textures = {
+            [&] {
+                auto texture = crimild::alloc< Texture >();
+                texture->imageView = shadowMap->imageView;
+                texture->sampler = [] {
+                    auto sampler = crimild::alloc< Sampler >();
+                    sampler->setMinFilter( Sampler::Filter::NEAREST );
+                    sampler->setMagFilter( Sampler::Filter::NEAREST );
+                    return sampler;
+                }();
+                return texture;
+            }()
+        };
 
-SharedPointer< Node > loadScene( void )
-{
-    auto scene = crimild::alloc< Group >( "scene" );
+        m_descriptorSet = [&] {
+            auto descriptorSet = crimild::alloc< DescriptorSet >();
+            descriptorSet->descriptorSetLayout = [&] {
+				auto layout = crimild::alloc< DescriptorSetLayout >();
+				layout->bindings = {
+					{
+						.descriptorType = DescriptorType::UNIFORM_BUFFER,
+						.stage = Shader::Stage::VERTEX,
+					},
+					{
+						.descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+						.stage = Shader::Stage::FRAGMENT,
+					},
+				};
+				return layout;
+			}();
+            descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
+            descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
+            descriptorSet->writes = {
+                {
+                    .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                    .buffer = crimild::get_ptr( m_uniforms[ 0 ] ),
+                },
+                {
+                    .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                    .texture = crimild::get_ptr( m_textures[ 0 ] ),
+                },
+            };
+            return descriptorSet;
+        }();
 
-    scene->attachNode( buildBackground() );
+		attachments = {
+			m_color,
+			m_depth,
+		};
+		
+		commands = [&] {
+			auto commandBuffer = crimild::alloc< CommandBuffer >();
+			auto viewport = ViewportDimensions { .scalingMode = ScalingMode::RELATIVE };
+			commandBuffer->setViewport( viewport );
+			commandBuffer->setScissor( viewport );
+			scene->perform(
+				Apply(
+					[&]( Node *node ) {
+						if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
+							commandBuffer->bindGraphicsPipeline( crimild::get_ptr( renderState->pipeline ) );
+							commandBuffer->bindVertexBuffer( crimild::get_ptr( renderState->vbo ) );
+							commandBuffer->bindIndexBuffer( crimild::get_ptr( renderState->ibo ) );
+							commandBuffer->bindDescriptorSet( crimild::get_ptr( m_descriptorSet ) );
+							commandBuffer->bindDescriptorSet( crimild::get_ptr( renderState->descriptorSet ) );
+							commandBuffer->drawIndexed(
+								renderState->ibo->getCount()
+							);
+						}
+					}
+				)
+			);
+			return commandBuffer;
+		}();
 
-    auto pivot = crimild::alloc< Group >();
-    pivot->attachNode( buildFloor() );
-    pivot->attachNode( buildWall() );
-    pivot->attachNode( buildTeapot() );
-    pivot->attachNode( buildPillar( -8.0f * Vector3f::UNIT_X ) );
-    pivot->attachNode( buildPillar( 8.0f * Vector3f::UNIT_X ) );
-    pivot->attachNode( buildPillar( -8.0f * Vector3f::UNIT_Z ) );
-    pivot->attachNode( buildPillar( 8.0f * Vector3f::UNIT_Z ) );
-    pivot->attachComponent( crimild::alloc< RotationComponent >( Vector3f::UNIT_Y, 0.1f ) );
-    scene->attachNode( pivot );
+		clearValue = {
+			.color = RGBAColorf( 59.0f / 255.0f, 53.0f / 255.0f, 97.0f / 255.0f, 1.0f ),
+		};
+	}
 
-    return scene;
-}
+	virtual ~ScenePass( void ) = default;
+
+	inline Attachment *getColor( void ) noexcept { return crimild::get_ptr( m_color ); }
+
+	inline Attachment *getDepth( void ) noexcept { return crimild::get_ptr( m_depth ); }
+
+private:
+	SharedPointer< Attachment > m_color;
+	SharedPointer< Attachment > m_depth;
+	containers::Array< SharedPointer< UniformBuffer >> m_uniforms;
+	containers::Array< SharedPointer< Texture >> m_textures;
+	SharedPointer< DescriptorSet > m_descriptorSet;
+};
+
+class DebugPass : public RenderPass {
+private:
+	struct Uniforms {
+		crimild::Int32 attachmentType;
+	};
+	
+public:
+	explicit DebugPass( containers::Array< Attachment * > const &inputs ) noexcept
+	{
+		m_pipeline = [&] {
+			auto pipeline = crimild::alloc< Pipeline >();
+			pipeline->program = [&] {
+				auto createShader = []( Shader::Stage stage, std::string path ) {
+					return crimild::alloc< Shader >(
+						stage,
+						FileSystem::getInstance().readFile(
+							FilePath {
+								.path = path,
+							}.getAbsolutePath()
+						)
+					);
+				};
+
+				auto program = crimild::alloc< ShaderProgram >(
+					containers::Array< SharedPointer< Shader >> {
+						createShader(
+							Shader::Stage::VERTEX,
+							"assets/shaders/debug.vert.spv"
+						),
+						createShader(
+							Shader::Stage::FRAGMENT,
+							"assets/shaders/debug.frag.spv"
+						),
+						}
+				);
+				program->descriptorSetLayouts = {
+					[] {
+						auto layout = crimild::alloc< DescriptorSetLayout >();
+						layout->bindings = {
+							{
+								.descriptorType = DescriptorType::UNIFORM_BUFFER,
+								.stage = Shader::Stage::FRAGMENT,
+							},
+							{
+							 	.descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+							 	.stage = Shader::Stage::FRAGMENT,
+							},
+						};
+						return layout;
+					}(),
+				};
+				return program;
+			}();
+			pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
+			pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
+			pipeline->bindingDescription = pipeline->program->bindingDescription;
+			pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
+			pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
+			return pipeline;
+		}();
+		
+		m_color = [&] {
+            auto att = crimild::alloc< Attachment >();
+			// TODO: usage should be optional. It can be derived from frame graph, right?
+            att->usage = Attachment::Usage::COLOR_ATTACHMENT; 
+            att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
+            return att;
+        }();
+
+        ViewportDimensions dimensions[] = {
+    		{
+        		.scalingMode = ScalingMode::SWAPCHAIN_RELATIVE,
+                .dimensions = Rectf( 0.0f, 0.0f, 1.0f, 1.0f ),
+            },
+            {
+                .scalingMode = ScalingMode::SWAPCHAIN_RELATIVE,
+                .dimensions = Rectf( 0.8f, 0.8f, 0.175f, 0.175f ),
+            },
+            {
+                .scalingMode = ScalingMode::SWAPCHAIN_RELATIVE,
+                .dimensions = Rectf( 0.5f, 0.5f, 0.5f, 0.5f ),
+            },
+            {
+                .scalingMode = ScalingMode::SWAPCHAIN_RELATIVE,
+                .dimensions = Rectf( 0.5f, 0.0f, 0.5f, 0.5f ),
+            },
+        };
+
+		m_inputs = inputs.map(
+			[ &, index = 0 ]( auto input ) mutable -> Input {
+            	auto texture = [&] {
+                    auto texture = crimild::alloc< Texture >();
+                    texture->imageView = input->imageView;
+                    texture->sampler = [] {
+                        auto sampler = crimild::alloc< Sampler >();
+                        sampler->setMinFilter( Sampler::Filter::NEAREST );
+                        sampler->setMagFilter( Sampler::Filter::NEAREST );
+                        return sampler;
+                    }();
+                    return texture;
+                }();
+				auto uniforms = [&] {
+					auto formatIsDepthStencil = [&] {
+						auto format = input->format;
+						switch ( format ) {
+							case Format::DEPTH_16_UNORM:
+							case Format::DEPTH_32_SFLOAT:
+							case Format::DEPTH_16_UNORM_STENCIL_8_UINT:
+							case Format::DEPTH_24_UNORM_STENCIL_8_UINT:
+							case Format::DEPTH_32_SFLOAT_STENCIL_8_UINT:
+							case Format::DEPTH_STENCIL_DEVICE_OPTIMAL:
+								return true;
+							default:
+								return false;
+						}
+					}();
+					return crimild::alloc< UniformBufferImpl< Uniforms >>(
+						Uniforms {
+							.attachmentType = formatIsDepthStencil ? 1 : 0,
+						}
+					);
+				}();
+				auto descriptorSet = [&] {
+					auto descriptorSet = crimild::alloc< DescriptorSet >();
+					descriptorSet->descriptorSetLayout = m_pipeline->program->descriptorSetLayouts[ 0 ];
+					descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
+					descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
+					descriptorSet->writes = {
+						{
+							.descriptorType = DescriptorType::UNIFORM_BUFFER,
+							.buffer = crimild::get_ptr( uniforms ),
+						},
+						{
+							.descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+							.texture = crimild::get_ptr( texture ),
+						},
+					};
+					return descriptorSet;
+				}();
+				return Input {
+					.uniforms = uniforms,
+					.texture = texture,
+					.descriptorSet = descriptorSet,
+					.viewport = dimensions[ index++ ],
+				};
+			}
+		);
+
+		attachments = {
+			m_color,
+		};
+
+		commands = [&] {
+			auto commandBuffer = crimild::alloc< CommandBuffer >();
+			m_inputs.each(
+				[&]( auto &input ) {
+					commandBuffer->setViewport( input.viewport );
+					commandBuffer->setScissor( input.viewport );
+                    commandBuffer->bindGraphicsPipeline( crimild::get_ptr( m_pipeline ) );
+					commandBuffer->bindDescriptorSet( crimild::get_ptr( input.descriptorSet ) );
+					commandBuffer->draw( 6 );
+				}
+			);
+			return commandBuffer;
+		}();
+
+		clearValue = {
+			.color = RGBAColorf( 0.0f, 1.0f, 0.0f, 0.0f ),
+		};
+	}
+
+	virtual ~DebugPass( void ) noexcept = default;
+
+	inline Attachment *getColor( void ) noexcept { return crimild::get_ptr( m_color ); }
+
+private:
+	SharedPointer< Attachment > m_color;
+	SharedPointer< Pipeline > m_pipeline;
+
+	struct Input {
+		SharedPointer< UniformBufferImpl< Uniforms >> uniforms;
+		SharedPointer< Texture > texture;
+		SharedPointer< DescriptorSet > descriptorSet;
+		ViewportDimensions viewport;
+	};
+	containers::Array< Input > m_inputs;
+};
+
+struct RenderPassUniform {
+    Matrix4f view;
+    Matrix4f proj;
+    Matrix4f lightSpace;
+    Vector3f lightPos;
+};
+
+class RenderPassUniformBuffer : public UniformBufferImpl< RenderPassUniform > {
+public:
+	~RenderPassUniformBuffer( void ) = default;
+
+	Camera *camera = nullptr;
+	Light *light = nullptr;
+	Matrix4f reflect = Matrix4f::IDENTITY;
+
+	void updateIfNeeded( void ) noexcept override
+	{
+		setData({
+			.view = [&] {
+				if ( camera != nullptr ) {
+					// if a camera has been specified, we use that one to get the view matrix
+					return reflect * camera->getViewMatrix();
+				}
+
+				if ( auto camera = Camera::getMainCamera() ) {
+					// if no camera has been set, let's use whatever's the main one
+					return reflect * camera->getViewMatrix();
+				}
+
+				// no camera
+				return Matrix4f::IDENTITY;
+			}(),
+			.proj = [&] {
+				auto proj = Matrix4f::IDENTITY;
+				if ( camera != nullptr ) {
+					proj = camera->getProjectionMatrix();
+				}
+				else if ( auto camera = Camera::getMainCamera() ) {
+					proj = camera->getProjectionMatrix();
+				}
+				return proj;
+			}(),
+		});
+	}
+};
+
+struct Library {
+	SharedPointer< FrameGraph > frameGraph;
+	SharedPointer< PresentationMaster > master;
+
+	struct Scenes {
+        struct Scene {
+            SharedPointer< Group > root;
+            SharedPointer< Camera > camera;
+			SharedPointer< Light > light;
+        };
+
+		Scene scene;
+        Scene screen;
+	} scenes;
+
+	struct Programs {
+		SharedPointer< ShaderProgram > scene;
+		SharedPointer< ShaderProgram > mirror;
+        SharedPointer< ShaderProgram > screen;
+	} programs;
+
+	struct Passes {
+		struct Pass {
+			SharedPointer< RenderPass > renderPass;
+			SharedPointer< Attachment > color;
+            SharedPointer< Attachment > depth;
+            SharedPointer< DescriptorSet > descriptorSet;
+            containers::Array< SharedPointer< UniformBuffer >> uniforms;
+            containers::Array< SharedPointer< Texture >> textures;
+		};
+
+		Pass offscreen;
+		Pass scene;
+        Pass screen;
+	} passes;
+};
+
+#pragma mark - ExampleVulkanSystem
+class ExampleVulkanSystem : public GLFWVulkanSystem {
+public:
+    crimild::Bool start( void ) override
+    {
+        if ( !GLFWVulkanSystem::start() ) {
+            return false;
+        }
+
+        m_library.frameGraph = crimild::alloc< FrameGraph >();
+
+        m_library.programs.scene = [] {
+            auto createShader = []( Shader::Stage stage, std::string path ) {
+                return crimild::alloc< Shader >(
+                    stage,
+                    FileSystem::getInstance().readFile(
+                        FilePath {
+                            .path = path,
+                        }.getAbsolutePath()
+                    )
+                );
+            };
+
+            auto program = crimild::alloc< ShaderProgram >(
+                containers::Array< SharedPointer< Shader >> {
+                    createShader(
+                        Shader::Stage::VERTEX,
+                        "assets/shaders/scene.vert.spv"
+                    ),
+                    createShader(
+                        Shader::Stage::FRAGMENT,
+                        "assets/shaders/scene.frag.spv"
+                    ),
+                }
+            );
+            program->attributeDescriptions = VertexP3N3TC2::getAttributeDescriptions( 0 );
+            program->bindingDescription = VertexP3N3TC2::getBindingDescription( 0 );
+            program->descriptorSetLayouts = {
+                [] {
+                    auto layout = crimild::alloc< DescriptorSetLayout >();
+                    layout->bindings = {
+                        {
+                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                            .stage = Shader::Stage::VERTEX,
+                        },
+                        {
+                            .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                            .stage = Shader::Stage::FRAGMENT,
+                        },
+                    };
+                    return layout;
+                }(),
+                [] {
+                    auto layout = crimild::alloc< DescriptorSetLayout >();
+                    layout->bindings = {
+                        {
+                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                            .stage = Shader::Stage::VERTEX,
+                        },
+                        {
+                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                            .stage = Shader::Stage::FRAGMENT,
+                        },
+                        {
+                            .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                            .stage = Shader::Stage::FRAGMENT,
+                        },
+                    };
+                    return layout;
+                }(),
+            };
+            return program;
+        }();
+
+        m_library.scenes.scene.root = [&] {
+            auto scene = crimild::alloc< Group >();
+
+            scene->attachNode( [&] {
+                auto path = FilePath {
+                    .path = "assets/models/scene.obj",
+                };
+                auto group = crimild::alloc< Group >();
+                OBJLoader loader( path.getAbsolutePath() );
+                loader.pipeline = [&] {
+                    auto pipeline = crimild::alloc< Pipeline >();
+                    pipeline->program = m_library.programs.scene;
+                    pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
+                    pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
+                    pipeline->bindingDescription = pipeline->program->bindingDescription;
+                    pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
+                    pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
+                    return pipeline;
+                }();
+                if ( auto model = loader.load() ) {
+                    group->attachNode( model );
+                }
+                return group;
+            }());
+
+            scene->attachNode([] {
+                auto camera = crimild::alloc< Camera >( 60.0f, 1.0f, 0.1f, 100.0f );
+                camera->local().setTranslate( 15.0f, 20.0f, 20.0f );
+                camera->local().lookAt( 1.0 * Vector3f::UNIT_Y );
+                Camera::setMainCamera( camera );
+                return camera;
+            }());
+
+            scene->attachNode(
+            	[&] {
+                	auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+                    light->local().setTranslate( 20.0f, 20.0f, 20.0f );
+                    light->local().lookAt( Vector3f::ZERO );
+                    m_library.scenes.scene.light = light;
+
+                	auto pivot = crimild::alloc< Group >();
+                	pivot->attachNode( light );
+                	pivot->attachComponent< RotationComponent >( Vector3f::UNIT_Y, 0.05f );
+                	return pivot;
+            	}()
+            );
+
+            return scene;
+        }();
+
+		m_shadowPass = crimild::alloc< ShadowPass >(
+			crimild::get_ptr( m_library.scenes.scene.root ),
+			crimild::get_ptr( m_library.scenes.scene.light )
+		);
+
+		m_scenePass = crimild::alloc< ScenePass >(
+			crimild::get_ptr( m_library.scenes.scene.root ),
+			crimild::get_ptr( m_library.scenes.scene.camera ),
+			crimild::get_ptr( m_library.scenes.scene.light ),
+          	m_shadowPass->getDepth()
+		);
+
+		m_debugPass = crimild::alloc< DebugPass >(
+			containers::Array< Attachment * > {
+				m_scenePass->getColor(),
+//            	m_scenePass->getDepth(),
+//				m_shadowPass->getColor(),
+                m_shadowPass->getDepth(),
+			}
+		);
+
+        m_library.master = [&] {
+            auto master = crimild::alloc< PresentationMaster >();
+			master->colorAttachment = crimild::retain( m_debugPass->getColor() );
+            return master;
+        }();
+
+        if ( m_library.frameGraph->compile() ) {
+            auto commands = m_library.frameGraph->recordCommands();
+            setCommandBuffers( { commands } );
+        }
+
+        return true;
+    }
+
+    void update( void ) override
+    {
+        auto clock = Simulation::getInstance()->getSimulationClock();
+
+        auto updateScene = [&]( auto &scene ) {
+            scene->perform( UpdateComponents( clock ) );
+            scene->perform( UpdateWorldState() );
+        };
+
+        updateScene( m_library.scenes.scene.root );
+
+        GLFWVulkanSystem::update();
+    }
+
+    void stop( void ) override
+    {
+        if ( auto renderDevice = getRenderDevice() ) {
+            renderDevice->waitIdle();
+        }
+
+        GLFWVulkanSystem::stop();
+    }
+
+private:
+    Library m_library;
+
+	SharedPointer< ShadowPass > m_shadowPass;
+	SharedPointer< ScenePass > m_scenePass;
+	SharedPointer< DebugPass > m_debugPass;
+};
 
 int main( int argc, char **argv )
 {
-	crimild::init();
+    crimild::init();
+    crimild::vulkan::init();
+
+    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 
     auto settings = crimild::alloc< Settings >( argc, argv );
-//    settings->set( "video.width", 1280 );
-//    settings->set( "video.height", 720 );
-    settings->set( "video.show_frame_time", true );
-	CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< sdl::SDLSimulation >( "Shadows", settings );
+    settings->set( "video.width", 720 );
+    settings->set( "video.height", 720 );
 
-	auto scene = crimild::alloc< Group >();
-    scene->attachNode( loadScene() );
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Shadows", settings );
 
-    auto buildLight = []( crimild::Real32 yaw, crimild::Real32 pitch, crimild::Real32 roll ) {
-        auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-        light->local().rotate().fromEulerAngles( yaw, pitch, roll );
-        light->setColor( 0.5f * RGBAColorf::ONE );
-        light->setCastShadows( true );
-        light->getShadowMap()->setCullFaceState( CullFaceState::DISABLED );
-        light->getShadowMap()->setMinBias( 0.005f );
-        light->getShadowMap()->setMaxBias( 0.05f );
-        return light;
-    };
+    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
 
-    scene->attachNode( buildLight( -1.0f, Numericf::HALF_PI, 0.0f ) );
-    scene->attachNode( buildLight( -0.5f, Numericf::PI, 0.0f ) );
+    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
 
-	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
-	camera->local().setTranslate( 1.0f, 15.0f, 35.0f );
-    camera->local().lookAt( Vector3f( 0.0f, 5.0f, 0.0 ), Vector3f( 0.0f, 1.0f, 0.0f ) );
-	camera->setRenderGraph( createRenderGraph() );
-	scene->attachNode( camera );
-
-	sim->setScene( scene );
-
-	sim->registerMessageHandler< crimild::messaging::KeyReleased >( [ camera ]( crimild::messaging::KeyReleased const &msg ) {
-		switch ( msg.key ) {
-			case CRIMILD_INPUT_KEY_Q:
-				crimild::concurrency::sync_frame( [ camera ]() {
-					std::cout << "Full" << std::endl;
-                    camera->setRenderGraph( createRenderGraph( false ) );
-				});
-				break;
-				
-			case CRIMILD_INPUT_KEY_W:
-				crimild::concurrency::sync_frame( [ camera ]() {
-					std::cout << "Debug" << std::endl;
-                    camera->setRenderGraph( createRenderGraph( true ) );
-				});
-				break;
-
-		}
-	});
-	return sim->run();
+    return sim->run();
 }
 

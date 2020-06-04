@@ -7,7 +7,7 @@ void main()
 {
 	float d = gl_FragCoord.z;
 	float near = 0.1;
-	float far = 500.0;
+	float far = 100.0;
 	d = ( 2.0 * near * far ) / ( far + near - d * ( far - near ) );
 	outColor = vec4( vec3( d / far ), 1.0 );
 }
