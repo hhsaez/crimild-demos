@@ -52,20 +52,28 @@ Matrix4f computeLightSpaceMatrix( Light *light ) noexcept
 
 class ShadowPass : public RenderPass {
 private:
-	struct Uniforms {
-		Matrix4f lightSpaceMatrix;
-	};
-
-	class ShadowPassUniformBuffer : public UniformBufferImpl< Uniforms > {
+	class ShadowPassUniformBuffer : public UniformBuffer {
+    private:
+        struct Props {
+            Matrix4f lightSpaceMatrix;
+        };
+        
 	public:
+        ShadowPassUniformBuffer( Light *light ) noexcept
+            : UniformBuffer( Props { } ),
+              light( light )
+        {
+            
+        }
+        
 		virtual ~ShadowPassUniformBuffer( void ) = default;
 
 		Light *light = nullptr;
 
-		void updateIfNeeded( void ) noexcept override
+		void onPreRender( void ) noexcept override
 		{
-			setData(
-				{
+			setValue(
+				Props {
 					.lightSpaceMatrix = computeLightSpaceMatrix( light ),
 				}
 			);
@@ -101,8 +109,7 @@ public:
 						),
 						}
 				);
-				program->attributeDescriptions = VertexP3N3TC2::getAttributeDescriptions( 0 );
-				program->bindingDescription = VertexP3N3TC2::getBindingDescription( 0 );
+				program->vertexLayouts = { VertexLayout::P3_N3_TC2 };
 				program->descriptorSetLayouts = {
 					[] {
 						auto layout = crimild::alloc< DescriptorSetLayout >();
@@ -126,7 +133,7 @@ public:
 								.stage = Shader::Stage::FRAGMENT,
 							},
 							{
-								.descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+								.descriptorType = DescriptorType::TEXTURE,
 								.stage = Shader::Stage::FRAGMENT,
 							},
 						};
@@ -135,9 +142,6 @@ public:
 				};
 				return program;
 			}();
-			pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
-			pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
-			pipeline->bindingDescription = pipeline->program->bindingDescription;
 			pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
 			pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
             pipeline->depthState = [&] {
@@ -170,30 +174,16 @@ public:
 
         m_uniforms = {
             [&] {
-                auto ubo = crimild::alloc< ShadowPassUniformBuffer >();
-                ubo->light = light;
-                return ubo;
+                return crimild::alloc< ShadowPassUniformBuffer >( light );
             }()
         };
 		
         m_descriptorSet = [&] {
             auto descriptorSet = crimild::alloc< DescriptorSet >();
-            descriptorSet->descriptorSetLayout = [&] {
-				auto layout = crimild::alloc< DescriptorSetLayout >();
-				layout->bindings = {
-					{
-						.descriptorType = DescriptorType::UNIFORM_BUFFER,
-						.stage = Shader::Stage::VERTEX,
-					},
-				};
-				return layout;
-			}();
-            descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
-            descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
-            descriptorSet->writes = {
+            descriptorSet->descriptors = {
                 {
                     .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                    .buffer = crimild::get_ptr( m_uniforms[ 0 ] ),
+                    .obj = m_uniforms[ 0 ],
                 },
             };
             return descriptorSet;
@@ -218,7 +208,7 @@ public:
 							commandBuffer->bindIndexBuffer( crimild::get_ptr( renderState->ibo ) );
 							commandBuffer->bindDescriptorSet( crimild::get_ptr( m_descriptorSet ) );
 							commandBuffer->bindDescriptorSet( crimild::get_ptr( renderState->descriptorSet ) );
-							commandBuffer->drawIndexed( renderState->ibo->getCount() );
+							commandBuffer->drawIndexed( renderState->ibo->getIndexCount() );
 						}
 					}
 				)
@@ -254,56 +244,65 @@ private:
 
 class ScenePass : public RenderPass {
 private:
-	struct Uniforms {
-		Matrix4f view;
-		Matrix4f proj;
-		Matrix4f lightSpace;
-		Vector3f lightPos;
-	};
-
-	class UniformBuffer : public UniformBufferImpl< Uniforms > {
+	class SceneUniforms : public UniformBuffer {
+    private:
+        struct Props {
+            Matrix4f view;
+            Matrix4f proj;
+            Matrix4f lightSpace;
+            Vector3f lightPos;
+        };
+        
 	public:
-		virtual ~UniformBuffer( void ) = default;
+        SceneUniforms( void ) noexcept
+            : UniformBuffer( Props { } )              
+        {
+            
+        }
+        
+		virtual ~SceneUniforms( void ) = default;
 
 		Camera *camera = nullptr;
 		Light *light = nullptr;
 
-		void updateIfNeeded( void ) noexcept override
+		void onPreRender( void ) noexcept override
 		{
-			setData({
-				.view = [&] {
-					if ( camera != nullptr ) {
-						// if a camera has been specified, we use that one to get the view matrix
-						return camera->getViewMatrix();
-					}
-					
-					if ( auto camera = Camera::getMainCamera() ) {
-						// if no camera has been set, let's use whatever's the main one
-						return camera->getViewMatrix();
-					}
-					
-					// no camera
-					return Matrix4f::IDENTITY;
-				}(),
-				.proj = [&] {
-					auto proj = Matrix4f::IDENTITY;
-					if ( camera != nullptr ) {
-						proj = camera->getProjectionMatrix();
-					}
-					else if ( auto camera = Camera::getMainCamera() ) {
-						proj = camera->getProjectionMatrix();
-					}
-					return proj;
-				}(),
-				.lightSpace = [&] {
-                    return computeLightSpaceMatrix( light );
-				}(),
-				.lightPos = [&] {
-					return light != nullptr
+			setValue(
+                Props {
+                    .view = [&] {
+                        if ( camera != nullptr ) {
+                            // if a camera has been specified, we use that one to get the view matrix
+                            return camera->getViewMatrix();
+                        }
+                        
+                        if ( auto camera = Camera::getMainCamera() ) {
+                            // if no camera has been set, let's use whatever's the main one
+                            return camera->getViewMatrix();
+                        }
+                        
+                        // no camera
+                        return Matrix4f::IDENTITY;
+                    }(),
+                    .proj = [&] {
+                        auto proj = Matrix4f::IDENTITY;
+                        if ( camera != nullptr ) {
+                            proj = camera->getProjectionMatrix();
+                        }
+                        else if ( auto camera = Camera::getMainCamera() ) {
+                            proj = camera->getProjectionMatrix();
+                        }
+                        return proj;
+                    }(),
+                    .lightSpace = [&] {
+                        return computeLightSpaceMatrix( light );
+                    }(),
+                    .lightPos = [&] {
+                        return light != nullptr
 					    ? light->getWorld().getTranslate()
 					    : Vector3f( 100.0f, 100.0f, 100.0f );
-				}(),
-			});
+                    }(),
+                }
+            );
 		}
 	};
 	
@@ -331,7 +330,7 @@ public:
 
         m_uniforms = {
             [&] {
-                auto ubo = crimild::alloc< UniformBuffer >();
+                auto ubo = crimild::alloc< SceneUniforms >();
                 ubo->camera = camera;
                 ubo->light = light;
                 return ubo;
@@ -354,30 +353,14 @@ public:
 
         m_descriptorSet = [&] {
             auto descriptorSet = crimild::alloc< DescriptorSet >();
-            descriptorSet->descriptorSetLayout = [&] {
-				auto layout = crimild::alloc< DescriptorSetLayout >();
-				layout->bindings = {
-					{
-						.descriptorType = DescriptorType::UNIFORM_BUFFER,
-						.stage = Shader::Stage::VERTEX,
-					},
-					{
-						.descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
-						.stage = Shader::Stage::FRAGMENT,
-					},
-				};
-				return layout;
-			}();
-            descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
-            descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
-            descriptorSet->writes = {
+            descriptorSet->descriptors = {
                 {
                     .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                    .buffer = crimild::get_ptr( m_uniforms[ 0 ] ),
+                    .obj = m_uniforms[ 0 ],
                 },
                 {
-                    .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
-                    .texture = crimild::get_ptr( m_textures[ 0 ] ),
+                    .descriptorType = DescriptorType::TEXTURE,
+                    .obj = m_textures[ 0 ],
                 },
             };
             return descriptorSet;
@@ -403,7 +386,7 @@ public:
 							commandBuffer->bindDescriptorSet( crimild::get_ptr( m_descriptorSet ) );
 							commandBuffer->bindDescriptorSet( crimild::get_ptr( renderState->descriptorSet ) );
 							commandBuffer->drawIndexed(
-								renderState->ibo->getCount()
+								renderState->ibo->getIndexCount()
 							);
 						}
 					}
@@ -475,7 +458,7 @@ public:
 								.stage = Shader::Stage::FRAGMENT,
 							},
 							{
-							 	.descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+							 	.descriptorType = DescriptorType::TEXTURE,
 							 	.stage = Shader::Stage::FRAGMENT,
 							},
 						};
@@ -484,9 +467,6 @@ public:
 				};
 				return program;
 			}();
-			pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
-			pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
-			pipeline->bindingDescription = pipeline->program->bindingDescription;
 			pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
 			pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
 			return pipeline;
@@ -547,7 +527,7 @@ public:
 								return false;
 						}
 					}();
-					return crimild::alloc< UniformBufferImpl< Uniforms >>(
+					return crimild::alloc< UniformBuffer >(
 						Uniforms {
 							.attachmentType = formatIsDepthStencil ? 1 : 0,
 						}
@@ -555,17 +535,14 @@ public:
 				}();
 				auto descriptorSet = [&] {
 					auto descriptorSet = crimild::alloc< DescriptorSet >();
-					descriptorSet->descriptorSetLayout = m_pipeline->program->descriptorSetLayouts[ 0 ];
-					descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
-					descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
-					descriptorSet->writes = {
+					descriptorSet->descriptors = {
 						{
 							.descriptorType = DescriptorType::UNIFORM_BUFFER,
-							.buffer = crimild::get_ptr( uniforms ),
+							.obj = uniforms,
 						},
 						{
-							.descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
-							.texture = crimild::get_ptr( texture ),
+							.descriptorType = DescriptorType::TEXTURE,
+							.obj = texture,
 						},
 					};
 					return descriptorSet;
@@ -611,7 +588,7 @@ private:
 	SharedPointer< Pipeline > m_pipeline;
 
 	struct Input {
-		SharedPointer< UniformBufferImpl< Uniforms >> uniforms;
+		SharedPointer< UniformBuffer > uniforms;
 		SharedPointer< Texture > texture;
 		SharedPointer< DescriptorSet > descriptorSet;
 		ViewportDimensions viewport;
@@ -626,17 +603,24 @@ struct RenderPassUniform {
     Vector3f lightPos;
 };
 
-class RenderPassUniformBuffer : public UniformBufferImpl< RenderPassUniform > {
+class RenderPassUniformBuffer : public UniformBuffer {
 public:
+    RenderPassUniformBuffer( void ) noexcept
+        : UniformBuffer( RenderPassUniform { } )
+    {
+        
+    }
+    
 	~RenderPassUniformBuffer( void ) = default;
 
 	Camera *camera = nullptr;
 	Light *light = nullptr;
 	Matrix4f reflect = Matrix4f::IDENTITY;
 
-	void updateIfNeeded( void ) noexcept override
+	void onPreRender( void ) noexcept override
 	{
-		setData({
+		setValue(
+            RenderPassUniform {
 			.view = [&] {
 				if ( camera != nullptr ) {
 					// if a camera has been specified, we use that one to get the view matrix
@@ -737,8 +721,7 @@ public:
                     ),
                 }
             );
-            program->attributeDescriptions = VertexP3N3TC2::getAttributeDescriptions( 0 );
-            program->bindingDescription = VertexP3N3TC2::getBindingDescription( 0 );
+            program->vertexLayouts = { VertexLayout::P3_N3_TC2 };
             program->descriptorSetLayouts = {
                 [] {
                     auto layout = crimild::alloc< DescriptorSetLayout >();
@@ -748,7 +731,7 @@ public:
                             .stage = Shader::Stage::VERTEX,
                         },
                         {
-                            .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                            .descriptorType = DescriptorType::TEXTURE,
                             .stage = Shader::Stage::FRAGMENT,
                         },
                     };
@@ -766,7 +749,7 @@ public:
                             .stage = Shader::Stage::FRAGMENT,
                         },
                         {
-                            .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                            .descriptorType = DescriptorType::TEXTURE,
                             .stage = Shader::Stage::FRAGMENT,
                         },
                     };
@@ -788,9 +771,6 @@ public:
                 loader.pipeline = [&] {
                     auto pipeline = crimild::alloc< Pipeline >();
                     pipeline->program = m_library.programs.scene;
-                    pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
-                    pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
-                    pipeline->bindingDescription = pipeline->program->bindingDescription;
                     pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
                     pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
                     return pipeline;

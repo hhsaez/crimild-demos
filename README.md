@@ -54,7 +54,10 @@ It's safe to ignore SDL_Mixer2 warnings, if any.
 ### <a name="Basics">Basics</a>
 
 #### [Triangle](examples/Triangle/)
-Basic and explicit example for rendering a single colored triangle using Crimild. This shows the most important concepts and tools in the engine.
+Basic and explicit example for rendering a single colored triangle using Crimild. This shows the most important concepts and tools in the engine like geometries, buffers, pipelines and render passes.
+
+#### [Transformations](example/Transformations)
+Creates a scene with many objects, each of them with a different transformations. Shows how to specify translations, rotations and scales using the local transformation of nodes.
 
 ### <a name="Textures">Textures</a>
 

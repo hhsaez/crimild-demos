@@ -38,27 +38,34 @@ struct RenderPassUniform {
 	Matrix4f proj;
 };
 
-class RenderPassUniformBuffer : public UniformBufferImpl< RenderPassUniform > {
+class RenderPassUniformBuffer : public UniformBuffer {
 public:
+    RenderPassUniformBuffer( void ) noexcept
+    	: UniformBuffer( RenderPassUniform { } )
+    {
+
+    }
+
 	~RenderPassUniformBuffer( void ) = default;
-	
+
 	Camera *camera = nullptr;
 	Matrix4f reflect = Matrix4f::IDENTITY;
-	
-	void updateIfNeeded( void ) noexcept override
+
+	void onPreRender( void ) noexcept override
 	{
-		setData({
+		setValue(
+        RenderPassUniform {
 			.view = [&] {
 				if ( camera != nullptr ) {
 					// if a camera has been specified, we use that one to get the view matrix
 					return reflect * camera->getViewMatrix();
 				}
-				
+
 				if ( auto camera = Camera::getMainCamera() ) {
 					// if no camera has been set, let's use whatever's the main one
 					return reflect * camera->getViewMatrix();
 				}
-				
+
 				// no camera
 				return Matrix4f::IDENTITY;
 			}(),
@@ -89,7 +96,7 @@ struct Library {
 		Scene scene;
         Scene screen;
 	} scenes;
-	
+
 	struct Programs {
 		SharedPointer< ShaderProgram > scene;
 		SharedPointer< ShaderProgram > mirror;
@@ -102,7 +109,7 @@ struct Library {
 			SharedPointer< Attachment > color;
             SharedPointer< Attachment > depth;
             SharedPointer< DescriptorSet > descriptorSet;
-            containers::Array< SharedPointer< UniformBuffer >> uniforms;
+            Array< SharedPointer< UniformBuffer >> uniforms;
 		};
 
 		Pass offscreen;
@@ -138,9 +145,9 @@ public:
 					)
 				);
 			};
-			
+
 			auto program = crimild::alloc< ShaderProgram >(
-				containers::Array< SharedPointer< Shader >> {
+				Array< SharedPointer< Shader >> {
 					createShader(
 						Shader::Stage::VERTEX,
 						"assets/shaders/scene.vert.spv"
@@ -151,8 +158,13 @@ public:
 					),
 				}
 			);
-			program->attributeDescriptions = VertexP3C3TC2::getAttributeDescriptions( 0 );
-			program->bindingDescription = VertexP3C3TC2::getBindingDescription( 0 );
+            program->vertexLayouts = {
+                VertexLayout {
+                    { .name = VertexAttribute::Name::POSITION, crimild::utils::getFormat< Vector3f >() },
+                    { .name = VertexAttribute::Name::COLOR, crimild::utils::getFormat< Vector3f >() },
+                    { .name = VertexAttribute::Name::TEX_COORD, crimild::utils::getFormat< Vector2f >() },
+                }
+            };
             program->descriptorSetLayouts = {
             	[] {
                     auto layout = crimild::alloc< DescriptorSetLayout >();
@@ -172,7 +184,7 @@ public:
                             .stage = Shader::Stage::VERTEX,
                         },
                         {
-                            .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                            .descriptorType = DescriptorType::TEXTURE,
                             .stage = Shader::Stage::FRAGMENT,
                         },
                     };
@@ -195,7 +207,7 @@ public:
             };
 
             auto program = crimild::alloc< ShaderProgram >(
-                containers::Array< SharedPointer< Shader >> {
+                Array< SharedPointer< Shader >> {
                     createShader(
                         Shader::Stage::VERTEX,
                         "assets/shaders/mirror.vert.spv"
@@ -206,8 +218,13 @@ public:
                     ),
                 }
             );
-            program->attributeDescriptions = VertexP3C3TC2::getAttributeDescriptions( 0 );
-            program->bindingDescription = VertexP3C3TC2::getBindingDescription( 0 );
+            program->vertexLayouts = {
+                VertexLayout {
+                    { .name = VertexAttribute::Name::POSITION, crimild::utils::getFormat< Vector3f >() },
+                    { .name = VertexAttribute::Name::COLOR, crimild::utils::getFormat< Vector3f >() },
+                    { .name = VertexAttribute::Name::TEX_COORD, crimild::utils::getFormat< Vector2f >() },
+                },
+            };
             program->descriptorSetLayouts = {
                 [] {
                     auto layout = crimild::alloc< DescriptorSetLayout >();
@@ -227,7 +244,7 @@ public:
                             .stage = Shader::Stage::VERTEX,
                         },
                         {
-                            .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
+                            .descriptorType = DescriptorType::TEXTURE,
                             .stage = Shader::Stage::FRAGMENT,
                         },
                     };
@@ -246,16 +263,24 @@ public:
 			renderable->pipeline = [&] {
 				auto pipeline = crimild::alloc< Pipeline >();
                 pipeline->program = m_library.programs.scene;
-             	pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
-                pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
-                pipeline->bindingDescription = pipeline->program->bindingDescription;
 				pipeline->cullFaceState = CullFaceState::DISABLED;
                 pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
                 pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
 				return pipeline;
 			}();
-			renderable->vbo = crimild::alloc< VertexP3C3TC2Buffer >(
-				containers::Array< VertexP3C3TC2 > {
+            struct Vertex {
+                Vector3f position;
+                RGBColorf color;
+                Vector2f texCoord;
+            };
+
+			renderable->vbo = crimild::alloc< VertexBuffer >(
+                VertexLayout {
+                    { .name = VertexAttribute::Name::POSITION, crimild::utils::getFormat< Vector3f >() },
+                    { .name = VertexAttribute::Name::COLOR, crimild::utils::getFormat< Vector3f >() },
+                    { .name = VertexAttribute::Name::TEX_COORD, crimild::utils::getFormat< Vector2f >() },
+                },
+				Array< Vertex > {
 					{
                         .position = Vector3f( 0.0f, 2.0f, 0.0f ),
 						.color = RGBColorf( 1.0f, 0.0f, 0.0f ),
@@ -273,16 +298,15 @@ public:
                     },
                 }
 			);
-			renderable->ibo = crimild::alloc< IndexUInt32Buffer >(
-				containers::Array< crimild::UInt32 > {
+			renderable->ibo = crimild::alloc< IndexBuffer >(
+                Format::INDEX_32_UINT,
+                Array< crimild::UInt32 > {
 					0, 1, 2,
                 }
 			);
 			renderable->uniforms = {
 				[&] {
-					auto ubo = crimild::alloc< ModelUniformBuffer >();
-					ubo->node = crimild::get_ptr( node );
-					return ubo;
+					return crimild::alloc< ModelUniform >( crimild::get_ptr( node ) );
 				}(),
 			};
 			renderable->textures = {
@@ -301,25 +325,22 @@ public:
 			};
 			renderable->descriptorSet = [&] {
 				auto descriptorSet = crimild::alloc< DescriptorSet >();
-				descriptorSet->descriptorSetLayout = m_library.programs.scene->descriptorSetLayouts[ 1 ];
-				descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
-                descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
-				descriptorSet->writes = {
+				descriptorSet->descriptors = {
 					{
 						.descriptorType = DescriptorType::UNIFORM_BUFFER,
-						.buffer = crimild::get_ptr( renderable->uniforms[ 0 ] ),
+						.obj = renderable->uniforms[ 0 ],
 					},
 					{
-						.descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
-						.texture = crimild::get_ptr( renderable->textures[ 0 ] ),
+						.descriptorType = DescriptorType::TEXTURE,
+						.obj = renderable->textures[ 0 ],
 					},
 				};
 				return descriptorSet;
 			}();
-			
+
 			node->attachComponent< RotationComponent >( Vector3f::UNIT_Y, 0.1f );
             node->local().setScale( 2.0f );
-			
+
 			return node;
 		};
 
@@ -330,16 +351,25 @@ public:
 			renderable->pipeline = [&] {
 				auto pipeline = crimild::alloc< Pipeline >();
                 pipeline->program = m_library.programs.mirror;
-             	pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
-                pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
-                pipeline->bindingDescription = pipeline->program->bindingDescription;
 				pipeline->cullFaceState = CullFaceState::DISABLED;
                 pipeline->viewport = { .scalingMode = ScalingMode::DYNAMIC };
                 pipeline->scissor = { .scalingMode = ScalingMode::DYNAMIC };
 				return pipeline;
 			}();
-			renderable->vbo = crimild::alloc< VertexP3C3TC2Buffer >(
-				containers::Array< VertexP3C3TC2 > {
+
+            struct Vertex {
+                Vector3f position;
+                RGBColorf color;
+                Vector2f texCoord;
+            };
+
+			renderable->vbo = crimild::alloc< VertexBuffer >(
+                VertexLayout {
+                    { .name = VertexAttribute::Name::POSITION, crimild::utils::getFormat< Vector3f >() },
+                    { .name = VertexAttribute::Name::COLOR, crimild::utils::getFormat< Vector3f >() },
+                    { .name = VertexAttribute::Name::TEX_COORD, crimild::utils::getFormat< Vector2f >() },
+                },
+				Array< Vertex > {
                     {
                         .position = Vector3f( -1.33f, 0.0f, -1.0f ),
                         .color = RGBColorf::ONE,
@@ -362,17 +392,16 @@ public:
                     },
             	}
 			);
-			renderable->ibo = crimild::alloc< IndexUInt32Buffer >(
-				containers::Array< crimild::UInt32 > {
+			renderable->ibo = crimild::alloc< IndexBuffer >(
+                Format::INDEX_32_UINT,
+				Array< crimild::UInt32 > {
 					0, 1, 2,
                     0, 2, 3,
                 }
 			);
             renderable->uniforms = {
                 [&] {
-                    auto ubo = crimild::alloc< ModelUniformBuffer >();
-                    ubo->node = crimild::get_ptr( node );
-                    return ubo;
+                    return crimild::alloc< ModelUniform >( crimild::get_ptr( node ) );
                 }(),
             };
             renderable->textures = {
@@ -390,17 +419,14 @@ public:
             };
             renderable->descriptorSet = [&] {
                 auto descriptorSet = crimild::alloc< DescriptorSet >();
-                descriptorSet->descriptorSetLayout = m_library.programs.scene->descriptorSetLayouts[ 1 ];
-                descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
-                descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
-                descriptorSet->writes = {
+                descriptorSet->descriptors = {
                     {
                         .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                        .buffer = crimild::get_ptr( renderable->uniforms[ 0 ] ),
+                        .obj = renderable->uniforms[ 0 ],
                     },
                     {
-                        .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
-                        .texture = crimild::get_ptr( renderable->textures[ 0 ] ),
+                        .descriptorType = DescriptorType::TEXTURE,
+                        .obj = renderable->textures[ 0 ],
                     },
                 };
                 return descriptorSet;
@@ -468,18 +494,15 @@ public:
 
         m_library.passes.offscreen.descriptorSet = [&] {
             auto descriptorSet = crimild::alloc< DescriptorSet >();
-            descriptorSet->descriptorSetLayout = m_library.programs.scene->descriptorSetLayouts[ 0 ];
-            descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
-            descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
-            descriptorSet->writes = {
+            descriptorSet->descriptors = {
                 {
                     .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                    .buffer = crimild::get_ptr( m_library.passes.offscreen.uniforms[ 0 ] ),
+                    .obj = m_library.passes.offscreen.uniforms[ 0 ],
                 },
             };
             return descriptorSet;
         }();
-			
+
         m_library.passes.offscreen.depth = [&] {
             auto att = crimild::alloc< Attachment >();
             att->usage = Attachment::Usage::DEPTH_STENCIL_ATTACHMENT;
@@ -511,7 +534,7 @@ public:
                                 commandBuffer->bindDescriptorSet( crimild::get_ptr( m_library.passes.offscreen.descriptorSet ) );
                                 commandBuffer->bindDescriptorSet( crimild::get_ptr( renderState->descriptorSet ) );
                                 commandBuffer->drawIndexed(
-                                    renderState->ibo->getCount()
+                                    renderState->ibo->getIndexCount()
                                 );
 							}
 						}
@@ -526,7 +549,7 @@ public:
             };
 			return renderPass;
 		}();
-			
+
         m_library.passes.scene.uniforms = {
             [&] {
                 auto ubo = crimild::alloc< RenderPassUniformBuffer >();
@@ -538,13 +561,10 @@ public:
 
         m_library.passes.scene.descriptorSet = [&] {
             auto descriptorSet = crimild::alloc< DescriptorSet >();
-            descriptorSet->descriptorSetLayout = m_library.programs.scene->descriptorSetLayouts[ 0 ];
-            descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
-            descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
-            descriptorSet->writes = {
+            descriptorSet->descriptors = {
                 {
                     .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                    .buffer = crimild::get_ptr( m_library.passes.scene.uniforms[ 0 ] ),
+                    .obj = m_library.passes.scene.uniforms[ 0 ],
                 },
             };
             return descriptorSet;
@@ -588,7 +608,7 @@ public:
                                 commandBuffer->bindDescriptorSet( crimild::get_ptr( m_library.passes.scene.descriptorSet ) );
                                 commandBuffer->bindDescriptorSet( crimild::get_ptr( renderState->descriptorSet ) );
                                 commandBuffer->drawIndexed(
-                                    renderState->ibo->getCount()
+                                    renderState->ibo->getIndexCount()
                                 );
                             }
                         }
@@ -610,14 +630,21 @@ public:
 #pragma mark - screen pipeline
                         auto pipeline = crimild::alloc< Pipeline >();
                         pipeline->program = m_library.programs.scene;
-                        pipeline->descriptorSetLayouts = pipeline->program->descriptorSetLayouts;
-                        pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
-                        pipeline->bindingDescription = pipeline->program->bindingDescription;
                         pipeline->cullFaceState = CullFaceState::DISABLED;
                         return pipeline;
                     }();
-                    renderable->vbo = crimild::alloc< VertexP3C3TC2Buffer >(
-                        containers::Array< VertexP3C3TC2 > {
+                struct Vertex {
+                    Vector3f position;
+                    RGBColorf color;
+                    Vector2f texCoord;
+                };
+                    renderable->vbo = crimild::alloc< VertexBuffer >(
+                        VertexLayout {
+                            { .name = VertexAttribute::Name::POSITION, crimild::utils::getFormat< Vector3f >() },
+                            { .name = VertexAttribute::Name::COLOR, crimild::utils::getFormat< Vector3f >() },
+                            { .name = VertexAttribute::Name::TEX_COORD, crimild::utils::getFormat< Vector2f >() },
+                        },
+                        Array< Vertex > {
                             {
                                 .position = Vector3f( -1.0f, 1.0f, 0.0f ),
                                 .color = RGBColorf::ONE,
@@ -640,17 +667,16 @@ public:
                             },
                         }
                     );
-                    renderable->ibo = crimild::alloc< IndexUInt32Buffer >(
-                        containers::Array< crimild::UInt32 > {
+                    renderable->ibo = crimild::alloc< IndexBuffer >(
+                        Format::INDEX_32_UINT,
+                        Array< crimild::UInt32 > {
                             0, 1, 2,
                             0, 2, 3,
                         }
                     );
                     renderable->uniforms = {
                         [&] {
-                            auto ubo = crimild::alloc< ModelUniformBuffer >();
-                            ubo->node = crimild::get_ptr( node );
-                            return ubo;
+                            return crimild::alloc< ModelUniform >( crimild::get_ptr( node ) );
                         }(),
                     };
                     renderable->textures = {
@@ -668,17 +694,14 @@ public:
                     };
                     renderable->descriptorSet = [&] {
                         auto descriptorSet = crimild::alloc< DescriptorSet >();
-                        descriptorSet->descriptorSetLayout = m_library.programs.scene->descriptorSetLayouts[ 1 ];
-                        descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
-                        descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
-                        descriptorSet->writes = {
+                        descriptorSet->descriptors = {
                             {
-                                .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                .buffer = crimild::get_ptr( renderable->uniforms[ 0 ] ),
+                                DescriptorType::UNIFORM_BUFFER,
+                                renderable->uniforms[ 0 ],
                             },
                             {
-                                .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
-                                .texture = crimild::get_ptr( renderable->textures[ 0 ] ),
+                                DescriptorType::TEXTURE,
+                                renderable->textures[ 0 ],
                             },
                         };
                         return descriptorSet;
@@ -703,13 +726,10 @@ public:
 
         m_library.passes.screen.descriptorSet = [&] {
             auto descriptorSet = crimild::alloc< DescriptorSet >();
-            descriptorSet->descriptorSetLayout = m_library.programs.screen->descriptorSetLayouts[ 0 ];
-            descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
-            descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
-            descriptorSet->writes = {
+            descriptorSet->descriptors = {
                 {
                     .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                    .buffer = crimild::get_ptr( m_library.passes.screen.uniforms[ 0 ] ),
+                    .obj = m_library.passes.screen.uniforms[ 0 ],
                 },
             };
             return descriptorSet;
@@ -738,7 +758,7 @@ public:
                                 commandBuffer->bindDescriptorSet( crimild::get_ptr( m_library.passes.screen.descriptorSet ) );
                                 commandBuffer->bindDescriptorSet( crimild::get_ptr( renderState->descriptorSet ) );
                                 commandBuffer->drawIndexed(
-                                    renderState->ibo->getCount()
+                                    renderState->ibo->getIndexCount()
                                 );
                             }
                         }
@@ -802,4 +822,3 @@ int main( int argc, char **argv )
     sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
     return sim->run();
 }
-

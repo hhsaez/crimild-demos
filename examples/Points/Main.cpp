@@ -46,53 +46,53 @@ public:
         m_scene = [&] {
             auto scene = crimild::alloc< Group >();
 
-            scene->attachNode([&] {
-				auto geometry = crimild::alloc< Geometry >();
-				geometry->attachPrimitive(
-					[&] {
-						auto primitive = crimild::alloc< Primitive >(
-							Primitive::Type::TRIANGLES
-						);
-						primitive->setVertexData(
-                            {
-                                [&] {
-                                    return crimild::alloc< VertexBuffer >(
+            scene->attachNode(
+                [&] {
+                    auto geometry = crimild::alloc< Geometry >();
+                    geometry->attachPrimitive(
+                        [&] {
+                            auto primitive = crimild::alloc< Primitive >( Primitive::Type::POINTS );
+                            primitive->setVertexData(
+                                {
+                                    crimild::alloc< VertexBuffer >(
                                         VertexP3C3::getLayout(),
-                                        Array< VertexP3C3 > {
-                                            {
-                                                .position = Vector3f( -0.5f, -0.5f, 0.0f ),
-                                                .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
-                                                },
-                                            {
-                                                .position = Vector3f( 0.5f, -0.5f, 0.0f ),
-                                                .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
-                                                },
-                                            {
-                                                .position = Vector3f( 0.0f, 0.5f, 0.0f ),
-                                                .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
-                                                },
+                                        [&] {
+                                            auto vertices = Array< VertexP3C3 >( 50000 );
+                                            auto size = 100.0f;
+                                            auto rnd = Random::Generator( 1982 );
+
+                                            for ( auto i = 0; i < vertices.size(); i++ ) {
+                                                auto position = Vector3f(
+                                                    rnd.generate( -0.5f * size, 0.5f * size ),
+                                                    rnd.generate( -0.5f * size, 0.5f * size ),
+                                                    rnd.generate( -0.5f * size, 0.5f * size )
+                                                );
+                                                auto color = Vector3f( 0.5f, 0.5f, 0.5f ) + position / size;
+                                                color *= position.getMagnitude() / size;
+                                                vertices[ i ] = {
+                                                    .position = position,
+                                                    .color = color,
+                                                };
                                             }
-                                    );
-                                }(),
-                            }
-                        );
-						primitive->setIndices(
-                            crimild::alloc< IndexBuffer >(
-                                Format::INDEX_32_UINT,
-                                Array< crimild::UInt32 > {
-                                    0, 1, 2,
+                                            return vertices;
+                                        }()
+                                    ),
                                 }
-                            )
-                        );
-                        return primitive;
-                    }()
-                );
-                return geometry;
-            }());
+                            );
+                            return primitive;
+                        }()
+                    );
+                    geometry->attachComponent< RotationComponent >(
+                        Vector3f( 0.5f, 0.95f, 0.75f ),
+                        0.1f
+                    );
+                    return geometry;
+                }()
+            );
 
             scene->attachNode([] {
                 auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
+                camera->local().setTranslate( 0.0f, 0.0f, 250.0f );
                 Camera::setMainCamera( camera );
                 return camera;
             }());
@@ -106,11 +106,17 @@ public:
                     auto att = crimild::alloc< Attachment >();
                     att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
                     return att;
+                }(),
+                [&] {
+                    auto att = crimild::alloc< Attachment >();
+                    att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+                    return att;
                 }()
             };
             renderPass->setPipeline(
                 [&] {
                     auto pipeline = crimild::alloc< Pipeline >();
+                    pipeline->primitiveType = Primitive::Type::POINTS;
                     pipeline->program = [&] {
                         auto createShader = []( Shader::Stage stage, std::string path ) {
                             return crimild::alloc< Shader >(
@@ -188,9 +194,12 @@ public:
                             commandBuffer->bindGraphicsPipeline( renderPass->getPipeline() );
                             commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
                             commandBuffer->bindDescriptorSet( g->getDescriptors() );
-                            commandBuffer->bindVertexBuffer( crimild::get_ptr( g->anyPrimitive()->getVertexData()[ 0 ] ) );
-                            commandBuffer->bindIndexBuffer( g->anyPrimitive()->getIndices() );
-                            commandBuffer->drawIndexed( g->anyPrimitive()->getIndices()->getIndexCount() );
+                            auto vertices = g->anyPrimitive()->getVertexData()[ 0 ];
+                            commandBuffer->bindVertexBuffer( get_ptr( vertices ) );
+                            commandBuffer->draw( vertices->getVertexCount() );
+                            //commandBuffer->bindVertexBuffer( crimild::get_ptr( g->anyPrimitive()->getVertexData()[ 0 ] ) );
+                            //commandBuffer->bindIndexBuffer( g->anyPrimitive()->getIndices() );
+                            //commandBuffer->drawIndexed( g->anyPrimitive()->getIndices()->getIndexCount() );
 						}
 					)
 				);
@@ -251,7 +260,7 @@ int main( int argc, char **argv )
 
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Triangle", crimild::alloc< Settings >( argc, argv ) );
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Points", crimild::alloc< Settings >( argc, argv ) );
     sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
     return sim->run();
 }
