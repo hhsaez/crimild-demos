@@ -41,90 +41,21 @@ public:
             return false;
         }
 
-        auto program = ShaderProgramLibrary::getInstance()->get( constants::SHADER_PROGRAM_UNLIT_P2C3TC2_TEXTURE_COLOR );
-
-        auto pipeline = [&] {
-            auto pipeline = crimild::alloc< Pipeline >();
-            pipeline->program = crimild::retain( program );
-            return pipeline;
-        }();
-
-        auto vbo = crimild::alloc< VertexP2C3TC2Buffer >(
-            containers::Array< VertexP2C3TC2 > {
-                {
-                    .position = Vector2f( -1.0f, 1.0f ),
-                    .color = RGBColorf::ONE,
-                    .texCoord = Vector2f( 0.0f, 1.0f ),
-                },
-                {
-                    .position = Vector2f( -1.0f, -1.0f ),
-                    .color = RGBColorf::ONE,
-                    .texCoord = Vector2f( 0.0f, 0.0f ),
-                },
-                {
-                    .position = Vector2f( 1.0f, -1.0f ),
-                    .color = RGBColorf::ONE,
-                    .texCoord = Vector2f( 1.0f, 0.0f ),
-                },
-                {
-                    .position = Vector2f( 1.0f, 1.0f ),
-                    .color = RGBColorf::ONE,
-                    .texCoord = Vector2f( 1.0f, 1.0f ),
-                },
-            }
-        );
-
-        auto ibo = crimild::alloc< IndexUInt32Buffer >(
-            containers::Array< crimild::UInt32 > {
-                0, 1, 2,
-                0, 2, 3,
-            }
-        );
-
-        auto texture = [] {
-            auto texture = crimild::alloc< Texture >();
-			texture->imageView = [&] {
-				auto imageView = crimild::alloc< ImageView >();
-				imageView->image = [&] {
-					return ImageManager::getInstance()->loadImage(
-						{
-							.filePath = {
-								.path = "assets/textures/test.png"
-							},
-						}
-					);
-				}();
-				return imageView;
-        	}();
-			texture->sampler = [&] {
-				auto sampler = crimild::alloc< Sampler >();
-				sampler->setMinFilter( Sampler::Filter::NEAREST );
-				sampler->setMagFilter( Sampler::Filter::NEAREST );
-				return sampler;
-			}();
-			return texture;
-        }();
+        m_frameGraph = crimild::alloc< FrameGraph >();
 
         m_scene = [&] {
             auto scene = crimild::alloc< Group >();
             scene->attachNode(
-                [&] {
-                    auto node = crimild::alloc< Node >();
-
-                    auto renderable = node->attachComponent< RenderStateComponent >();
-                    renderable->pipeline = pipeline;
-                    renderable->vbo = vbo;
-                    renderable->ibo = ibo;
-                    renderable->uniforms = {
-                        [&] {
-                            auto ubo = crimild::alloc< ModelViewProjectionUniformBuffer >();
-                            ubo->node = crimild::get_ptr( node );
-                            return ubo;
-                        }(),
-                    };
-                    renderable->textures = { texture };
-
-                    return node;
+                [] {
+                    auto geometry = crimild::alloc< Geometry >();
+                    geometry->attachPrimitive(
+                        crimild::alloc< QuadPrimitive >(
+                            QuadPrimitive::Params {
+                                .layout = VertexP3TC2::getLayout(),
+                            }
+                        )
+                    );
+                    return geometry;
                 }()
             );
             scene->attachNode([] {
@@ -137,44 +68,157 @@ public:
             return scene;
         }();
 
-		m_frameGraph = [&] {
-			auto graph = crimild::alloc< FrameGraph >();
+		m_renderPass = [&] {
+            auto renderPass = crimild::alloc< RenderPass >();
+            renderPass->attachments = {
+                [&] {
+                    auto att = crimild::alloc< Attachment >();
+                    att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
+                    return att;
+                }(),
+                [&] {
+                    auto att = crimild::alloc< Attachment >();
+                    att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+                    return att;
+                }()
+            };
+            renderPass->setPipeline(
+                [&] {
+                    auto pipeline = crimild::alloc< Pipeline >();
+                    pipeline->primitiveType = Primitive::Type::TRIANGLES;
+                    pipeline->program = [&] {
+                        auto createShader = []( Shader::Stage stage, std::string path ) {
+                            return crimild::alloc< Shader >(
+                                stage,
+                                FileSystem::getInstance().readFile(
+                                    FilePath {
+                                        .path = path,
+                                    }.getAbsolutePath()
+                                )
+                            );
+                        };
 
-			auto color = [&] {
-				auto attachment = graph->create< Attachment >();
-				attachment->usage = Attachment::Usage::COLOR_ATTACHMENT;
-				attachment->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
-				return attachment;
-			}();
+                        auto program = crimild::alloc< ShaderProgram >(
+                            Array< SharedPointer< Shader >> {
+                                createShader(
+                                    Shader::Stage::VERTEX,
+                                    "assets/shaders/scene.vert.spv"
+                                ),
+                                createShader(
+                                    Shader::Stage::FRAGMENT,
+                                    "assets/shaders/scene.frag.spv"
+                                ),
+                                }
+                        );
+                        program->vertexLayouts = { VertexP3TC2::getLayout() };
+                        program->descriptorSetLayouts = {
+                            [] {
+                                auto layout = crimild::alloc< DescriptorSetLayout >();
+                                layout->bindings = {
+                                    {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .stage = Shader::Stage::VERTEX,
+                                    },
+                                    {
+                                        .descriptorType = DescriptorType::TEXTURE,
+                                        .stage = Shader::Stage::FRAGMENT,
+                                    },
+                                };
+                                return layout;
+                            }(),
+                            [] {
+                                auto layout = crimild::alloc< DescriptorSetLayout >();
+                                layout->bindings = {
+                                    {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .stage = Shader::Stage::VERTEX,
+                                    },
+                                };
+                                return layout;
+                            }(),
+                        };
+                        return program;
+                    }();
+                    return pipeline;
+                }()
+            );
+            renderPass->setDescriptors(
+                [&] {
+                    auto descriptorSet = crimild::alloc< DescriptorSet >();
+                    descriptorSet->descriptors = {
+                        {
+                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                            .obj = [&] {
+                                FetchCameras fetch;
+                                m_scene->perform( fetch );
+                                auto camera = fetch.anyCamera();
+                                return crimild::alloc< CameraViewProjectionUniform >( camera );
+                            }(),
+                        },
+                        {
+                            .descriptorType = DescriptorType::TEXTURE,
+                            .obj = [] {
+                                auto texture = crimild::alloc< Texture >();
+                                texture->imageView = [&] {
+                                    auto imageView = crimild::alloc< ImageView >();
+                                    imageView->image = [&] {
+                                        return ImageManager::getInstance()->loadImage(
+                                            {
+                                                .filePath = {
+                                                    .path = "assets/textures/test.png"
+                                                },
+                                            }
+                                        );
+                                    }();
+                                    return imageView;
+                                }();
+                                texture->sampler = [&] {
+                                    auto sampler = crimild::alloc< Sampler >();
+                                    sampler->setMinFilter( Sampler::Filter::NEAREST );
+                                    sampler->setMagFilter( Sampler::Filter::NEAREST );
+                                    return sampler;
+                                }();
+                                return texture;
+                            }(),
+                        },
+                    };
+                    return descriptorSet;
+                }()
+            );
+            renderPass->commands = [&] {
+                auto commandBuffer = crimild::alloc< CommandBuffer >();
+                m_scene->perform(
+                    ApplyToGeometries(
+                        [&]( Geometry *g ) {
+                            auto p = g->anyPrimitive();
+                            auto vertices = p->getVertexData()[ 0 ];
+                            auto indices = p->getIndices();
 
-			auto renderPass = graph->create< RenderPass >();
-            renderPass->attachments = { color };
-			renderPass->commands = [&] {
-				auto commands = crimild::alloc< CommandBuffer >();
-				m_scene->perform(
-					Apply(
-						[&]( Node *node ) {
-							if ( auto renderable = node->getComponent< RenderStateComponent > () ) {
-								renderable->commandRecorder(
-									crimild::get_ptr( commands )
-								);
-							}
+                            commandBuffer->bindGraphicsPipeline( renderPass->getPipeline() );
+                            commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
+                            commandBuffer->bindDescriptorSet( g->getDescriptors() );
+                            commandBuffer->bindVertexBuffer( get_ptr( vertices ) );
+                            commandBuffer->bindIndexBuffer( indices );
+                            commandBuffer->drawIndexed( indices->getIndexCount() );
 						}
 					)
 				);
-				return commands;
+				return commandBuffer;
 			}();
 
-			auto master = graph->create< PresentationMaster >();
-			master->colorAttachment = color;
-			
-			return graph;
+			return renderPass;
 		}();
 
-		if ( m_frameGraph->compile() ) {
-			auto commands = m_frameGraph->recordCommands();
-			setCommandBuffers( { commands } );
-		}
+		m_master = [&] {
+            auto master = crimild::alloc< PresentationMaster >();
+            master->colorAttachment = m_renderPass->attachments[ 0 ];
+			return master;
+        }();
+
+        if ( m_frameGraph->compile() ) {
+            auto commands = m_frameGraph->recordCommands();
+            setCommandBuffers( { commands } );
+        }
 
         return true;
     }
@@ -195,6 +239,8 @@ public:
         }
 
         m_scene = nullptr;
+        m_renderPass = nullptr;
+        m_master = nullptr;
         m_frameGraph = nullptr;
 
         GLFWVulkanSystem::stop();
@@ -202,7 +248,9 @@ public:
 
 private:
     SharedPointer< Node > m_scene;
-	SharedPointer< FrameGraph > m_frameGraph;
+    SharedPointer< FrameGraph > m_frameGraph;
+	SharedPointer< RenderPass > m_renderPass;
+	SharedPointer< PresentationMaster > m_master;
 };
 
 int main( int argc, char **argv )
@@ -220,4 +268,3 @@ int main( int argc, char **argv )
 
     return sim->run();
 }
-

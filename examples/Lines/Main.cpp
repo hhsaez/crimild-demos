@@ -51,7 +51,7 @@ public:
                     auto geometry = crimild::alloc< Geometry >();
                     geometry->attachPrimitive(
                         [&] {
-                            auto primitive = crimild::alloc< Primitive >( Primitive::Type::POINTS );
+                            auto primitive = crimild::alloc< Primitive >( Primitive::Type::LINES );
                             primitive->setVertexData(
                                 {
                                     crimild::alloc< VertexBuffer >(
@@ -63,10 +63,10 @@ public:
 
                                             for ( auto i = 0; i < vertices.size(); i++ ) {
                                                 auto position = Vector3f(
-                                                    rnd.generate( -0.5f * size, 0.5f * size ),
-                                                    rnd.generate( -0.5f * size, 0.5f * size ),
-                                                    rnd.generate( -0.5f * size, 0.5f * size )
-                                                );
+                                                    rnd.generate( -1.0f, 1.0f ),
+                                                    rnd.generate( -1.0f, 1.0f ),
+                                                    rnd.generate( -1.0f, 1.0f )
+                                                ).getNormalized() * rnd.generate( 0.0f, size );
                                                 auto color = Vector3f( 0.5f, 0.5f, 0.5f ) + position / size;
                                                 color *= position.getMagnitude() / size;
                                                 vertices[ i ] = {
@@ -92,7 +92,7 @@ public:
 
             scene->attachNode([] {
                 auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 0.0f, 0.0f, 250.0f );
+                camera->local().setTranslate( 0.0f, 0.0f, 300.0f );
                 Camera::setMainCamera( camera );
                 return camera;
             }());
@@ -116,7 +116,7 @@ public:
             renderPass->setPipeline(
                 [&] {
                     auto pipeline = crimild::alloc< Pipeline >();
-                    pipeline->primitiveType = Primitive::Type::POINTS;
+                    pipeline->primitiveType = Primitive::Type::LINES;
                     pipeline->program = [&] {
                         auto createShader = []( Shader::Stage stage, std::string path ) {
                             return crimild::alloc< Shader >(
@@ -257,7 +257,7 @@ int main( int argc, char **argv )
 
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Points", crimild::alloc< Settings >( argc, argv ) );
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Lines", crimild::alloc< Settings >( argc, argv ) );
     sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
     return sim->run();
 }

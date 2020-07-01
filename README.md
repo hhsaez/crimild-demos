@@ -42,9 +42,9 @@ cmake . -G "Visual Studio 2014"
 
 ### Web (Wasm/WebGL)
 ```
-mkdir build-web 
-cd build-web 
-cmake .. -DCMAKE_TOOLCHAIN_FILE=#{EMSCRIPTEN_HOME}/cmake/Modules/Platform/Emscripten.cmake 
+mkdir build-web
+cd build-web
+cmake .. -DCMAKE_TOOLCHAIN_FILE=#{EMSCRIPTEN_HOME}/cmake/Modules/Platform/Emscripten.cmake
 make clean all -j8
 ```
 It's safe to ignore SDL_Mixer2 warnings, if any.
@@ -58,6 +58,12 @@ Basic and explicit example for rendering a single colored triangle using Crimild
 
 #### [Transformations](example/Transformations)
 Creates a scene with many objects, each of them with a different transformations. Shows how to specify translations, rotations and scales using the local transformation of nodes.
+
+#### [Points](example/Points)
+Shows how to use a POINTS primitive to build a point cloud.
+
+#### [Lines](example/Lines)
+Shows how to use a LINES primitive.
 
 ### <a name="Textures">Textures</a>
 
@@ -74,4 +80,3 @@ Create textures by using different min/mag filter options in samplers.
 Create textures by using different wrap modes options in samplers.
 
 ### <a name="Advanced">Advanced</a>
-
