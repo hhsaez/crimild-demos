@@ -29,41 +29,9 @@
 #include <Crimild_Vulkan.hpp>
 #include <Crimild_GLFW.hpp>
 
-namespace crimild {
-
-    class UnlitMaterial : public Material {
-    public:
-        virtual ~UnlitMaterial( void ) = default;
-
-        inline void setColorMap( SharedPointer< Texture > const &colorMap ) noexcept { m_colorMap = colorMap; }
-        inline Texture *getColorMap( void ) noexcept { return get_ptr( m_colorMap ); }
-
-        DescriptorSet *getDescriptors( void ) noexcept
-        {
-            if ( auto ds = get_ptr( m_descriptors ) ) {
-                return ds;
-            }
-
-            m_descriptors = crimild::alloc< DescriptorSet >();
-            m_descriptors->descriptors = {
-                {
-                    .descriptorType = DescriptorType::TEXTURE,
-                    .obj = m_colorMap,
-                },
-            };
-
-            return get_ptr( m_descriptors );
-        }
-
-    private:
-        SharedPointer< Texture > m_colorMap;
-        SharedPointer< DescriptorSet > m_descriptors;
-    };
-
-}
-
 using namespace crimild;
 using namespace crimild::glfw;
+using namespace crimild::vulkan;
 
 class ExampleVulkanSystem : public GLFWVulkanSystem {
 public:
@@ -73,82 +41,35 @@ public:
             return false;
         }
 
-        m_frameGraph = crimild::alloc< FrameGraph >();
+		m_frameGraph = crimild::alloc< FrameGraph >();
 
         m_scene = [&] {
             auto scene = crimild::alloc< Group >();
 
-            auto textureBuilder = []( crimild::Bool mipmapping ) {
-                auto texture = crimild::alloc< Texture >();
-                texture->imageView = [&] {
-                    auto imageView = crimild::alloc< ImageView >();
-                    imageView->image = Image::CHECKERBOARD_128;
-                    // Enable/Disable mipmapping at the image view
-                    imageView->mipLevels = mipmapping ? 0 : 1;
-                    return imageView;
-                }();
-                texture->sampler = [&] {
-                    auto sampler = crimild::alloc< Sampler >();
-                    sampler->setMinFilter( Sampler::Filter::NEAREST );
-                    sampler->setMagFilter( Sampler::Filter::NEAREST );
-                    sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
-                    if ( mipmapping ) {
-                        sampler->setMaxLod( texture->imageView->image->getMipLevels() );
-                    }
-                    return sampler;
-                }();
-                return texture;
-            };
-
-            auto quadBuilder = [&]( const Vector3f &position, float scale, SharedPointer< Texture > const &texture ) {
-                auto geometry = crimild::alloc< Geometry >();
-                geometry->attachPrimitive(
-                    crimild::alloc< QuadPrimitive >(
-                        QuadPrimitive::Params {
-                            .layout = VertexP3TC2::getLayout(),
-                            .size = 0.5f * Vector2f::ONE,
-                        }
-                    )
-                );
-                geometry->attachComponent< MaterialComponent >()->attachMaterial(
-                    [&] {
-                        auto material = crimild::alloc< UnlitMaterial >();
-                        material->setColorMap( texture );
-                        return material;
-                    }()
-                );
-                geometry->local().setTranslate( position );
-                geometry->local().setScale( scale );
-                return geometry;
-            };
-
-            auto sampleBuilder = [&]( const Vector3f &position, crimild::Bool mipmapping ) {
-                auto texture = textureBuilder( mipmapping );
-                auto group = crimild::alloc< Group >();
-
-                math::fibonacciSquares( 8 ).each(
-                    [&]( auto &it ) {
-                        group->attachNode(
-                            quadBuilder(
-                                it.first,
-                                0.9f * it.second,
-                                texture
-                            )
-                        );
-                    }
-                );
-
-                group->local().setTranslate( position );
-                return group;
-            };
-
-            scene->attachNode( sampleBuilder( Vector3f( -7.0f, 7.0f, 0.0f ), true ) );
-            scene->attachNode( sampleBuilder( Vector3f( -7.0f, -19.0f, 0.0f ), false ) );
+            math::fibonacciSquares( 15 ).each(
+                [&]( auto &it ) {
+                    scene->attachNode(
+                        [&] {
+                            auto geometry = crimild::alloc< Geometry >();
+                            geometry->attachPrimitive(
+                                crimild::alloc< SpherePrimitive >(
+                                    SpherePrimitive::Params {
+                                        .type = Primitive::Type::TRIANGLES,
+                                        .layout = VertexP3C3::getLayout(),
+                                    }
+                                )
+                            );
+                            geometry->local().setTranslate( it.first );
+                            geometry->local().setScale( 0.5f * it.second );
+                            return geometry;
+                        }()
+                    );
+                }
+            );
 
             scene->attachNode([] {
                 auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 0.0f, 0.0f, 80.0f );
-                camera->local().lookAt( Vector3f::ZERO );
+                camera->local().setTranslate( 0.0f, 0.0f, 250.0f );
                 Camera::setMainCamera( camera );
                 return camera;
             }());
@@ -163,6 +84,11 @@ public:
                     att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
                     return att;
                 }(),
+                [&] {
+                    auto att = crimild::alloc< Attachment >();
+                    att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+                    return att;
+                }()
             };
             renderPass->setPipeline(
                 [&] {
@@ -192,7 +118,7 @@ public:
                                 ),
                                 }
                         );
-                        program->vertexLayouts = { VertexP3TC2::getLayout() };
+                        program->vertexLayouts = { VertexP3C3::getLayout() };
                         program->descriptorSetLayouts = {
                             [] {
                                 auto layout = crimild::alloc< DescriptorSetLayout >();
@@ -200,16 +126,6 @@ public:
                                     {
                                         .descriptorType = DescriptorType::UNIFORM_BUFFER,
                                         .stage = Shader::Stage::VERTEX,
-                                    },
-                                };
-                                return layout;
-                            }(),
-                            [] {
-                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                layout->bindings = {
-                                    {
-                                        .descriptorType = DescriptorType::TEXTURE,
-                                        .stage = Shader::Stage::FRAGMENT,
                                     },
                                 };
                                 return layout;
@@ -234,7 +150,7 @@ public:
                 [&] {
                     auto descriptorSet = crimild::alloc< DescriptorSet >();
                     descriptorSet->descriptors = {
-                        {
+                        Descriptor {
                             .descriptorType = DescriptorType::UNIFORM_BUFFER,
                             .obj = [&] {
                                 FetchCameras fetch;
@@ -252,16 +168,12 @@ public:
                 m_scene->perform(
                     ApplyToGeometries(
                         [&]( Geometry *g ) {
+                            commandBuffer->bindGraphicsPipeline( renderPass->getPipeline() );
+                            commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
+                            commandBuffer->bindDescriptorSet( g->getDescriptors() );
                             auto p = g->anyPrimitive();
                             auto vertices = p->getVertexData()[ 0 ];
                             auto indices = p->getIndices();
-
-                            commandBuffer->bindGraphicsPipeline( renderPass->getPipeline() );
-                            commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
-                            if ( auto m = static_cast< UnlitMaterial * >( g->getComponent< MaterialComponent >()->first() ) ) {
-                                commandBuffer->bindDescriptorSet( m->getDescriptors() );
-                            }
-                            commandBuffer->bindDescriptorSet( g->getDescriptors() );
                             commandBuffer->bindVertexBuffer( get_ptr( vertices ) );
                             commandBuffer->bindIndexBuffer( indices );
                             commandBuffer->drawIndexed( indices->getIndexCount() );
@@ -325,9 +237,7 @@ int main( int argc, char **argv )
 
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Texture Mipmapping", crimild::alloc< Settings >( argc, argv ) );
-
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Spheres", crimild::alloc< Settings >( argc, argv ) );
     sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-
     return sim->run();
 }
