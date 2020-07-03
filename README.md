@@ -65,6 +65,15 @@ Shows how to use a POINTS primitive to build a point cloud.
 #### [Lines](example/Lines)
 Shows how to use a LINES primitive.
 
+#### [Spheres](example/Lines)
+Shows how to use a Sphere primitive.
+
+#### [Boxes](example/Lines)
+Shows how to use a Box primitive.
+
+#### [Parametric Primitives](example/ParametricPrimitives)
+Shows how to use each of the parametric primitives.
+
 ### <a name="Textures">Textures</a>
 
 #### [Textures](examples/Textures/)
