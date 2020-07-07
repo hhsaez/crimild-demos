@@ -5,18 +5,20 @@ layout ( location = 0 ) in vec3 inWorldPos;
 layout ( location = 1 ) in vec3 inWorldNormal;
 layout ( location = 2 ) in vec3 inWorldEye;
 
-layout ( binding = 1 ) uniform samplerCube texSampler;
+layout ( set = 1, binding = 0 ) uniform samplerCube uSampler;
 
 layout ( location = 0 ) out vec4 outColor;
 
-void main()
+vec3 refracted(vec3 I)
 {
 	float ratio = 1.0 / 1.33;
-	vec3 I = normalize( inWorldPos - inWorldEye );
 	vec3 R = refract( I, normalize( inWorldNormal ), ratio );
-
-	R.y *= -1.0;
-
-	outColor = vec4( texture( texSampler, R ).rgb, 1.0 );
+	return texture( uSampler, R ).rgb;
 }
 
+void main()
+{
+	vec3 I = normalize( inWorldPos - inWorldEye );
+
+    outColor = vec4( refracted( I ), 1.0 );
+}

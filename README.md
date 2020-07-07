@@ -88,4 +88,10 @@ Create textures by using different min/mag filter options in samplers.
 #### [Texture Wrap Mode](examples/TextureWrapping/)
 Create textures by using different wrap modes options in samplers.
 
+#### [Skybox](examples/Skybox)
+Use a cubemap texture to render a skybox around a scene.
+
+#### [Environment Mapping](examples/EnviornmentMapping)
+Implements simple reflection and refraction effects using environment mapping.
+
 ### <a name="Advanced">Advanced</a>
