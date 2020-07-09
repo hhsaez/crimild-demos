@@ -7,6 +7,7 @@ A repository for crimild-based demos and code examples
 + [Building](#Building)
 + [Examples](#Examples)
     + [Basics](#Basics)
+    + [Primitives](#Primitives)
 	+ [Textures](#Textures)
     + [Advanced](#Advanced)
 
@@ -59,6 +60,8 @@ Basic and explicit example for rendering a single colored triangle using Crimild
 #### [Transformations](example/Transformations)
 Creates a scene with many objects, each of them with a different transformations. Shows how to specify translations, rotations and scales using the local transformation of nodes.
 
+### <a name="Primitives">Primitives</a>
+
 #### [Points](example/Points)
 Shows how to use a POINTS primitive to build a point cloud.
 
@@ -93,5 +96,13 @@ Use a cubemap texture to render a skybox around a scene.
 
 #### [Environment Mapping](examples/EnviornmentMapping)
 Implements simple reflection and refraction effects using environment mapping.
+
+### <a name="Lighting">Lighting</a>
+
+#### [Unlit](examples/Unlit)
+Uses an unlit material to show how colors are displayed when no lighing is available.
+
+#### [Basic](examples/Basic)
+Implements Phong and Gouraud lighting with simple shaders.
 
 ### <a name="Advanced">Advanced</a>
