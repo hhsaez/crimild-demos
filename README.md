@@ -99,10 +99,13 @@ Implements simple reflection and refraction effects using environment mapping.
 
 ### <a name="Lighting">Lighting</a>
 
-#### [Unlit](examples/Unlit)
+#### [Lighting Unlit](examples/Lighting Unlit)
 Uses an unlit material to show how colors are displayed when no lighing is available.
 
-#### [Basic](examples/Basic)
+#### [Lighting Basic](examples/Lighting Basic)
 Implements Phong and Gouraud lighting with simple shaders.
+
+#### [Lighting Material](examples/Lighting Material)
+Renders a scene with several objects using the LitMaterial class.
 
 ### <a name="Advanced">Advanced</a>
