@@ -32,6 +32,8 @@
 
 namespace crimild {
 
+    /*
+
     class LightingShaderProgram : public ShaderProgram {
     public:
         LightingShaderProgram( std::string name )
@@ -103,6 +105,8 @@ namespace crimild {
         virtual ~LightingMaterial( void ) = default;
     };
 
+    */
+
 }
 
 using namespace crimild;
@@ -121,20 +125,15 @@ public:
         m_scene = [&] {
             auto scene = crimild::alloc< Group >();
 
-            auto createMaterial = []( std::string name ) {
-                auto material = crimild::alloc< Material >();
-                material->setPipeline(
-                    [&] {
-                        auto pipeline = crimild::alloc< LightingPipeline >();
-                        pipeline->program = crimild::alloc< LightingShaderProgram >( name );
-                        return pipeline;
-                    }()
-                );
+            auto createMaterial = []( auto program ) {
+                auto material = crimild::alloc< SimpleLitMaterial >();
+                material->getPipeline()->program = crimild::retain( program );
+                material->setDiffuse( RGBAColorf( 1.0f, 0.1f, 0.1f, 1.0f ) );
                 return material;
             };
 
-            auto gouraudMaterial = createMaterial( "gouraud" );
-            auto phongMaterial = createMaterial( "phong" );
+            auto gouraudMaterial = createMaterial( AssetManager::getInstance()->get< GouraudLitShaderProgram >() );
+            auto phongMaterial = createMaterial( AssetManager::getInstance()->get< PhongLitShaderProgram >() );
 
             auto sphere = []( auto position, auto material ) {
                 auto geometry = crimild::alloc< Geometry >();
@@ -142,7 +141,7 @@ public:
                     crimild::alloc< SpherePrimitive >(
                         SpherePrimitive::Params {
                             .type = Primitive::Type::TRIANGLES,
-                            .layout = VertexP3N3::getLayout(),
+                            .layout = VertexP3N3TC2::getLayout(),
                         }
                     )
                 );
@@ -196,7 +195,7 @@ public:
                         Descriptor {
                             .descriptorType = DescriptorType::UNIFORM_BUFFER,
                             .obj = [&] {
-                                return crimild::alloc< UniformBuffer >( Vector4f( -1.0f, -1.0f, -1.0f, 0.0f ) );
+                                return crimild::alloc< UniformBuffer >( Vector4f( 10.0f, 10.0f, 10.0f, 0.0f ) );
                             }(),
                         },
                     };
@@ -212,6 +211,7 @@ public:
                                 if ( auto material = ms->first() ) {
                                     commandBuffer->bindGraphicsPipeline( material->getPipeline() );
                                     commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
+                                    commandBuffer->bindDescriptorSet( material->getDescriptors() );
                                     commandBuffer->bindDescriptorSet( g->getDescriptors() );
                                     commandBuffer->drawPrimitive( g->anyPrimitive() );
                                 }

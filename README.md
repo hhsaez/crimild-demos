@@ -99,13 +99,19 @@ Implements simple reflection and refraction effects using environment mapping.
 
 ### <a name="Lighting">Lighting</a>
 
-#### [Lighting Unlit](examples/Lighting Unlit)
+#### [Lighting Unlit](examples/LightingUnlit)
 Uses an unlit material to show how colors are displayed when no lighing is available.
 
-#### [Lighting Basic](examples/Lighting Basic)
+#### [Lighting Basic](examples/LightingBasic)
 Implements Phong and Gouraud lighting with simple shaders.
 
-#### [Lighting Material](examples/Lighting Material)
+#### [Lighting Material](examples/LightingMaterial)
 Renders a scene with several objects using the LitMaterial class.
+
+#### [Lighting Diffuse Map](examples/LightingDiffuseMap)
+Renders Planet Earth with diffuse texture and single point light, using Phong shading model.
+
+#### [Lighting Specular Map](examples/LightingSpecularMap)
+Renders Planet Earth with diffuse and specular textures, under the influence of a single point light and using Phong shading model.
 
 ### <a name="Advanced">Advanced</a>
