@@ -114,4 +114,13 @@ Renders Planet Earth with diffuse texture and single point light, using Phong sh
 #### [Lighting Specular Map](examples/LightingSpecularMap)
 Renders Planet Earth with diffuse and specular textures, under the influence of a single point light and using Phong shading model.
 
+#### [Lighting Directional](examples/LightingDirectional)
+Uses a single directional light to lit a scene.
+
+#### [Lighting Point](examples/LightingPoint)
+Uses a single point light to lit a scene.
+
+#### [Lighting Spotlight](examples/LightingSpotlight)
+Uses a single spotlight light to lit a scene
+
 ### <a name="Advanced">Advanced</a>
