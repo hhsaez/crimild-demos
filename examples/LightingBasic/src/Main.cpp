@@ -30,85 +30,6 @@
 #include <Crimild_GLFW.hpp>
 #include <Crimild_STB.hpp>
 
-namespace crimild {
-
-    /*
-
-    class LightingShaderProgram : public ShaderProgram {
-    public:
-        LightingShaderProgram( std::string name )
-        {
-            auto createShader = []( Shader::Stage stage, std::string path ) {
-                return crimild::alloc< Shader >(
-                    stage,
-                    FileSystem::getInstance().readFile(
-                        FilePath {
-                            .path = path,
-                        }.getAbsolutePath()
-                    )
-                );
-            };
-
-            setShaders(
-                Array< SharedPointer< Shader >> {
-                    createShader(
-                        Shader::Stage::VERTEX,
-                        "assets/shaders/" + name + ".vert.spv"
-                    ),
-                    createShader(
-                        Shader::Stage::FRAGMENT,
-                        "assets/shaders/" + name + ".frag.spv"
-                    ),
-                    }
-            );
-
-            vertexLayouts = { VertexP3N3::getLayout() };
-
-            descriptorSetLayouts = {
-                [] {
-                    auto layout = crimild::alloc< DescriptorSetLayout >();
-                    layout->bindings = {
-                        {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .stage = Shader::Stage::VERTEX,
-                        },
-                        {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .stage = Shader::Stage::ALL,
-                        },
-                    };
-                    return layout;
-                }(),
-                [] {
-                    auto layout = crimild::alloc< DescriptorSetLayout >();
-                    layout->bindings = {
-                        {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .stage = Shader::Stage::VERTEX,
-                        },
-                    };
-                    return layout;
-                }(),
-            };
-        }
-
-        virtual ~LightingShaderProgram( void ) = default;
-    };
-
-    class LightingPipeline : public Pipeline {
-    public:
-        virtual ~LightingPipeline( void ) = default;
-    };
-
-    class LightingMaterial : public Material {
-    public:
-        virtual ~LightingMaterial( void ) = default;
-    };
-
-    */
-
-}
-
 using namespace crimild;
 using namespace crimild::glfw;
 
@@ -153,6 +74,15 @@ public:
             scene->attachNode( sphere( Vector3f( -1.25f, 0.0f, 0.0f ), gouraudMaterial ) );
             scene->attachNode( sphere( Vector3f( 1.25f, 0.0f, 0.0f ), phongMaterial ) );
 
+            scene->attachNode(
+                [] {
+                    auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+                    light->local().setTranslate( 10.0f, 10.0f, 10.0f );
+                    light->local().lookAt( Vector3f::ZERO );
+                    return light;
+                }()
+            );
+
             scene->attachNode([] {
                 auto camera = crimild::alloc< Camera >();
                 camera->local().setTranslate( 0.0f, 0.0f, 5.0f );
@@ -194,9 +124,19 @@ public:
                         },
                         Descriptor {
                             .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
-                                return crimild::alloc< UniformBuffer >( Vector4f( 10.0f, 10.0f, 10.0f, 0.0f ) );
-                            }(),
+                            .obj = crimild::alloc< LightingUniform >(
+                                [&] {
+                                    FetchLights fetch;
+                                    Array< Light * > lights;
+                                    m_scene->perform( fetch );
+                                    fetch.forEachLight(
+                                        [&]( auto light ) {
+                                            lights.add( light );
+                                        }
+                                    );
+                                    return lights;
+                                }()
+                            ),
                         },
                     };
                     return descriptorSet;

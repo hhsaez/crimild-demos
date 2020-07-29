@@ -16,8 +16,9 @@ struct LightData {
 	vec4 cutoffs;
 };
 
-layout ( binding = 1 ) uniform LightDataUniform {
-	LightData light;
+layout ( binding = 1 ) uniform LightingUniform {
+	LightData light[ 10 ];
+    int pointLightCount;
 };
 
 layout ( location = 0 ) out vec4 outColor;
@@ -75,4 +76,3 @@ void main()
 
 	outColor = vec4( albedo * accum, 1.0 );
 }
-

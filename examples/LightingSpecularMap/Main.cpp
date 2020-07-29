@@ -30,33 +30,6 @@
 #include <Crimild_GLFW.hpp>
 #include <Crimild_STB.hpp>
 
-namespace crimild {
-
-    template< typename T >
-    class DynamicUniformBuffer : public UniformBuffer {
-    private:
-        using PreRenderCallback = std::function< T( void ) >;
-
-    public:
-        explicit DynamicUniformBuffer( const T &value ) noexcept : UniformBuffer( value ) { }
-        explicit DynamicUniformBuffer( PreRenderCallback callback ) noexcept : UniformBuffer( T() ) { onPreRender( callback ); }
-        virtual ~DynamicUniformBuffer( void ) = default;
-
-        inline void onPreRender( PreRenderCallback callback ) noexcept { m_callback = callback; }
-
-        virtual void onPreRender( void ) noexcept override
-        {
-            if ( m_callback != nullptr ) {
-                setValue( m_callback() );
-            }
-        }
-
-    private:
-        std::function< T( void ) > m_callback;
-    };
-
-}
-
 using namespace crimild;
 using namespace crimild::glfw;
 
@@ -231,23 +204,19 @@ public:
                         },
                         Descriptor {
                             .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
-                                struct LightProps {
-                                    Vector4f position;
-                                };
-
-                                FetchLights fetch;
-                                m_scene->perform( fetch );
-
-                                return crimild::alloc< DynamicUniformBuffer< LightProps >>(
-                                    [ light = retain( fetch.anyLight() ) ] {
-                                        auto p = light->getWorld().getTranslate();
-                                        return LightProps {
-                                            .position = Vector4f( p.x(), p.y(), p.z(), 0.0f ),
-                                        };
-                                    }
-                                );
-                            }(),
+                            .obj = crimild::alloc< LightingUniform >(
+                                [&] {
+                                    FetchLights fetch;
+                                    Array< Light * > lights;
+                                    m_scene->perform( fetch );
+                                    fetch.forEachLight(
+                                        [&]( auto light ) {
+                                            lights.add( light );
+                                        }
+                                    );
+                                    return lights;
+                                }()
+                            ),
                         },
                     };
                     return descriptorSet;

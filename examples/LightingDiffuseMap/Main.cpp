@@ -211,23 +211,19 @@ public:
                         },
                         Descriptor {
                             .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
-                                struct LightProps {
-                                    Vector4f position;
-                                };
-
-                                FetchLights fetch;
-                                m_scene->perform( fetch );
-
-                                return crimild::alloc< DynamicUniformBuffer< LightProps >>(
-                                    [ light = retain( fetch.anyLight() ) ] {
-                                        auto p = light->getWorld().getTranslate();
-                                        return LightProps {
-                                            .position = Vector4f( p.x(), p.y(), p.z(), 0.0f ),
-                                        };
-                                    }
-                                );
-                            }(),
+                            .obj = crimild::alloc< LightingUniform >(
+                                [&] {
+                                    FetchLights fetch;
+                                    Array< Light * > lights;
+                                    m_scene->perform( fetch );
+                                    fetch.forEachLight(
+                                        [&]( auto light ) {
+                                            lights.add( light );
+                                        }
+                                    );
+                                    return lights;
+                                }()
+                            ),
                         },
                     };
                     return descriptorSet;

@@ -171,12 +171,19 @@ public:
                         },
                         Descriptor {
                             .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
-                                FetchLights fetch;
-                                m_scene->perform( fetch );
-
-                                return crimild::alloc< LightUniform >( fetch.anyLight() );
-                            }(),
+                            .obj = crimild::alloc< LightingUniform >(
+                                [&] {
+                                    FetchLights fetch;
+                                    Array< Light * > lights;
+                                    m_scene->perform( fetch );
+                                    fetch.forEachLight(
+                                        [&]( auto light ) {
+                                            lights.add( light );
+                                        }
+                                    );
+                                    return lights;
+                                }()
+                            ),
                         },
                     };
                     return descriptorSet;
