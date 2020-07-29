@@ -123,4 +123,7 @@ Uses a single point light to lit a scene.
 #### [Lighting Spotlight](examples/LightingSpotlight)
 Uses a single spotlight light to lit a scene
 
+#### [Lighting Multiple](examples/LightingMultiple)
+Creates a scene with lots of cubes and adds multiple light sources: one directional light, two point lights moving around the scene and a flashlight (using a spot light). Camera can be controlled with WASD and the mouse.
+
 ### <a name="Advanced">Advanced</a>

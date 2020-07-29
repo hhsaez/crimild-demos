@@ -105,7 +105,7 @@ public:
                                             return texture;
                                         }()
                                     );
-                                    material->setShininess( 4.0f );
+                                    material->setShininess( 32.0f );
                                     return material;
                                 }()
                             );
