@@ -126,4 +126,15 @@ Uses a single spotlight light to lit a scene
 #### [Lighting Multiple](examples/LightingMultiple)
 Creates a scene with lots of cubes and adds multiple light sources: one directional light, two point lights moving around the scene and a flashlight (using a spot light). Camera can be controlled with WASD and the mouse.
 
+### <a name="Loaders">Loaders</a>
+
+#### [OBJLoader](example/OBJLoader)
+Shows how to use the OBJ loader to create a simple scene by loading models from files.
+
 ### <a name="Advanced">Advanced</a>
+
+#### [Depth](examples/Depth)
+Visualizes the depth buffer by implementing a custom shader.
+
+#### [Depth Functions](examples/DepthFunc)
+Visualizes what happens when depth testing is disabled.
