@@ -131,7 +131,7 @@ Creates a scene with lots of cubes and adds multiple light sources: one directio
 #### [OBJLoader](example/OBJLoader)
 Shows how to use the OBJ loader to create a simple scene by loading models from files.
 
-### <a name="Advanced">Advanced</a>
+### <a name="DepthStencil">Depth/Stencil</a>
 
 #### [Depth](examples/Depth)
 Visualizes the depth buffer by implementing a custom shader.
@@ -141,3 +141,10 @@ Visualizes what happens when depth testing is disabled.
 
 #### [Stencil Outline](examples/StencilOutline)
 Renders an outline around some objects using the stencil buffer and multiple passes
+
+### <a name="Alpha">Alpha</a>
+
+#### [AlphaDiscard](examples/AlphaDiscard)
+Displays a scene with several objects, discarding fragments if the alpha value is lower than some threshold.
+
+### <a name="Advanced">Advanced</a>
