@@ -138,3 +138,6 @@ Visualizes the depth buffer by implementing a custom shader.
 
 #### [Depth Functions](examples/DepthFunc)
 Visualizes what happens when depth testing is disabled.
+
+#### [Stencil Outline](examples/StencilOutline)
+Renders an outline around some objects using the stencil buffer and multiple passes
