@@ -179,7 +179,7 @@ public:
         }();
 
         m_composition = present(
-            invert(
+            grayscale(
                 renderScene( crimild::get_ptr( m_scene ) )
             )
         );
@@ -231,7 +231,7 @@ int main( int argc, char **argv )
 
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Postprocessing: Negative", crimild::alloc< Settings >( argc, argv ) );
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Postprocessing: Grayscale", crimild::alloc< Settings >( argc, argv ) );
 
     SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
 
