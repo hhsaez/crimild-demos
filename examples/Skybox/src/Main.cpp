@@ -25,9 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Rendering/SkyboxMaterial.hpp"
-#include "Rendering/UnlitMaterial.hpp"
-
 #include <Crimild.hpp>
 #include <Crimild_Vulkan.hpp>
 #include <Crimild_GLFW.hpp>
@@ -49,46 +46,46 @@ public:
         m_scene = [&] {
             auto scene = crimild::alloc< Group >();
 
+            auto primitive = crimild::alloc< BoxPrimitive >(
+                BoxPrimitive::Params {
+                    .type = Primitive::Type::TRIANGLES,
+                    .layout = VertexP3N3TC2::getLayout(),
+                }
+            );
+
+            auto material = [] {
+                auto material = crimild::alloc< UnlitMaterial >();
+                material->setColor( RGBAColorf( 1.0f, 0.0f, 1.0f, 1.0f ) );
+                material->setTexture(
+                    [] {
+                        auto texture = crimild::alloc< Texture >();
+                        texture->imageView = [&] {
+                            auto imageView = crimild::alloc< ImageView >();
+                            imageView->image = Image::CHECKERBOARD_16;
+                            return imageView;
+                        }();
+                        texture->sampler = [&] {
+                            auto sampler = crimild::alloc< Sampler >();
+                            sampler->setMinFilter( Sampler::Filter::NEAREST );
+                            sampler->setMagFilter( Sampler::Filter::NEAREST );
+                            sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                            return sampler;
+                        }();
+                        return texture;
+                    }()
+                );
+                return material;
+            }();
+
             math::fibonacciSquares( 20 ).each(
                 [&]( auto &it ) {
                     scene->attachNode(
                         [&] {
                             auto geometry = crimild::alloc< Geometry >();
-                            geometry->attachPrimitive(
-                                crimild::alloc< BoxPrimitive >(
-                                    BoxPrimitive::Params {
-                                        .type = Primitive::Type::TRIANGLES,
-                                        .layout = VertexP3N3TC2::getLayout(),
-                                    }
-                                )
-                            );
+                            geometry->attachPrimitive( primitive );
                             geometry->local().setTranslate( it.first + Vector3f::UNIT_Z * it.second );
                             geometry->local().setScale( 0.25f * it.second );
-                            geometry->attachComponent< MaterialComponent >()->attachMaterial(
-                                [] {
-                                    auto material = crimild::alloc< UnlitMaterial >();
-                                    material->setColor( RGBAColorf( 1.0f, 0.0f, 1.0f, 1.0f ) );
-                                    material->setTexture(
-                                        [] {
-                                            auto texture = crimild::alloc< Texture >();
-                                            texture->imageView = [&] {
-                                                auto imageView = crimild::alloc< ImageView >();
-                                                imageView->image = Image::CHECKERBOARD_16;
-                                                return imageView;
-                                            }();
-                                            texture->sampler = [&] {
-                                                auto sampler = crimild::alloc< Sampler >();
-                                                sampler->setMinFilter( Sampler::Filter::NEAREST );
-                                                sampler->setMagFilter( Sampler::Filter::NEAREST );
-                                                sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
-                                                return sampler;
-                                            }();
-                                            return texture;
-                                        }()
-                                    );
-                                    return material;
-                                }()
-                            );
+                            geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
                             return geometry;
                         }()
                     );
@@ -97,54 +94,37 @@ public:
 
             scene->attachNode(
                 [&] {
-                    auto geometry = crimild::alloc< Geometry >();
-                    geometry->setLayer( Node::Layer::SKYBOX );
-                    geometry->attachPrimitive(
-                        crimild::alloc< BoxPrimitive >(
-                            BoxPrimitive::Params {
-                                .type = Primitive::Type::TRIANGLES,
-                                .layout = VertexP3::getLayout(),
-                                .size = Vector3f( 1.0f, 1.0f, 1.0f ),
-                            }
-                        )
-                    );
-                    geometry->attachComponent< MaterialComponent >()->attachMaterial(
+                    auto skybox = crimild::alloc< Skybox >(
                         [] {
-                            auto material = crimild::alloc< SkyboxMaterial >();
-                            material->setTexture(
-                                [] {
-                                    auto texture = crimild::alloc< Texture >();
-                                    texture->imageView = [&] {
-                                        auto imageView = crimild::alloc< ImageView >();
-                                        imageView->image = ImageManager::getInstance()->loadCubemap(
-                                            {
-                                                .filePaths = {
-                                                    { .path = "assets/textures/right.tga" },
-                                                    { .path = "assets/textures/left.tga" },
-                                                    { .path = "assets/textures/top.tga" },
-                                                    { .path = "assets/textures/bottom.tga" },
-                                                    { .path = "assets/textures/back.tga" },
-                                                    { .path = "assets/textures/front.tga" },
-                                                },
-                                            }
-                                        );
-                                        return imageView;
-                                    }();
-                                    texture->sampler = [&] {
-                                        auto sampler = crimild::alloc< Sampler >();
-                                        sampler->setMinFilter( Sampler::Filter::NEAREST );
-                                        sampler->setMagFilter( Sampler::Filter::NEAREST );
-                                        sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
-                                        sampler->setCompareOp( CompareOp::NEVER );
-                                        return sampler;
-                                    }();
-                                    return texture;
-                                }()
-                            );
-                            return material;
+                            auto texture = crimild::alloc< Texture >();
+                            texture->imageView = [&] {
+                                auto imageView = crimild::alloc< ImageView >();
+                                imageView->image = ImageManager::getInstance()->loadCubemap(
+                                    {
+                                        .filePaths = {
+                                            { .path = "assets/textures/right.tga" },
+                                            { .path = "assets/textures/left.tga" },
+                                            { .path = "assets/textures/top.tga" },
+                                            { .path = "assets/textures/bottom.tga" },
+                                            { .path = "assets/textures/back.tga" },
+                                            { .path = "assets/textures/front.tga" },
+                                        },
+                                    }
+                                );
+                                return imageView;
+                            }();
+                            texture->sampler = [&] {
+                                auto sampler = crimild::alloc< Sampler >();
+                                sampler->setMinFilter( Sampler::Filter::LINEAR );
+                                sampler->setMagFilter( Sampler::Filter::LINEAR );
+                                sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                                sampler->setCompareOp( CompareOp::NEVER );
+                                return sampler;
+                            }();
+                            return texture;
                         }()
                     );
-                    return geometry;
+                    return skybox;
                 }()
             );
 
@@ -157,75 +137,14 @@ public:
                 return camera;
             }());
 
+            scene->perform( StartComponents() );
+
             return scene;
         }();
 
-        m_scene->perform( StartComponents() );
-
-		m_renderPass = [&] {
-            auto renderPass = crimild::alloc< RenderPass >();
-            renderPass->attachments = {
-                [&] {
-                    auto att = crimild::alloc< Attachment >();
-                    att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
-                    return att;
-                }(),
-                [&] {
-                    auto att = crimild::alloc< Attachment >();
-                    att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
-                    return att;
-                }()
-            };
-
-            renderPass->setDescriptors(
-                [&] {
-                    auto descriptorSet = crimild::alloc< DescriptorSet >();
-                    descriptorSet->descriptors = {
-                        Descriptor {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
-                                FetchCameras fetch;
-                                m_scene->perform( fetch );
-                                auto camera = fetch.anyCamera();
-                                return crimild::alloc< CameraViewProjectionUniform >( camera );
-                            }(),
-                        },
-                    };
-                    return descriptorSet;
-                }()
-            );
-            renderPass->commands = [&] {
-                auto commandBuffer = crimild::alloc< CommandBuffer >();
-                m_scene->perform(
-                    ApplyToGeometries(
-                        [&]( Geometry *g ) {
-                            if ( auto ms = g->getComponent< MaterialComponent >() ) {
-                                if ( auto material = ms->first() ) {
-                                    commandBuffer->bindGraphicsPipeline( material->getPipeline() );
-                                    commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
-                                    commandBuffer->bindDescriptorSet( material->getDescriptors() );
-                                    commandBuffer->bindDescriptorSet( g->getDescriptors() );
-                                    auto p = g->anyPrimitive();
-                                    auto vertices = p->getVertexData()[ 0 ];
-                                    auto indices = p->getIndices();
-                                    commandBuffer->bindVertexBuffer( get_ptr( vertices ) );
-                                    commandBuffer->bindIndexBuffer( indices );
-                                    commandBuffer->drawIndexed( indices->getIndexCount() );
-                                }
-                            }
-						}
-					)
-				);
-				return commandBuffer;
-			}();
-
-			return renderPass;
-		}();
-
-		m_master = [&] {
-            auto master = crimild::alloc< PresentationMaster >();
-            master->colorAttachment = m_renderPass->attachments[ 0 ];
-			return master;
+        m_composition = [&] {
+            using namespace crimild::compositions;
+            return present( renderScene( crimild::get_ptr( m_scene ) ) );
         }();
 
         if ( m_frameGraph->compile() ) {
@@ -252,8 +171,6 @@ public:
         }
 
         m_scene = nullptr;
-        m_renderPass = nullptr;
-        m_master = nullptr;
         m_frameGraph = nullptr;
 
         GLFWVulkanSystem::stop();
@@ -262,8 +179,7 @@ public:
 private:
     SharedPointer< Node > m_scene;
     SharedPointer< FrameGraph > m_frameGraph;
-	SharedPointer< RenderPass > m_renderPass;
-	SharedPointer< PresentationMaster > m_master;
+    compositions::Composition m_composition;
 };
 
 int main( int argc, char **argv )

@@ -25,7 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Rendering/SkyboxMaterial.hpp"
 #include "Rendering/ReflectionMaterial.hpp"
 #include "Rendering/RefractionMaterial.hpp"
 
@@ -79,12 +78,6 @@ public:
                 return texture;
             }();
 
-            auto skyboxMaterial = [&] {
-                auto material = crimild::alloc< SkyboxMaterial >();
-                material->setTexture( environmentTexture );
-                return material;
-            }();
-
             auto reflectionMaterial = [&] () -> SharedPointer< Material > {
                 auto material = crimild::alloc< ReflectionMaterial >();
                 material->setTexture( environmentTexture );
@@ -122,19 +115,7 @@ public:
 
             scene->attachNode(
                 [&] {
-                    auto geometry = crimild::alloc< Geometry >();
-                    geometry->setLayer( Node::Layer::SKYBOX );
-                    geometry->attachPrimitive(
-                        crimild::alloc< BoxPrimitive >(
-                            BoxPrimitive::Params {
-                                .type = Primitive::Type::TRIANGLES,
-                                .layout = VertexP3::getLayout(),
-                                .size = Vector3f( 1.0f, 1.0f, 1.0f ),
-                            }
-                        )
-                    );
-                    geometry->attachComponent< MaterialComponent >()->attachMaterial( skyboxMaterial );
-                    return geometry;
+                    return crimild::alloc< Skybox >( environmentTexture );
                 }()
             );
 
@@ -147,75 +128,14 @@ public:
                 return camera;
             }());
 
+            scene->perform( StartComponents() );
+
             return scene;
         }();
 
-        m_scene->perform( StartComponents() );
-
-		m_renderPass = [&] {
-            auto renderPass = crimild::alloc< RenderPass >();
-            renderPass->attachments = {
-                [&] {
-                    auto att = crimild::alloc< Attachment >();
-                    att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
-                    return att;
-                }(),
-                [&] {
-                    auto att = crimild::alloc< Attachment >();
-                    att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
-                    return att;
-                }()
-            };
-
-            renderPass->setDescriptors(
-                [&] {
-                    auto descriptorSet = crimild::alloc< DescriptorSet >();
-                    descriptorSet->descriptors = {
-                        Descriptor {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
-                                FetchCameras fetch;
-                                m_scene->perform( fetch );
-                                auto camera = fetch.anyCamera();
-                                return crimild::alloc< CameraViewProjectionUniform >( camera );
-                            }(),
-                        },
-                    };
-                    return descriptorSet;
-                }()
-            );
-            renderPass->commands = [&] {
-                auto commandBuffer = crimild::alloc< CommandBuffer >();
-                m_scene->perform(
-                    ApplyToGeometries(
-                        [&]( Geometry *g ) {
-                            if ( auto ms = g->getComponent< MaterialComponent >() ) {
-                                if ( auto material = ms->first() ) {
-                                    commandBuffer->bindGraphicsPipeline( material->getPipeline() );
-                                    commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
-                                    commandBuffer->bindDescriptorSet( material->getDescriptors() );
-                                    commandBuffer->bindDescriptorSet( g->getDescriptors() );
-                                    auto p = g->anyPrimitive();
-                                    auto vertices = p->getVertexData()[ 0 ];
-                                    auto indices = p->getIndices();
-                                    commandBuffer->bindVertexBuffer( get_ptr( vertices ) );
-                                    commandBuffer->bindIndexBuffer( indices );
-                                    commandBuffer->drawIndexed( indices->getIndexCount() );
-                                }
-                            }
-						}
-					)
-				);
-				return commandBuffer;
-			}();
-
-			return renderPass;
-		}();
-
-		m_master = [&] {
-            auto master = crimild::alloc< PresentationMaster >();
-            master->colorAttachment = m_renderPass->attachments[ 0 ];
-			return master;
+        m_composition = [&] {
+            using namespace crimild::compositions;
+            return present( renderScene( m_scene ) );
         }();
 
         if ( m_frameGraph->compile() ) {
@@ -242,8 +162,6 @@ public:
         }
 
         m_scene = nullptr;
-        m_renderPass = nullptr;
-        m_master = nullptr;
         m_frameGraph = nullptr;
 
         GLFWVulkanSystem::stop();
@@ -252,8 +170,7 @@ public:
 private:
     SharedPointer< Node > m_scene;
     SharedPointer< FrameGraph > m_frameGraph;
-	SharedPointer< RenderPass > m_renderPass;
-	SharedPointer< PresentationMaster > m_master;
+    compositions::Composition m_composition;
 };
 
 int main( int argc, char **argv )

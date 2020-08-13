@@ -34,7 +34,5 @@ RefractionPipeline::RefractionPipeline( void ) noexcept
 {
     primitiveType = Primitive::Type::TRIANGLES;
     program = crimild::alloc< RefractionShaderProgram >();
-
-    // no culling
-    cullFaceState = CullFaceState::DISABLED;
+    rasterizationState.cullMode = CullMode::NONE;
 }

@@ -34,7 +34,5 @@ ReflectionPipeline::ReflectionPipeline( void ) noexcept
 {
     primitiveType = Primitive::Type::TRIANGLES;
     program = crimild::alloc< ReflectionShaderProgram >();
-
-    // no culling
-    cullFaceState = CullFaceState::DISABLED;
+    rasterizationState.cullMode = CullMode::NONE;
 }

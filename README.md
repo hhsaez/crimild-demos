@@ -152,8 +152,27 @@ Displays a scene with several objects, discarding fragments if the alpha value i
 #### [Pipeline Cull mode](examples/PipelineCullMode)
 Modify a pipeline to disable back-face culling for a rotating quad.
 
-### <a name="Postprocessing">Postprocessing</a>
+### <a name="Compositions">Compositions</a>
 
+#### [Postprocessing Negative](examples/PostprocessingNegative)
+Applies a "negative" post processing effect by using frame compositions
 
+#### [Postprocessing Grayscale](examples/PostprocessingGrayscale)
+Converts a color scene into grayscale by using frame compositions
 
-### <a name="Advanced">Advanced</a>
+#### [Postprocessing Sharpen](examples/PostprocessingSharpen)
+Applies a sharpen convolution to a rendered scene by using frame compositions
+
+#### [Postprocessing Blur](examples/PostprocessingBlur)
+Applies a blur convolution to a rendered scene by using frame compositions
+
+#### [Postprocessing Edges](examples/PostprocessingEdges)
+Process a rendered scene, highlighting edges by using frame compositions
+
+### <a name="Cubemaps">Cubemaps</a>
+
+#### [Skybox](examples/Skybox)
+Renders a skybox by loading a cubemap
+
+#### [EnvironmentMapping](examples/EnvironmentMapping)
+Renders a scene and computes reflection and refraction for objects based on environmental map.
