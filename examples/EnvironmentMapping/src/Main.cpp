@@ -25,9 +25,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Rendering/ReflectionMaterial.hpp"
-#include "Rendering/RefractionMaterial.hpp"
-
 #include <Crimild.hpp>
 #include <Crimild_Vulkan.hpp>
 #include <Crimild_GLFW.hpp>
@@ -78,17 +75,159 @@ public:
                 return texture;
             }();
 
-            auto reflectionMaterial = [&] () -> SharedPointer< Material > {
-                auto material = crimild::alloc< ReflectionMaterial >();
-                material->setTexture( environmentTexture );
-                return material;
-            }();
+            auto createMaterial = [&]( std::string fs, auto texture ) {
+                auto material = crimild::alloc< Material >();
+                material->setPipeline(
+                    [&] {
+                        auto pipeline = crimild::alloc< Pipeline >();
+                        pipeline->program = [&] {
+                            auto program = crimild::alloc< ShaderProgram >();
+                            program->setShaders(
+                                Array< SharedPointer< Shader >> {
+                                    crimild::alloc< Shader >(
+                                        Shader::Stage::VERTEX,
+                                        CRIMILD_TO_STRING(
+                                            layout ( location = 0 ) in vec3 inPosition;
+                                            layout ( location = 1 ) in vec3 inNormal;
 
-            auto refractionMaterial = [&] () -> SharedPointer< Material > {
-                auto material = crimild::alloc< RefractionMaterial >();
-                material->setTexture( environmentTexture );
+                                            layout ( set = 0, binding = 0 ) uniform RenderPassUniforms {
+                                                mat4 view;
+                                                mat4 proj;
+                                            };
+
+                                            layout ( set = 2, binding = 0 ) uniform GeometryUniforms {
+                                                mat4 model;
+                                            };
+
+                                            layout ( location = 0 ) out vec3 outWorldPos;
+                                            layout ( location = 1 ) out vec3 outWorldNormal;
+                                            layout ( location = 2 ) out vec3 outWorldEye;
+
+                                            void main()
+                                            {
+                                                vec4 worldPos = model * vec4( inPosition, 1.0 );
+                                                gl_Position = proj * view * worldPos;
+                                                outWorldPos = worldPos.xyz;
+
+                                                outWorldNormal = normalize( mat3( transpose( inverse( model ) ) ) * inNormal );
+
+                                                mat4 invView = inverse( view );
+                                                outWorldEye = vec3( invView[ 3 ].x, invView[ 3 ].y, invView[ 3 ].z );
+                                            }
+                                        )
+                                    ),
+                                    crimild::alloc< Shader >(
+                                        Shader::Stage::FRAGMENT,
+                                        fs
+                                    ),
+                                }
+                            );
+
+                            program->vertexLayouts = { VertexP3N3::getLayout() };
+
+                            program->descriptorSetLayouts = {
+                                [] {
+                                    auto layout = crimild::alloc< DescriptorSetLayout >();
+                                    layout->bindings = {
+                                        {
+                                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                            .stage = Shader::Stage::VERTEX,
+                                        },
+                                    };
+                                    return layout;
+                                }(),
+                                [] {
+                                    auto layout = crimild::alloc< DescriptorSetLayout >();
+                                    layout->bindings = {
+                                        {
+                                            .descriptorType = DescriptorType::TEXTURE,
+                                            .stage = Shader::Stage::FRAGMENT,
+                                        },
+                                    };
+                                    return layout;
+                                }(),
+                                [] {
+                                    auto layout = crimild::alloc< DescriptorSetLayout >();
+                                    layout->bindings = {
+                                        {
+                                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                            .stage = Shader::Stage::VERTEX,
+                                        },
+                                    };
+                                    return layout;
+                                }(),
+                            };
+                            return program;
+                        }();
+                        return pipeline;
+                    }()
+                );
+                material->setDescriptors(
+                    [&] {
+                        auto descriptors = crimild::alloc< DescriptorSet >();
+                        descriptors->descriptors = {
+                            {
+                                .descriptorType = DescriptorType::TEXTURE,
+                                .obj = texture,
+                            },
+                        };
+                        return descriptors;
+                    }()
+                );
                 return material;
-            }();
+            };
+
+            auto reflectionMaterial = createMaterial(
+                CRIMILD_TO_STRING(
+                    layout ( location = 0 ) in vec3 inWorldPos;
+                    layout ( location = 1 ) in vec3 inWorldNormal;
+                    layout ( location = 2 ) in vec3 inWorldEye;
+
+                    layout ( set = 1, binding = 0 ) uniform samplerCube uSampler;
+
+                    layout ( location = 0 ) out vec4 outColor;
+
+                    vec3 reflected(vec3 I)
+                    {
+                        vec3 R = reflect( I, normalize( inWorldNormal ) );
+                        return texture( uSampler, R ).rgb;
+                    }
+
+                    void main()
+                    {
+                        vec3 I = normalize( inWorldPos - inWorldEye );
+                        outColor = vec4( reflected( I ), 1.0 );
+                    }
+                ),
+                environmentTexture
+            );
+
+            auto refractionMaterial = createMaterial(
+                CRIMILD_TO_STRING(
+                    layout ( location = 0 ) in vec3 inWorldPos;
+                    layout ( location = 1 ) in vec3 inWorldNormal;
+                    layout ( location = 2 ) in vec3 inWorldEye;
+
+                    layout ( set = 1, binding = 0 ) uniform samplerCube uSampler;
+
+                    layout ( location = 0 ) out vec4 outColor;
+
+                    vec3 refracted(vec3 I)
+                    {
+                        float ratio = 1.0 / 1.33;
+                        vec3 R = refract( I, normalize( inWorldNormal ), ratio );
+                        return texture( uSampler, R ).rgb;
+                    }
+
+                    void main()
+                    {
+                        vec3 I = normalize( inWorldPos - inWorldEye );
+
+                        outColor = vec4( refracted( I ), 1.0 );
+                    }
+                ),
+                environmentTexture
+            );
 
             math::fibonacciSquares( 20 ).each(
                 [&, i = 0]( auto &it ) mutable {
