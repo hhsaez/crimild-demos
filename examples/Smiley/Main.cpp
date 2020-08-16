@@ -41,121 +41,53 @@ public:
             return false;
         }
 
-        auto pipeline = [&] {
-            auto pipeline = crimild::alloc< Pipeline >();
-            pipeline->program = [&] {
-                auto program = crimild::alloc< ShaderProgram >(
-                    containers::Array< SharedPointer< Shader >> {
-                        crimild::alloc< Shader >(
-                            Shader::Stage::VERTEX,
-                            FileSystem::getInstance().readFile(
-                                FilePath {
-                                    .path = "assets/shaders/smiley.vert.spv",
-                                }.getAbsolutePath()
-                            )
-                        ),
-                        crimild::alloc< Shader >(
-                            Shader::Stage::FRAGMENT,
-                            FileSystem::getInstance().readFile(
-                                FilePath {
-                                    .path = "assets/shaders/smiley.frag.spv",
-                                }.getAbsolutePath()
-                            )
-                        ),
-                    }
-                );
-                program->attributeDescriptions = VertexP2TC2C4::getAttributeDescriptions( 0 );
-                program->bindingDescription = VertexP2TC2C4::getBindingDescription( 0 );
-                program->descriptorSetLayout = [] {
-                    auto layout = crimild::alloc< DescriptorSetLayout >();
-                    layout->bindings = {
+		m_frameGraph = crimild::alloc< FrameGraph >();
+
+        m_composition = [&] {
+            using namespace crimild::compositions;
+            return present(
+                shader(
+                    R"(
+                        float circleMask( vec2 uv, vec2 p, float r, float blur )
                         {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .stage = Shader::Stage::FRAGMENT,
-                        },
-                    };
-                    return layout;
-                }();
-                return program;
-            }();
-            return pipeline;
+                            float d = length( uv - p );
+                            float c = smoothstep( r, r - blur, d );
+                            return c;
+                        }
+
+                        void main()
+                        {
+                            vec2 uv = inTexCoord;
+                            uv -= 0.5;
+                            uv.x *= context.dimensions.x / context.dimensions.y;
+
+                            float blur = 0.00625;
+
+                            float mask = circleMask( uv, vec2( 0.0 ), 0.4, blur );
+                            mask -= circleMask( uv, vec2( -0.15, 0.1 ), 0.075, blur );
+                            mask -= circleMask( uv, vec2( 0.15, 0.1 ), 0.075, blur );
+                            vec3 faceColor = vec3( 1.0, 1.0, 0.0 ) * mask;
+
+                            mask = circleMask( uv, vec2( 0.0 ), 0.25, blur );
+                            mask -= circleMask( uv, vec2( 0.0, 0.05 ), 0.25, blur );
+                            mask *= uv.y <= 0.0 ? 1.0 : 0.0;
+                            vec3 mouthColor = vec3( 1.0 ) * mask;
+
+                            vec3 color = faceColor - mouthColor;
+
+                            outColor = vec4( color, 1.0 );
+                        }
+                    )"
+                )
+            );
         }();
 
-        struct ContextDescriptor {
-            Vector4f dimensions;
-        };
-
-        m_scene = [&] {
-            auto node = crimild::alloc< Node >();
-            node->attachComponent( [&] {
-                auto renderable = crimild::alloc< RenderStateComponent >();
-                renderable->pipeline = pipeline;
-                renderable->vbo = [&] {
-					return crimild::alloc< VertexP2TC2C4Buffer >(
-                     	containers::Array< VertexP2TC2C4 > {
-                        	{ .position = Vector2f( -1.0f, +1.0f ), .texCoord = Vector2f( 0.0f, 1.0f ) },
-                            { .position = Vector2f( -1.0f, -1.0f ), .texCoord = Vector2f( 0.0f, 0.0f ) },
-                            { .position = Vector2f( +1.0f, -1.0f ), .texCoord = Vector2f( 1.0f, 0.0f ) },
-                            { .position = Vector2f( +1.0f, +1.0f ), .texCoord = Vector2f( 1.0f, 1.0f ) },
-                    	}
-                   	);
-                }();
-                renderable->ibo = [&] {
-                    return crimild::alloc< IndexUInt32Buffer >(
-                        containers::Array< IndexUInt32 > {
-							0, 1, 2,
-                        	0, 2, 3,
-                    	}
-                    );
-                }();
-                renderable->uniforms = {
-                    [&] {
-                        auto settings = Simulation::getInstance()->getSettings();
-                        auto width = settings->get< float >( "video.width", 1024 );
-                        auto height = settings->get< float >( "video.height", 768 );
-                        return crimild::alloc< UniformBufferImpl< ContextDescriptor >>(
-                       		ContextDescriptor {
-								.dimensions = Vector4f( width, height, 0.0f, 0.0f ),
-                        	}
-                       	);
-                    }(),
-                };
-                renderable->textures = { };
-                return renderable;
-            }());
-            return node;
-        }();
-
-        auto commandBuffer = [ this ] {
-            auto commandBuffer = crimild::alloc< CommandBuffer >();
-
-            commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-            commandBuffer->beginRenderPass( nullptr );
-
-            m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
-                if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-                    renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
-                }
-            }));
-
-            commandBuffer->endRenderPass( nullptr );
-            commandBuffer->end();
-
-            return commandBuffer;
-        }();
-
-        setCommandBuffers( { commandBuffer } );
+        if ( m_frameGraph->compile() ) {
+            auto commands = m_frameGraph->recordCommands();
+            setCommandBuffers( { commands } );
+        }
 
         return true;
-    }
-
-    void update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
-
-        GLFWVulkanSystem::update();
     }
 
     void stop( void ) override
@@ -164,13 +96,14 @@ public:
             renderDevice->waitIdle();
         }
 
-        m_scene = nullptr;
+        m_frameGraph = nullptr;
 
         GLFWVulkanSystem::stop();
     }
 
 private:
-    SharedPointer< Node > m_scene;
+    SharedPointer< FrameGraph > m_frameGraph;
+    compositions::Composition m_composition;
 };
 
 int main( int argc, char **argv )
@@ -188,4 +121,3 @@ int main( int argc, char **argv )
 
     return sim->run();
 }
-
