@@ -176,3 +176,11 @@ Renders a skybox by loading a cubemap
 
 #### [EnvironmentMapping](examples/EnvironmentMapping)
 Renders a scene and computes reflection and refraction for objects based on environmental map.
+
+### <a name="Shadows">Shadows</a>
+
+#### [Directional](examples/Shadows)
+A simple scene is rendered using a directional light that cast shadows on both dynamic and static objects.
+
+#### [Spot](examples/Shadows)
+A simple scene is rendered using a spot light that cast shadows on both dynamic and static objects
