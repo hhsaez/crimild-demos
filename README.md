@@ -182,5 +182,17 @@ Renders a scene and computes reflection and refraction for objects based on envi
 #### [Directional](examples/Shadows)
 A simple scene is rendered using a directional light that cast shadows on both dynamic and static objects.
 
-#### [Spot](examples/Shadows)
+#### [Spot](examples/ShadowsSpot)
 A simple scene is rendered using a spot light that cast shadows on both dynamic and static objects
+
+#### [Point](examples/ShadowsPoint)
+A scene is rendered using a point light that casting shadows for all objects in all directions
+
+#### [Directional (many lights)](examples/ShadowsDirectionalMultiple)
+A simple scene is rendered using two directional lights, each one casting shadows on both dynamic and static objects.
+
+#### [Spot (many lights)](examples/ShadowsSpotMultiple)
+A simple scene is rendered using three spot lights with different colors, each one casting shadows on both dynamic and static objects
+
+#### [Point (many lights)](examples/ShadowsPointMultiple)
+A scene is rendered using three point lights with different colors, each one casting shadows for all objects in all directions
