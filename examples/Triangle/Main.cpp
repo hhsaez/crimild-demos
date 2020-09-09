@@ -26,8 +26,8 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
 #include <Crimild_GLFW.hpp>
+#include <Crimild_Vulkan.hpp>
 
 using namespace crimild;
 using namespace crimild::glfw;
@@ -41,100 +41,92 @@ public:
             return false;
         }
 
-		m_frameGraph = crimild::alloc< FrameGraph >();
+        m_frameGraph = crimild::alloc< FrameGraph >();
 
-        m_scene = [&] {
+        m_scene = [ & ] {
             auto scene = crimild::alloc< Group >();
 
-            scene->attachNode([&] {
-				auto geometry = crimild::alloc< Geometry >();
-				geometry->attachPrimitive(
-					[&] {
-						auto primitive = crimild::alloc< Primitive >(
-							Primitive::Type::TRIANGLES
-						);
-						primitive->setVertexData(
+            scene->attachNode( [ & ] {
+                auto geometry = crimild::alloc< Geometry >();
+                geometry->attachPrimitive(
+                    [ & ] {
+                        auto primitive = crimild::alloc< Primitive >(
+                            Primitive::Type::TRIANGLES );
+                        primitive->setVertexData(
                             {
-                                [&] {
+                                [ & ] {
                                     return crimild::alloc< VertexBuffer >(
                                         VertexP3C3::getLayout(),
                                         Array< VertexP3C3 > {
                                             {
                                                 .position = Vector3f( -0.5f, -0.5f, 0.0f ),
                                                 .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
-                                                },
+                                            },
                                             {
                                                 .position = Vector3f( 0.5f, -0.5f, 0.0f ),
                                                 .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
-                                                },
+                                            },
                                             {
                                                 .position = Vector3f( 0.0f, 0.5f, 0.0f ),
                                                 .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
-                                                },
-                                            }
-                                    );
+                                            },
+                                        } );
                                 }(),
-                            }
-                        );
-						primitive->setIndices(
+                            } );
+                        primitive->setIndices(
                             crimild::alloc< IndexBuffer >(
                                 Format::INDEX_32_UINT,
                                 Array< crimild::UInt32 > {
-                                    0, 1, 2,
-                                }
-                            )
-                        );
+                                    0,
+                                    1,
+                                    2,
+                                } ) );
                         return primitive;
-                    }()
-                );
+                    }() );
                 return geometry;
-            }());
+            }() );
 
-            scene->attachNode([] {
+            scene->attachNode( [] {
                 auto camera = crimild::alloc< Camera >();
                 camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
                 Camera::setMainCamera( camera );
                 return camera;
-            }());
+            }() );
             return scene;
         }();
 
-		m_renderPass = [&] {
+        m_renderPass = [ & ] {
             auto renderPass = crimild::alloc< RenderPass >();
             renderPass->attachments = {
-                [&] {
+                [ & ] {
                     auto att = crimild::alloc< Attachment >();
                     att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
                     return att;
                 }()
             };
             renderPass->setPipeline(
-                [&] {
+                [ & ] {
                     auto pipeline = crimild::alloc< Pipeline >();
-                    pipeline->program = [&] {
+                    pipeline->program = [ & ] {
                         auto createShader = []( Shader::Stage stage, std::string path ) {
                             return crimild::alloc< Shader >(
                                 stage,
                                 FileSystem::getInstance().readFile(
                                     FilePath {
                                         .path = path,
-                                    }.getAbsolutePath()
-                                )
-                            );
+                                    }
+                                        .getAbsolutePath() ) );
                         };
 
                         auto program = crimild::alloc< ShaderProgram >(
-                            Array< SharedPointer< Shader >> {
+                            Array< SharedPointer< Shader > > {
                                 createShader(
                                     Shader::Stage::VERTEX,
-                                    "assets/shaders/scene.vert.spv"
-                                ),
+                                    "assets/shaders/scene.vert.spv" ),
                                 createShader(
                                     Shader::Stage::FRAGMENT,
-                                    "assets/shaders/scene.frag.spv"
-                                ),
-                                }
-                        );
+                                    "assets/shaders/scene.frag.spv" ),
+                            } );
                         program->vertexLayouts = { VertexLayout::P3_C3 };
                         program->descriptorSetLayouts = {
                             [] {
@@ -160,16 +152,16 @@ public:
                         };
                         return program;
                     }();
+                    auto &a = ( int ) 11;
                     return pipeline;
-                }()
-            );
+                }() );
             renderPass->setDescriptors(
-                [&] {
+                [ & ] {
                     auto descriptorSet = crimild::alloc< DescriptorSet >();
                     descriptorSet->descriptors = {
                         Descriptor {
                             .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
+                            .obj = [ & ] {
                                 FetchCameras fetch;
                                 m_scene->perform( fetch );
                                 auto camera = fetch.anyCamera();
@@ -178,32 +170,29 @@ public:
                         },
                     };
                     return descriptorSet;
-                }()
-            );
-            renderPass->commands = [&] {
+                }() );
+            renderPass->commands = [ & ] {
                 auto commandBuffer = crimild::alloc< CommandBuffer >();
                 m_scene->perform(
                     ApplyToGeometries(
-                        [&]( Geometry *g ) {
+                        [ & ]( Geometry *g ) {
                             commandBuffer->bindGraphicsPipeline( renderPass->getPipeline() );
                             commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
                             commandBuffer->bindDescriptorSet( g->getDescriptors() );
                             commandBuffer->bindVertexBuffer( crimild::get_ptr( g->anyPrimitive()->getVertexData()[ 0 ] ) );
                             commandBuffer->bindIndexBuffer( g->anyPrimitive()->getIndices() );
                             commandBuffer->drawIndexed( g->anyPrimitive()->getIndices()->getIndexCount() );
-						}
-					)
-				);
-				return commandBuffer;
-			}();
+                        } ) );
+                return commandBuffer;
+            }();
 
-			return renderPass;
-		}();
+            return renderPass;
+        }();
 
-		m_master = [&] {
+        m_master = [ & ] {
             auto master = crimild::alloc< PresentationMaster >();
             master->colorAttachment = m_renderPass->attachments[ 0 ];
-			return master;
+            return master;
         }();
 
         if ( m_frameGraph->compile() ) {
@@ -240,8 +229,8 @@ public:
 private:
     SharedPointer< Node > m_scene;
     SharedPointer< FrameGraph > m_frameGraph;
-	SharedPointer< RenderPass > m_renderPass;
-	SharedPointer< PresentationMaster > m_master;
+    SharedPointer< RenderPass > m_renderPass;
+    SharedPointer< PresentationMaster > m_master;
 };
 
 int main( int argc, char **argv )
