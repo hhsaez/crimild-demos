@@ -26,9 +26,9 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
 #include <Crimild_GLFW.hpp>
 #include <Crimild_STB.hpp>
+#include <Crimild_Vulkan.hpp>
 
 using namespace crimild;
 using namespace crimild::glfw;
@@ -43,7 +43,7 @@ public:
 
         m_frameGraph = crimild::alloc< FrameGraph >();
 
-        m_scene = [&] {
+        m_scene = [ & ] {
             auto scene = crimild::alloc< Group >();
 
             scene->attachNode(
@@ -52,18 +52,11 @@ public:
                         BoxPrimitive::Params {
                             .type = Primitive::Type::TRIANGLES,
                             .layout = VertexP3N3TC2::getLayout(),
-                        }
-                    );
+                        } );
 
                     auto material = [] {
                         auto material = crimild::alloc< SimpleLitMaterial >(
-                            SimpleLitMaterial::Props {
-                                .ambient = RGBAColorf( 0.0215f, 0.1745f, 0.0215f, 1.0f ),
-                                .diffuse = RGBAColorf( 0.07568f, 0.61424f, 0.07568f, 1.0f ),
-                                .specular = RGBAColorf( 0.633f, 0.727811f, 0.633f, 1.0f ),
-                                .shininess = 128.0f * 0.6f
-                                }
-                        );
+                            SimpleLitMaterial::Props {} );
                         return material;
                     }();
 
@@ -71,15 +64,14 @@ public:
                     auto rnd = Random::Generator( 1982 );
                     for ( auto i = 0; i < 30; ++i ) {
                         group->attachNode(
-                            [&] {
+                            [ & ] {
                                 auto geometry = crimild::alloc< Geometry >();
                                 geometry->attachPrimitive( primitive );
 
                                 geometry->local().setTranslate(
+                                    rnd.generate( -30.0f, 30.0f ),
                                     rnd.generate( -10.0f, 10.0f ),
-                                    rnd.generate( -10.0f, 10.0f ),
-                                    rnd.generate( -10.0f, 10.0f )
-                                );
+                                    rnd.generate( -30.0f, 30.0f ) );
 
                                 geometry->local().setScale( rnd.generate( 0.75f, 1.5f ) );
 
@@ -87,39 +79,30 @@ public:
                                     Vector3f(
                                         rnd.generate( 0.01f, 1.0f ),
                                         rnd.generate( 0.01f, 1.0f ),
-                                        rnd.generate( 0.01f, 1.0f )
-                                    ).getNormalized(),
-                                    rnd.generate( 0.0f, Numericf::TWO_PI )
-                                );
+                                        rnd.generate( 0.01f, 1.0f ) )
+                                        .getNormalized(),
+                                    rnd.generate( 0.0f, Numericf::TWO_PI ) );
 
                                 geometry->attachComponent< LambdaComponent >(
-                                    [
-                                        origin = geometry->getLocal().getTranslate(),
-                                        speed = ( rnd.generate( -1.0f, 1.0f ) < 0 ? -1.0f : 1.0f ) * rnd.generate( 1.0f, 6.0f )
-                                    ] ( auto node, const auto &clock ) {
-                                        node->local().setTranslate( origin + Vector3f::UNIT_Y * speed * Numericf::sin( clock.getCurrentTime() ) );
-                                    }
-                                );
+                                    [ origin = geometry->getLocal().getTranslate(),
+                                      speed = ( rnd.generate( -1.0f, 1.0f ) < 0 ? -1.0f : 1.0f ) * rnd.generate( 1.0f, 6.0f ) ]( auto node, const auto &clock ) {
+                                        //node->local().setTranslate( origin + Vector3f::UNIT_Y * speed * Numericf::sin( clock.getCurrentTime() ) );
+                                    } );
 
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
 
                                 return geometry;
-                            }()
-                        );
+                            }() );
                     }
                     return group;
-                }()
-            );
+                }() );
 
             scene->attachNode(
                 [] {
                     auto geometry = crimild::alloc< Geometry >();
                     geometry->attachPrimitive(
                         crimild::alloc< QuadPrimitive >(
-                            QuadPrimitive::Params {
-                            }
-                        )
-                    );
+                            QuadPrimitive::Params {} ) );
                     geometry->setLocal(
                         [] {
                             Transformation t;
@@ -127,35 +110,26 @@ public:
                             t.setScale( 100.0f );
                             t.setTranslate( 0.0f, -15.0f, 0.0f );
                             return t;
-                        }()
-                    );
+                        }() );
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [] {
                             return crimild::alloc< SimpleLitMaterial >(
-                                SimpleLitMaterial::Props {
-                                    .ambient = RGBAColorf( 0.0215f, 0.1745f, 0.0215f, 1.0f ),
-                                    .diffuse = RGBAColorf( 0.17568f, 0.61424f, 0.07568f, 1.0f ),
-                                    .specular = RGBAColorf( 0.633f, 0.727811f, 0.633f, 1.0f ),
-                                    .shininess = 128.0f * 0.6f
-                                }
-                            );
-                        }()
-                    );
+                                SimpleLitMaterial::Props {} );
+                        }() );
                     return geometry;
-                }()
-            );
+                }() );
 
-            scene->attachNode([] {
-                auto camera = crimild::alloc< Camera >();
+            scene->attachNode( [] {
+                auto camera = crimild::alloc< Camera >( 60, 4.0f / 3.0f, 1.0f, 500.0f );
                 camera->local().setTranslate( 15.0f, 20.0f, 50.0f );
                 camera->local().lookAt( 1.0 * Vector3f::UNIT_Y );
                 camera->attachComponent< FreeLookCameraComponent >();
                 return camera;
-            }());
+            }() );
 
             scene->attachNode(
-            	[&] {
-                	auto light = crimild::alloc< Group >();
+                [ & ] {
+                    auto light = crimild::alloc< Group >();
 
                     light->attachNode(
                         [] {
@@ -168,8 +142,7 @@ public:
                                 ArrowPrimitive::Params {
                                     .type = Primitive::Type::TRIANGLES,
                                     .layout = VertexP3N3TC2::getLayout(),
-                                }
-                            );
+                                } );
 
                             auto rnd = Random::Generator( 1999 );
                             for ( auto i = 0; i < 3; i++ ) {
@@ -178,40 +151,36 @@ public:
                                 geometry->local().setTranslate(
                                     rnd.generate( -2.0f, 2.0f ),
                                     rnd.generate( -2.0f, 2.0f ),
-                                    rnd.generate( -1.0f, 1.0f )
-                                );
+                                    rnd.generate( -1.0f, 1.0f ) );
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
                                 group->attachNode( geometry );
                             }
 
                             return group;
-                        }()
-                    );
+                        }() );
 
                     light->attachNode(
                         [] {
                             auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
                             light->setCastShadows( true );
-                            light->setAmbient( RGBAColorf::ONE );
+                            //light->setAmbient( RGBAColorf::ONE );
                             return light;
-                        }()
-                    );
+                        }() );
 
                     light->local().setTranslate( 20.0f, 20.0f, 20.0f );
                     light->local().lookAt( Vector3f::ZERO );
 
-                	auto pivot = crimild::alloc< Group >();
-                	pivot->attachNode( light );
-                	return pivot;
-            	}()
-            );
+                    auto pivot = crimild::alloc< Group >();
+                    pivot->attachNode( light );
+                    return pivot;
+                }() );
 
             scene->perform( StartComponents() );
 
             return scene;
         }();
 
-        m_composition = [&] {
+        m_composition = [ & ] {
             using namespace crimild::compositions;
             return present( debug( renderScene( m_scene ) ) );
         }();
@@ -228,7 +197,7 @@ public:
     {
         auto clock = Simulation::getInstance()->getSimulationClock();
 
-        auto updateScene = [&]( auto &scene ) {
+        auto updateScene = [ & ]( auto &scene ) {
             scene->perform( UpdateComponents( clock ) );
             scene->perform( UpdateWorldState() );
         };
