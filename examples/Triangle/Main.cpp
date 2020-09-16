@@ -152,7 +152,6 @@ public:
                         };
                         return program;
                     }();
-                    auto &a = ( int ) 11;
                     return pipeline;
                 }() );
             renderPass->setDescriptors(

@@ -83,12 +83,6 @@ public:
                                         .getNormalized(),
                                     rnd.generate( 0.0f, Numericf::TWO_PI ) );
 
-                                geometry->attachComponent< LambdaComponent >(
-                                    [ origin = geometry->getLocal().getTranslate(),
-                                      speed = ( rnd.generate( -1.0f, 1.0f ) < 0 ? -1.0f : 1.0f ) * rnd.generate( 1.0f, 6.0f ) ]( auto node, const auto &clock ) {
-                                        //node->local().setTranslate( origin + Vector3f::UNIT_Y * speed * Numericf::sin( clock.getCurrentTime() ) );
-                                    } );
-
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
 
                                 return geometry;
