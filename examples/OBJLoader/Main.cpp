@@ -52,6 +52,7 @@ public:
                 };
                 auto group = crimild::alloc< Group >();
                 OBJLoader loader( path.getAbsolutePath() );
+                loader.setVerbose( true );
                 if ( auto model = loader.load() ) {
                     group->attachNode( model );
                 }
@@ -66,6 +67,7 @@ public:
                     );
                     light->setAmbient( RGBAColorf( 0.2f, 0.2f, 0.1f, 1.0f ) );
                     light->local().rotate().fromAxisAngle( Vector3f::UNIT_X, -0.25f * Numericf::PI );
+                    light->setCastShadows( true );
                     return light;
                 }()
             );
@@ -85,80 +87,9 @@ public:
             return scene;
         }();
 
-		m_renderPass = [&] {
-            auto renderPass = crimild::alloc< RenderPass >();
-            renderPass->attachments = {
-                [&] {
-                    auto att = crimild::alloc< Attachment >();
-                    att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
-                    return att;
-                }(),
-                [&] {
-                    auto att = crimild::alloc< Attachment >();
-                    att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
-                    return att;
-                }()
-            };
-
-            renderPass->setDescriptors(
-                [&] {
-                    auto descriptorSet = crimild::alloc< DescriptorSet >();
-                    descriptorSet->descriptors = {
-                        Descriptor {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
-                                FetchCameras fetch;
-                                m_scene->perform( fetch );
-                                auto camera = fetch.anyCamera();
-                                return crimild::alloc< CameraViewProjectionUniform >( camera );
-                            }(),
-                        },
-                        Descriptor {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = crimild::alloc< LightingUniform >(
-                                [&] {
-                                    FetchLights fetch;
-                                    Array< Light * > lights;
-                                    m_scene->perform( fetch );
-                                    fetch.forEachLight(
-                                        [&]( auto light ) {
-                                            lights.add( light );
-                                        }
-                                    );
-                                    return lights;
-                                }()
-                            ),
-                        },
-                    };
-                    return descriptorSet;
-                }()
-            );
-            renderPass->commands = [&] {
-                auto commandBuffer = crimild::alloc< CommandBuffer >();
-                m_scene->perform(
-                    ApplyToGeometries(
-                        [&]( Geometry *g ) {
-                            if ( auto ms = g->getComponent< MaterialComponent >() ) {
-                                if ( auto material = ms->first() ) {
-                                    commandBuffer->bindGraphicsPipeline( material->getPipeline() );
-                                    commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
-                                    commandBuffer->bindDescriptorSet( material->getDescriptors() );
-                                    commandBuffer->bindDescriptorSet( g->getDescriptors() );
-                                    commandBuffer->drawPrimitive( g->anyPrimitive() );
-                                }
-                            }
-						}
-					)
-				);
-				return commandBuffer;
-			}();
-			return renderPass;
-		}();
-
-		m_master = [&] {
-            auto master = crimild::alloc< PresentationMaster >();
-            master->colorAttachment = m_renderPass->attachments[ 0 ];
-			return master;
+        m_composition = [ & ] {
+            using namespace crimild::compositions;
+            return present( renderScene( m_scene ) );
         }();
 
         if ( m_frameGraph->compile() ) {
@@ -172,8 +103,13 @@ public:
     void update( void ) override
     {
         auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
+
+        auto updateScene = [ & ]( auto &scene ) {
+            scene->perform( UpdateComponents( clock ) );
+            scene->perform( UpdateWorldState() );
+        };
+
+        updateScene( m_scene );
 
         GLFWVulkanSystem::update();
     }
@@ -184,19 +120,13 @@ public:
             renderDevice->waitIdle();
         }
 
-        m_scene = nullptr;
-        m_renderPass = nullptr;
-        m_master = nullptr;
-        m_frameGraph = nullptr;
-
         GLFWVulkanSystem::stop();
     }
 
 private:
-    SharedPointer< Node > m_scene;
     SharedPointer< FrameGraph > m_frameGraph;
-	SharedPointer< RenderPass > m_renderPass;
-	SharedPointer< PresentationMaster > m_master;
+    SharedPointer< Node > m_scene;
+    compositions::Composition m_composition;
 };
 
 int main( int argc, char **argv )
