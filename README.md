@@ -126,6 +126,9 @@ Uses a single spotlight light to lit a scene
 #### [Lighting Multiple](examples/LightingMultiple)
 Creates a scene with lots of cubes and adds multiple light sources: one directional light, two point lights moving around the scene and a flashlight (using a spot light). Camera can be controlled with WASD and the mouse.
 
+#### [Normal Mapping](examples/NormalMapping)
+Uses a normal texture to provide more detail to models
+
 ### <a name="Loaders">Loaders</a>
 
 #### [OBJLoader](example/OBJLoader)
@@ -196,3 +199,11 @@ A simple scene is rendered using three spot lights with different colors, each o
 
 #### [Point (many lights)](examples/ShadowsPointMultiple)
 A scene is rendered using three point lights with different colors, each one casting shadows for all objects in all directions
+
+### <a name="Image Effects">Image Effects</a>
+
+#### [HDR](examples/HDR)
+Renders a scene with HDR enabled, providing more control over bright and dark colors
+
+#### [Bloom(examples/Bloom)
+Filters brigth areas, applying blur to the result, to generate a light bleeding effect

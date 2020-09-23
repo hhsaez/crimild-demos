@@ -26,9 +26,9 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
 #include <Crimild_GLFW.hpp>
 #include <Crimild_STB.hpp>
+#include <Crimild_Vulkan.hpp>
 
 using namespace crimild;
 using namespace crimild::glfw;
@@ -41,31 +41,28 @@ public:
             return false;
         }
 
-		m_frameGraph = crimild::alloc< FrameGraph >();
+        m_frameGraph = crimild::alloc< FrameGraph >();
 
         auto rnd = Random::Generator( 1982 );
 
-        m_scene = [&] {
+        m_scene = [ & ] {
             auto scene = crimild::alloc< Group >();
 
             for ( auto i = 0; i < 30; ++i ) {
                 scene->attachNode(
-                    [&] {
+                    [ & ] {
                         auto geometry = crimild::alloc< Geometry >();
                         geometry->attachPrimitive(
                             crimild::alloc< BoxPrimitive >(
                                 BoxPrimitive::Params {
                                     .type = Primitive::Type::TRIANGLES,
                                     .layout = VertexP3N3TC2::getLayout(),
-                                }
-                            )
-                        );
+                                } ) );
 
                         geometry->local().setTranslate(
                             rnd.generate( -10.0f, 10.0f ),
                             rnd.generate( -10.0f, 10.0f ),
-                            rnd.generate( -10.0f, 10.0f )
-                        );
+                            rnd.generate( -10.0f, 10.0f ) );
 
                         geometry->local().setScale( rnd.generate( 0.75f, 1.5f ) );
 
@@ -73,27 +70,22 @@ public:
                             Vector3f(
                                 rnd.generate( 0.01f, 1.0f ),
                                 rnd.generate( 0.01f, 1.0f ),
-                                rnd.generate( 0.01f, 1.0f )
-                            ).getNormalized(),
-                            rnd.generate( 0.0f, Numericf::TWO_PI )
-                        );
+                                rnd.generate( 0.01f, 1.0f ) )
+                                .getNormalized(),
+                            rnd.generate( 0.0f, Numericf::TWO_PI ) );
 
                         geometry->attachComponent< MaterialComponent >()->attachMaterial(
-                            [&] {
+                            [ & ] {
                                 auto material = crimild::alloc< SimpleLitMaterial >(
                                     SimpleLitMaterial::Props {
                                         .ambient = RGBAColorf( 0.0215f, 0.1745f, 0.0215f, 1.0f ),
                                         .diffuse = RGBAColorf( 0.07568f, 0.61424f, 0.07568f, 1.0f ),
                                         .specular = RGBAColorf( 0.633f, 0.727811f, 0.633f, 1.0f ),
-                                        .shininess = 128.0f * 0.6f
-                                    }
-                                );
+                                        .shininess = 128.0f * 0.6f } );
                                 return material;
-                            }()
-                        );
+                            }() );
                         return geometry;
-                    }()
-                );
+                    }() );
             }
 
             scene->attachNode(
@@ -108,65 +100,57 @@ public:
                                         .type = Primitive::Type::TRIANGLES,
                                         .layout = VertexP3N3TC2::getLayout(),
                                         .radius = 0.1f,
-                                    }
-                                )
-                            );
+                                    } ) );
                             geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                 [] {
                                     auto material = crimild::alloc< UnlitMaterial >();
                                     material->setColor( RGBAColorf::ONE );
                                     return material;
-                                }()
-                            );
+                                }() );
                             return geometry;
-                        }()
-                    );
+                        }() );
                     group->attachNode(
                         [] {
                             auto light = crimild::alloc< Light >(
-                                Light::Type::POINT
-                            );
+                                Light::Type::POINT );
                             light->setAttenuation( Vector3f( 1.0f, 0.09f, 0.032f ) );
                             light->setAmbient( RGBAColorf::ONE );
                             return light;
-                        }()
-                    );
+                        }() );
                     group->attachComponent< LambdaComponent >(
-                        [] ( auto node, auto &clock ) {
+                        []( auto node, auto &clock ) {
                             auto speed = 0.25f;
                             auto t = speed * clock.getCurrentTime();
                             auto x = Numericf::remap( -1.0f, 1.0f, -15.0f, 15.0f, Numericf::cos( t ) * Numericf::sin( t ) );
                             auto y = Numericf::remapSin( -3.0f, 3.0f, t );
-                            auto z = Numericf::remapCos( -15.0f, 15.0f, t );;
+                            auto z = Numericf::remapCos( -15.0f, 15.0f, t );
+                            ;
                             node->local().setTranslate( x, y, z );
-                        }
-                    );
+                        } );
                     return group;
-                }()
-            );
+                }() );
 
             scene->attachNode(
-                [&] {
+                [ & ] {
                     auto camera = crimild::alloc< Camera >();
                     camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
                     return camera;
-                }()
-            );
+                }() );
 
             scene->perform( StartComponents() );
 
             return scene;
         }();
 
-		m_renderPass = [&] {
+        m_renderPass = [ & ] {
             auto renderPass = crimild::alloc< RenderPass >();
             renderPass->attachments = {
-                [&] {
+                [ & ] {
                     auto att = crimild::alloc< Attachment >();
                     att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
                     return att;
                 }(),
-                [&] {
+                [ & ] {
                     auto att = crimild::alloc< Attachment >();
                     att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
                     return att;
@@ -174,12 +158,12 @@ public:
             };
 
             renderPass->setDescriptors(
-                [&] {
+                [ & ] {
                     auto descriptorSet = crimild::alloc< DescriptorSet >();
                     descriptorSet->descriptors = {
                         Descriptor {
                             .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
+                            .obj = [ & ] {
                                 FetchCameras fetch;
                                 m_scene->perform( fetch );
                                 auto camera = fetch.anyCamera();
@@ -188,29 +172,25 @@ public:
                         },
                         Descriptor {
                             .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = crimild::alloc< LightingUniform >(
-                                [&] {
-                                    FetchLights fetch;
-                                    Array< Light * > lights;
-                                    m_scene->perform( fetch );
-                                    fetch.forEachLight(
-                                        [&]( auto light ) {
-                                            lights.add( light );
-                                        }
-                                    );
-                                    return lights;
-                                }()
-                            ),
+                            .obj = crimild::alloc< LightingUniform >( [ & ] {
+                                FetchLights fetch;
+                                Array< Light * > lights;
+                                m_scene->perform( fetch );
+                                fetch.forEachLight(
+                                    [ & ]( auto light ) {
+                                        lights.add( light );
+                                    } );
+                                return lights;
+                            }() ),
                         },
                     };
                     return descriptorSet;
-                }()
-            );
-            renderPass->commands = [&] {
+                }() );
+            renderPass->commands = [ & ] {
                 auto commandBuffer = crimild::alloc< CommandBuffer >();
                 m_scene->perform(
                     ApplyToGeometries(
-                        [&]( Geometry *g ) {
+                        [ & ]( Geometry *g ) {
                             if ( auto ms = g->getComponent< MaterialComponent >() ) {
                                 if ( auto material = ms->first() ) {
                                     commandBuffer->bindGraphicsPipeline( material->getPipeline() );
@@ -220,18 +200,16 @@ public:
                                     commandBuffer->drawPrimitive( g->anyPrimitive() );
                                 }
                             }
-						}
-					)
-				);
-				return commandBuffer;
-			}();
-			return renderPass;
-		}();
+                        } ) );
+                return commandBuffer;
+            }();
+            return renderPass;
+        }();
 
-		m_master = [&] {
+        m_master = [ & ] {
             auto master = crimild::alloc< PresentationMaster >();
             master->colorAttachment = m_renderPass->attachments[ 0 ];
-			return master;
+            return master;
         }();
 
         if ( m_frameGraph->compile() ) {
@@ -268,8 +246,8 @@ public:
 private:
     SharedPointer< Node > m_scene;
     SharedPointer< FrameGraph > m_frameGraph;
-	SharedPointer< RenderPass > m_renderPass;
-	SharedPointer< PresentationMaster > m_master;
+    SharedPointer< RenderPass > m_renderPass;
+    SharedPointer< PresentationMaster > m_master;
 };
 
 int main( int argc, char **argv )
