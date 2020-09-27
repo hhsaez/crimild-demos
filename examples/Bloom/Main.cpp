@@ -166,8 +166,8 @@ public:
             using namespace crimild::compositions;
             return present(
                 tonemapping(
-                    bloomHDR(
-                        renderSceneHDR( m_scene ) ),
+                    bloom(
+                        renderScene( m_scene ) ),
                     0.5 ) );
         }();
 
