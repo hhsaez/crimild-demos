@@ -60,7 +60,7 @@ public:
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [ x, y ] {
                             auto material = crimild::alloc< LitMaterial >();
-                            material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
+//                            material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
                             material->setMetallic( 1.0f - float( y ) / 6.0f );
                             material->setRoughness( float( x ) / 6.0f );
                             return material;
@@ -69,6 +69,38 @@ public:
                 }
             }
 
+            scene->attachNode(
+            	crimild::alloc< Skybox >(
+             		[] {
+                        auto texture = crimild::alloc< Texture >();
+                        texture->imageView = [] {
+                            auto imageView = crimild::alloc< ImageView >();
+                            imageView->image = ImageManager::getInstance()->loadImage(
+                                {
+                                    .filePath = {
+                                        .path = "assets/textures/Newport_Loft_Ref.hdr",
+//                                        .path = "assets/textures/Milkyway_small.hdr",
+//                                        .path = "assets/textures/Mans_Outside_2k.hdr",
+//                                        .path = "assets/textures/Theatre-Side_2k.hdr",
+                                    },
+                                    .hdr = true,
+                                }
+                            );
+                            return imageView;
+                        }();
+                        texture->sampler = [ & ] {
+                            auto sampler = crimild::alloc< Sampler >();
+                            sampler->setMinFilter( Sampler::Filter::LINEAR );
+                            sampler->setMagFilter( Sampler::Filter::LINEAR );
+                            sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                            sampler->setCompareOp( CompareOp::NEVER );
+                            return sampler;
+                        }();
+                        return texture;
+            		}()
+            	)
+            );
+
             auto createLight = []( const auto &position ) {
                 auto light = crimild::alloc< Light >( Light::Type::POINT );
                 light->local().setTranslate( position );
@@ -76,149 +108,10 @@ public:
                 return light;
             };
 
-            scene->attachNode(
-                [] {
-                    auto geometry = crimild::alloc< Geometry >();
-                    geometry->attachPrimitive( crimild::alloc< BoxPrimitive >() );
-                    geometry->attachComponent< MaterialComponent >()->attachMaterial(
-                        [] {
-                            auto material = crimild::alloc< Material >();
-                            material->setDescriptors(
-                                [&] {
-                                    auto descriptors = crimild::alloc< DescriptorSet >();
-                                    descriptors->descriptors = {
-                                        {
-                                            .descriptorType = DescriptorType::TEXTURE,
-                                            .obj = [] {
-                                                auto texture = crimild::alloc< Texture >();
-                                                texture->imageView = [] {
-                                                    auto imageView = crimild::alloc< ImageView >();
-                                                    imageView->image = ImageManager::getInstance()->loadImage(
-                                                        {
-                                                            .filePath = {
-                                                                .path = "assets/textures/Newport_Loft_Ref.hdr",
-                                                            },
-                                                            .hdr = true,
-                                                        }
-                                                    );
-                                                    return imageView;
-                                                }();
-                                                texture->sampler = [ & ] {
-                                                    auto sampler = crimild::alloc< Sampler >();
-                                                    sampler->setMinFilter( Sampler::Filter::LINEAR );
-                                                    sampler->setMagFilter( Sampler::Filter::LINEAR );
-                                                    return sampler;
-                                                }();
-                                                return texture;
-                                            }(),
-                                        },
-                                    };
-                                    return descriptors;
-                                }()
-                            );
-                        	material->setPipeline(
-                                [] {
-                                    auto pipeline = crimild::alloc< Pipeline >();
-                                    pipeline->program = [] {
-                                        auto program = crimild::alloc< ShaderProgram >();
-                                        program->setShaders(
-                                            {
-                                                crimild::alloc< Shader >(
-                                                    Shader::Stage::VERTEX,
-                                                	R"(
-                                                        layout ( location = 0 ) in vec3 inPosition;
-                                                        layout ( location = 1 ) in vec3 inNormal;
-                                                        layout ( location = 2 ) in vec2 inTexCoord;
-
-                                                        layout ( set = 0, binding = 0 ) uniform RenderPassUniforms {
-                                                     		mat4 view;
-                                                         	mat4 proj;
-                                                        };
-
-                                                        layout ( location = 0 ) out vec3 outPosition;
-
-                                                        void main() {
-                                                     		gl_Position = proj * view * vec4( inPosition, 1.0 );
-                                                         	outPosition = inPosition;
-                                                        }
-                                                 	)"
-                                             	),
-                                                crimild::alloc< Shader >(
-                                                    Shader::Stage::FRAGMENT,
-                                                    R"(
-                                                    	layout ( location = 0 ) in vec3 inPosition;
-
-                                                 		layout ( set = 1, binding = 0 ) uniform sampler2D uHDRMap;
-
-                                                        layout ( location = 0 ) out vec4 outColor;
-
-                                                     	const vec2 invAtan = vec2( 0.1591, 0.3183 );
-
-                                                     	vec2 sampleSphericalMap( vec3 v )
-                                                    	{
-                                                        	vec2 uv = vec2( atan( v.z, v.x ), asin( v.y ) );
-                                                         	uv *= invAtan;
-                                                         	uv += 0.5;
-                                                        	uv.y = 1.0 - uv.y; // because of vulkan
-                                                         	return uv;
-                                                     	}
-
-                                                        void main() {
-                                                        	vec2 uv = sampleSphericalMap( normalize( inPosition ) );
-                                                        	vec3 color = texture( uHDRMap, uv ).rgb;
-                                                    		outColor = vec4( color, 1.0 );
-                                                    	}
-                                                 	)"
-                                             	),
-                                        	}
-                                        );
-                                        program->vertexLayouts = { VertexP3N3TC2::getLayout() };
-                                        program->descriptorSetLayouts = {
-                                            [] {
-                                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                                layout->bindings = {
-                                                    {
-                                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                                        .stage = Shader::Stage::VERTEX,
-                                                    },
-                                                };
-                                                return layout;
-                                            }(),
-                                            [] {
-                                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                                layout->bindings = {
-                                                    {
-                                                        .descriptorType = DescriptorType::TEXTURE,
-                                                        .stage = Shader::Stage::FRAGMENT,
-                                                    },
-                                                };
-                                                return layout;
-                                            }(),
-                                            [] {
-                                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                                layout->bindings = {
-                                                    {
-                                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                                        .stage = Shader::Stage::VERTEX,
-                                                    },
-                                                };
-                                                return layout;
-                                            }(),
-                                        };
-                                        return program;
-                                    }();
-                                    return pipeline;
-                                }()
-                            );
-                            return material;
-                        }() );
-                    return geometry;
-                }() );
-
-            scene->attachNode( createLight( Vector3f( -15.0f, +15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( +15.0f, +15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( -15.0f, -15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( +15.0f, -15.0f, 10.0f ) ) );
+//            scene->attachNode( createLight( Vector3f( -15.0f, +15.0f, 10.0f ) ) );
+//            scene->attachNode( createLight( Vector3f( +15.0f, +15.0f, 10.0f ) ) );
+//            scene->attachNode( createLight( Vector3f( -15.0f, -15.0f, 10.0f ) ) );
+//            scene->attachNode( createLight( Vector3f( +15.0f, -15.0f, 10.0f ) ) );
 
             scene->attachNode(
                 [ & ] {
@@ -235,10 +128,23 @@ public:
 
         m_composition = [ & ] {
             using namespace crimild::compositions;
-            auto withTonemapping = []( auto enabled, auto cmp ) {
-                return enabled ? tonemapping( cmp, 1.0 ) : cmp;
+            auto enableTonemapping = true;
+            auto enableBloom = false;
+            auto enableDebug = true;
+
+            auto withTonemapping = [ enableTonemapping ]( auto cmp ) {
+                return enableTonemapping ? tonemapping( cmp, 1.0 ) : cmp;
             };
-            return present( withTonemapping( false, renderSceneHDR( m_scene ) ) );
+
+            auto withDebug = [ enableDebug ]( auto cmp ) {
+                return enableDebug ? debug( cmp ) : cmp;
+            };
+
+            auto withBloom = [ enableBloom ]( auto cmp ) {
+            	return enableBloom ? bloom( cmp ) : cmp;
+            };
+
+            return present( withDebug( withTonemapping( withBloom( renderSceneHDR( m_scene ) ) ) ) );
         }();
 
         if ( m_frameGraph->compile() ) {
@@ -286,7 +192,10 @@ int main( int argc, char **argv )
 
     Log::setLevel( Log::Level::LOG_LEVEL_ALL );
 
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "PBR: IBL", crimild::alloc< Settings >( argc, argv ) );
+    auto settings = crimild::alloc< Settings >( argc, argv );
+    settings->set( "video.width", 1280 );
+    settings->set( "video.height", 900 );
+    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "PBR: IBL", settings );
 
     SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
 
