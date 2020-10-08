@@ -60,7 +60,7 @@ public:
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [ x, y ] {
                             auto material = crimild::alloc< LitMaterial >();
-//                            material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
+                            //                            material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
                             material->setMetallic( 1.0f - float( y ) / 6.0f );
                             material->setRoughness( float( x ) / 6.0f );
                             return material;
@@ -70,22 +70,21 @@ public:
             }
 
             scene->attachNode(
-            	crimild::alloc< Skybox >(
-             		[] {
+                crimild::alloc< Skybox >(
+                    [] {
                         auto texture = crimild::alloc< Texture >();
                         texture->imageView = [] {
                             auto imageView = crimild::alloc< ImageView >();
                             imageView->image = ImageManager::getInstance()->loadImage(
                                 {
                                     .filePath = {
-                                        .path = "assets/textures/Newport_Loft_Ref.hdr",
-//                                        .path = "assets/textures/Milkyway_small.hdr",
-//                                        .path = "assets/textures/Mans_Outside_2k.hdr",
-//                                        .path = "assets/textures/Theatre-Side_2k.hdr",
+                                        //.path = "assets/textures/Newport_Loft_Ref.hdr",
+                                        //.path = "assets/textures/Milkyway_small.hdr",
+                                        //.path = "assets/textures/Mans_Outside_2k.hdr",
+                                        .path = "assets/textures/Theatre-Side_2k.hdr",
                                     },
                                     .hdr = true,
-                                }
-                            );
+                                } );
                             return imageView;
                         }();
                         texture->sampler = [ & ] {
@@ -97,9 +96,7 @@ public:
                             return sampler;
                         }();
                         return texture;
-            		}()
-            	)
-            );
+                    }() ) );
 
             auto createLight = []( const auto &position ) {
                 auto light = crimild::alloc< Light >( Light::Type::POINT );
@@ -108,10 +105,10 @@ public:
                 return light;
             };
 
-//            scene->attachNode( createLight( Vector3f( -15.0f, +15.0f, 10.0f ) ) );
-//            scene->attachNode( createLight( Vector3f( +15.0f, +15.0f, 10.0f ) ) );
-//            scene->attachNode( createLight( Vector3f( -15.0f, -15.0f, 10.0f ) ) );
-//            scene->attachNode( createLight( Vector3f( +15.0f, -15.0f, 10.0f ) ) );
+            scene->attachNode( createLight( Vector3f( -15.0f, +15.0f, 10.0f ) ) );
+            scene->attachNode( createLight( Vector3f( +15.0f, +15.0f, 10.0f ) ) );
+            scene->attachNode( createLight( Vector3f( -15.0f, -15.0f, 10.0f ) ) );
+            scene->attachNode( createLight( Vector3f( +15.0f, -15.0f, 10.0f ) ) );
 
             scene->attachNode(
                 [ & ] {
@@ -130,7 +127,7 @@ public:
             using namespace crimild::compositions;
             auto enableTonemapping = true;
             auto enableBloom = false;
-            auto enableDebug = true;
+            auto enableDebug = false;
 
             auto withTonemapping = [ enableTonemapping ]( auto cmp ) {
                 return enableTonemapping ? tonemapping( cmp, 1.0 ) : cmp;
@@ -141,7 +138,7 @@ public:
             };
 
             auto withBloom = [ enableBloom ]( auto cmp ) {
-            	return enableBloom ? bloom( cmp ) : cmp;
+                return enableBloom ? bloom( cmp ) : cmp;
             };
 
             return present( withDebug( withTonemapping( withBloom( renderSceneHDR( m_scene ) ) ) ) );
