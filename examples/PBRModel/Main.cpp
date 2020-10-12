@@ -46,6 +46,33 @@ public:
         m_scene = [ & ] {
             auto scene = crimild::alloc< Group >();
 
+            auto loadTexture = []( std::string path ) {
+                auto texture = crimild::alloc< Texture >();
+                texture->imageView = [ path ] {
+                    auto imageView = crimild::alloc< ImageView >();
+                    imageView->image = ImageManager::getInstance()->loadImage(
+                        {
+                            .filePath = {
+                                .path = path,
+                            },
+                        } );
+                    return imageView;
+                }();
+                texture->sampler = [ & ] {
+                    auto sampler = crimild::alloc< Sampler >();
+                    sampler->setMinFilter( Sampler::Filter::LINEAR );
+                    sampler->setMagFilter( Sampler::Filter::LINEAR );
+                    return sampler;
+                }();
+                return texture;
+            };
+
+            auto material = crimild::alloc< LitMaterial >();
+            material->setAlbedoMap( loadTexture( "assets/models/cerberus/Cerberus_A.tga" ) );
+            material->setMetallicMap( loadTexture( "assets/models/cerberus/Cerberus_M.tga" ) );
+            material->setRoughnessMap( loadTexture( "assets/models/cerberus/Cerberus_R.tga" ) );
+            material->setNormalMap( loadTexture( "assets/models/cerberus/Cerberus_N.tga" ) );
+
             scene->attachNode( [ & ] {
                 auto path = FilePath {
                     .path = "assets/models/cerberus/cerberus.obj"
@@ -54,32 +81,6 @@ public:
                 OBJLoader loader( path.getAbsolutePath() );
                 loader.setVerbose( true );
                 if ( auto model = loader.load() ) {
-                    auto loadTexture = []( std::string path ) {
-                        auto texture = crimild::alloc< Texture >();
-                        texture->imageView = [ path ] {
-                            auto imageView = crimild::alloc< ImageView >();
-                            imageView->image = ImageManager::getInstance()->loadImage(
-                                {
-                                    .filePath = {
-                                        .path = path,
-                                    },
-                                } );
-                            return imageView;
-                        }();
-                        texture->sampler = [ & ] {
-                            auto sampler = crimild::alloc< Sampler >();
-                            sampler->setMinFilter( Sampler::Filter::LINEAR );
-                            sampler->setMagFilter( Sampler::Filter::LINEAR );
-                            return sampler;
-                        }();
-                        return texture;
-                    };
-
-                    auto material = crimild::alloc< LitMaterial >();
-                    material->setAlbedoMap( loadTexture( "assets/models/cerberus/Cerberus_A.tga" ) );
-                    material->setMetallicMap( loadTexture( "assets/models/cerberus/Cerberus_M.tga" ) );
-                    material->setRoughnessMap( loadTexture( "assets/models/cerberus/Cerberus_R.tga" ) );
-                    material->setNormalMap( loadTexture( "assets/models/cerberus/Cerberus_N.tga" ) );
                     model->perform(
                         Apply(
                             [ material ]( Node *node ) {
@@ -98,8 +99,24 @@ public:
             scene->attachNode(
                 crimild::alloc< Skybox >(
                     [] {
+                    	auto imageWithRGBA = []( auto r, auto g, auto b, auto a ) {
+                            auto image = crimild::alloc< Image >();
+                            image->extent = {
+                                .width = 1,
+                                .height = 1,
+                                .depth = 1,
+                            };
+                            image->format = Format::R8G8B8A8_UNORM;
+                            image->data = {
+                                UInt8( r * 255 ),
+                                UInt8( g * 255 ),
+                                UInt8( b * 255 ),
+                                UInt8( a * 255 ),
+                            };
+                            return image;
+                        };
                         auto texture = crimild::alloc< Texture >();
-                        texture->imageView = [] {
+                        texture->imageView = [ imageWithRGBA ] {
                             auto imageView = crimild::alloc< ImageView >();
                             imageView->image = ImageManager::getInstance()->loadImage(
                                 {
@@ -108,6 +125,7 @@ public:
                                     },
                                     .hdr = true,
                                 } );
+//                            imageView->image = imageWithRGBA( 0.68, 0.78, 0.88, 1 );
                             return imageView;
                         }();
                         texture->sampler = [ & ] {
@@ -150,7 +168,7 @@ public:
             using namespace crimild::compositions;
             auto enableTonemapping = true;
             auto enableBloom = false;
-            auto enableDebug = true;
+            auto enableDebug = false;
 
             auto withTonemapping = [ enableTonemapping ]( auto cmp ) {
                 return enableTonemapping ? tonemapping( cmp, 1.0 ) : cmp;

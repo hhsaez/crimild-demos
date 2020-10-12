@@ -60,7 +60,7 @@ public:
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [ x, y ] {
                             auto material = crimild::alloc< LitMaterial >();
-                            //                            material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
+                            material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
                             material->setMetallic( 1.0f - float( y ) / 6.0f );
                             material->setRoughness( float( x ) / 6.0f );
                             return material;
@@ -78,8 +78,8 @@ public:
                             imageView->image = ImageManager::getInstance()->loadImage(
                                 {
                                     .filePath = {
-                                        //.path = "assets/textures/Newport_Loft_Ref.hdr",
-                                        //.path = "assets/textures/Milkyway_small.hdr",
+//                                        .path = "assets/textures/Newport_Loft_Ref.hdr",
+//                                        .path = "assets/textures/Milkyway_small.hdr",
                                         //.path = "assets/textures/Mans_Outside_2k.hdr",
                                         .path = "assets/textures/Theatre-Side_2k.hdr",
                                     },
@@ -113,7 +113,8 @@ public:
             scene->attachNode(
                 [ & ] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
+                    camera->local().setTranslate( 15.0f, 5.0f, 20.0f );
+                    camera->local().lookAt( Vector3f::ZERO );
                     camera->attachComponent< FreeLookCameraComponent >();
                     return camera;
                 }() );
@@ -127,7 +128,7 @@ public:
             using namespace crimild::compositions;
             auto enableTonemapping = true;
             auto enableBloom = false;
-            auto enableDebug = false;
+            auto enableDebug = true;
 
             auto withTonemapping = [ enableTonemapping ]( auto cmp ) {
                 return enableTonemapping ? tonemapping( cmp, 1.0 ) : cmp;

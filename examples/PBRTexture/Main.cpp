@@ -100,6 +100,26 @@ public:
             }
 
             scene->attachNode(
+                crimild::alloc< Skybox >(
+                    [] {
+                        auto texture = crimild::alloc< Texture >();
+                        texture->imageView = [] {
+                            auto imageView = crimild::alloc< ImageView >();
+                            imageView->image = Image::ZERO;
+                            return imageView;
+                        }();
+                        texture->sampler = [ & ] {
+                            auto sampler = crimild::alloc< Sampler >();
+                            sampler->setMinFilter( Sampler::Filter::LINEAR );
+                            sampler->setMagFilter( Sampler::Filter::LINEAR );
+                            sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                            sampler->setCompareOp( CompareOp::NEVER );
+                            return sampler;
+                        }();
+                        return texture;
+                    }() ) );
+
+            scene->attachNode(
                 [] {
                     auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
                     light->setColor( RGBAColorf( 25, 25, 25 ) );
