@@ -82,6 +82,38 @@ public:
             scene->attachNode( createLight( Vector3f( +15.0f, -15.0f, 10.0f ) ) );
 
             scene->attachNode(
+                crimild::alloc< Skybox >(
+                    [] {
+                        auto texture = crimild::alloc< Texture >();
+                        texture->imageView = [] {
+                            auto imageView = crimild::alloc< ImageView >();
+                            imageView->image = [] {
+                                auto image = crimild::alloc< Image >();
+                                image->extent = {
+                                    .width = 1,
+                                    .height = 1,
+                                    .depth = 1,
+                                };
+                                image->format = Format::R8G8B8A8_UNORM;
+                                image->data = {
+                                    0x44, 0x44, 0xFF, 0xFF
+                                };
+                                return image;
+                            }();
+                            return imageView;
+                        }();
+                        texture->sampler = [ & ] {
+                            auto sampler = crimild::alloc< Sampler >();
+                            sampler->setMinFilter( Sampler::Filter::LINEAR );
+                            sampler->setMagFilter( Sampler::Filter::LINEAR );
+                            sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                            sampler->setCompareOp( CompareOp::NEVER );
+                            return sampler;
+                        }();
+                        return texture;
+                    }() ) );
+
+            scene->attachNode(
                 [ & ] {
                     auto camera = crimild::alloc< Camera >();
                     camera->local().setTranslate( 0.0f, 0.0f, 30.0f );

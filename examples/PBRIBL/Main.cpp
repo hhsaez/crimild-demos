@@ -41,6 +41,8 @@ public:
             return false;
         }
 
+        auto settings = Simulation::getInstance()->getSettings();
+
         m_frameGraph = crimild::alloc< FrameGraph >();
 
         m_scene = [ & ] {
@@ -71,17 +73,14 @@ public:
 
             scene->attachNode(
                 crimild::alloc< Skybox >(
-                    [] {
+                    [ settings ] {
                         auto texture = crimild::alloc< Texture >();
-                        texture->imageView = [] {
+                        texture->imageView = [ settings ] {
                             auto imageView = crimild::alloc< ImageView >();
                             imageView->image = ImageManager::getInstance()->loadImage(
                                 {
                                     .filePath = {
-//                                        .path = "assets/textures/Newport_Loft_Ref.hdr",
-//                                        .path = "assets/textures/Milkyway_small.hdr",
-                                        //.path = "assets/textures/Mans_Outside_2k.hdr",
-                                        .path = "assets/textures/Theatre-Side_2k.hdr",
+                                        .path = settings->get< std::string >( "skybox", "assets/textures/Newport_Loft_Ref.hdr" ),
                                     },
                                     .hdr = true,
                                 } );
@@ -126,9 +125,9 @@ public:
 
         m_composition = [ & ] {
             using namespace crimild::compositions;
-            auto enableTonemapping = true;
-            auto enableBloom = false;
-            auto enableDebug = true;
+            auto enableTonemapping = settings->get< Bool >( "tonemapping", true );
+            auto enableBloom = settings->get< Bool >( "bloom", false );
+            auto enableDebug = settings->get< Bool >( "debug", false );
 
             auto withTonemapping = [ enableTonemapping ]( auto cmp ) {
                 return enableTonemapping ? tonemapping( cmp, 1.0 ) : cmp;

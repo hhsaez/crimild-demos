@@ -32,39 +32,6 @@
 using namespace crimild;
 using namespace crimild::glfw;
 
-namespace crimild {
-
-    class UnlitMaterial : public Material {
-    public:
-        virtual ~UnlitMaterial( void ) = default;
-
-        inline void setColorMap( SharedPointer< Texture > const &colorMap ) noexcept { m_colorMap = colorMap; }
-        inline Texture *getColorMap( void ) noexcept { return get_ptr( m_colorMap ); }
-
-        DescriptorSet *getDescriptors( void ) noexcept
-        {
-            if ( auto ds = get_ptr( m_descriptors ) ) {
-                return ds;
-            }
-
-            m_descriptors = crimild::alloc< DescriptorSet >();
-            m_descriptors->descriptors = {
-                {
-                    .descriptorType = DescriptorType::TEXTURE,
-                    .obj = m_colorMap,
-                },
-            };
-
-            return get_ptr( m_descriptors );
-        }
-
-    private:
-        SharedPointer< Texture > m_colorMap;
-        SharedPointer< DescriptorSet > m_descriptors;
-    };
-
-}
-
 using namespace crimild;
 using namespace crimild::glfw;
 
@@ -96,7 +63,7 @@ public:
                 geometry->attachComponent< MaterialComponent >()->attachMaterial(
                     [&] {
                         auto material = crimild::alloc< UnlitMaterial >();
-                        material->setColorMap(
+                        material->setTexture(
                             [&] {
                                 auto texture = crimild::alloc< Texture >();
                                 texture->imageView = [&] {
@@ -188,6 +155,10 @@ public:
                             [] {
                                 auto layout = crimild::alloc< DescriptorSetLayout >();
                                 layout->bindings = {
+                                    {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .stage = Shader::Stage::FRAGMENT,
+                                    },
                                     {
                                         .descriptorType = DescriptorType::TEXTURE,
                                         .stage = Shader::Stage::FRAGMENT,
