@@ -83,7 +83,7 @@ It's safe to ignore SDL_Mixer2 warnings, if any.
 <img src="examples/LightingMulitple/screenshot.png" width="200" /> | [Lighting Multiple](examples/LightingMultiple) | Creates a scene with lots of cubes and adds multiple light sources: one directional light, two point lights moving around the scene and a flashlight (using a spot light). Camera can be controlled with WASD and the mouse.
 <img src="examples/NormalMapping/screenshot.png" width="200" /> | [Normal Mapping](examples/NormalMapping) | Uses a normal texture to provide more detail to models
 <a name="Loaders">Loaders</a> | | 
-<img src="examples/OBJLoader/screenshot.png" width="200" /> | [OBJLoader](example/OBJLoader) | Shows how to use the OBJ loader to create a simple scene by loading models from files.
+<img src="examples/OBJLoader/screenshot.png" width="200" /> | [OBJLoader](examples/OBJLoader) | Shows how to use the OBJ loader to create a simple scene by loading models from files.
 <a name="DepthStencil">Depth/Stencil</a> | |
 <img src="examples/Depth/screenshot.png" width="200" /> | [Depth](examples/Depth) | Visualizes the depth buffer by implementing a custom shader. 
 <img src="examples/DepthFunc/screenshot.png" width="200" /> | [Depth Functions](examples/DepthFunc) | Visualizes what happens when depth testing is disabled.
