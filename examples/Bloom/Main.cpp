@@ -167,7 +167,7 @@ public:
             return present(
                 tonemapping(
                     bloom(
-                        renderScene( m_scene ) ),
+                        renderSceneHDR( m_scene ) ),
                     0.5 ) );
         }();
 

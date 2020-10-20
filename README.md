@@ -80,34 +80,34 @@ It's safe to ignore SDL_Mixer2 warnings, if any.
 <img src="examples/LightingDirectional/screenshot.png" width="200" /> | [Lighting Directional](examples/LightingDirectional) | Uses a single directional light to lit a scene.
 <img src="examples/LightingPoint/screenshot.png" width="200" /> | [Lighting Point](examples/LightingPoint) | Uses a single point light to lit a scene.
 <img src="examples/LightingSpotlight/screenshot.png" width="200" /> | [Lighting Spotlight](examples/LightingSpotlight) | Uses a single spotlight light to lit a scene
-<img src="examples/LightingMultiple/screenshot.png" width="200" /> | [Lighting Multiple](examples/LightingMultiple) | Creates a scene with lots of cubes and adds multiple light sources: one directional light, two point lights moving around the scene and a flashlight (using a spot light). Camera can be controlled with WASD and the mouse.
-<img src="examples/LightingNormalMapping/screenshot.png" width="200" /> | [Normal Mapping](examples/NormalMapping) | Uses a normal texture to provide more detail to models
-<a name="Loaders">Loaders</a> | |
+<img src="examples/LightingMulitple/screenshot.png" width="200" /> | [Lighting Multiple](examples/LightingMultiple) | Creates a scene with lots of cubes and adds multiple light sources: one directional light, two point lights moving around the scene and a flashlight (using a spot light). Camera can be controlled with WASD and the mouse.
+<img src="examples/NormalMapping/screenshot.png" width="200" /> | [Normal Mapping](examples/NormalMapping) | Uses a normal texture to provide more detail to models
+<a name="Loaders">Loaders</a> | | 
 <img src="examples/OBJLoader/screenshot.png" width="200" /> | [OBJLoader](example/OBJLoader) | Shows how to use the OBJ loader to create a simple scene by loading models from files.
 <a name="DepthStencil">Depth/Stencil</a> | |
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Depth](examples/Depth) | Visualizes the depth buffer by implementing a custom shader.
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Depth Functions](examples/DepthFunc) | Visualizes what happens when depth testing is disabled.
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Stencil Outline](examples/StencilOutline) | Renders an outline around some objects using the stencil buffer and multiple passes
+<img src="examples/Depth/screenshot.png" width="200" /> | [Depth](examples/Depth) | Visualizes the depth buffer by implementing a custom shader. 
+<img src="examples/DepthFunc/screenshot.png" width="200" /> | [Depth Functions](examples/DepthFunc) | Visualizes what happens when depth testing is disabled.
+<img src="examples/StencilOutline/screenshot.png" width="200" /> | [Stencil Outline](examples/StencilOutline) | Renders an outline around some objects using the stencil buffer and multiple passes
 <a name="Alpha">Alpha</a> | |
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [AlphaDiscard](examples/AlphaDiscard) | Displays a scene with several objects, discarding fragments if the alpha value is lower than some threshold.
+<img src="examples/AlphaDiscard/screenshot.png" width="200" /> | [AlphaDiscard](examples/AlphaDiscard) | Displays a scene with several objects, discarding fragments if the alpha value is lower than some threshold.
 <a name="Pipelines">Pipelines</a> | |
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Pipeline Cull mode](examples/PipelineCullMode) | Modify a pipeline to disable back-face culling for a rotating quad.
+<img src="examples/PipelineCullMode/screenshot.png" width="200" /> | [Pipeline Cull mode](examples/PipelineCullMode) | Modify a pipeline to disable back-face culling for a rotating quad.
 <a name="Compositions">Compositions</a> | |
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Postprocessing Negative](examples/PostprocessingNegative) | Applies a "negative" post processing effect by using frame compositions
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Postprocessing Grayscale](examples/PostprocessingGrayscale) |  Converts a color scene into grayscale by using frame compositions
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Postprocessing Sharpen](examples/PostprocessingSharpen) | Applies a sharpen convolution to a rendered scene by using frame compositions
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Postprocessing Blur](examples/PostprocessingBlur) | Applies a blur convolution to a rendered scene by using frame compositions
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Postprocessing Edges](examples/PostprocessingEdges) | Process a rendered scene, highlighting edges by using frame compositions
+<img src="examples/PostprocessingNegative/screenshot.png" width="200" /> | [Postprocessing Negative](examples/PostprocessingNegative) | Applies a "negative" post processing effect by using frame compositions
+<img src="examples/PostprocessingGrayscale/screenshot.png" width="200" /> | [Postprocessing Grayscale](examples/PostprocessingGrayscale) |  Converts a color scene into grayscale by using frame compositions
+<img src="examples/PostprocessingSharpen/screenshot.png" width="200" /> | [Postprocessing Sharpen](examples/PostprocessingSharpen) | Applies a sharpen convolution to a rendered scene by using frame compositions
+<img src="examples/PostprocessingBlur/screenshot.png" width="200" /> | [Postprocessing Blur](examples/PostprocessingBlur) | Applies a blur convolution to a rendered scene by using frame compositions
+<img src="examples/PostprocessingEdges/screenshot.png" width="200" /> | [Postprocessing Edges](examples/PostprocessingEdges) | Process a rendered scene, highlighting edges by using frame compositions
 <a name="Shadows">Shadows</a> | |
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Directional](examples/Shadows) | A simple scene is rendered using a directional light that cast shadows on both dynamic and static objects.
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Spot](examples/ShadowsSpot) | A simple scene is rendered using a spot light that cast shadows on both dynamic and static objects
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Point](examples/ShadowsPoint) | A scene is rendered using a point light that casting shadows for all objects in all directions
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Directional (many lights)](examples/ShadowsDirectionalMultiple) | A simple scene is rendered using two directional lights, each one casting shadows on both dynamic and static objects.
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Spot (many lights)](examples/ShadowsSpotMultiple) | A simple scene is rendered using three spot lights with different colors, each one casting shadows on both dynamic and static objects
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Point (many lights)](examples/ShadowsPointMultiple) | A scene is rendered using three point lights with different colors, each one casting shadows for all objects in all directions
+<img src="examples/Shadows/screenshot.png" width="200" /> | [Directional](examples/Shadows) | A simple scene is rendered using a directional light that cast shadows on both dynamic and static objects.
+<img src="examples/ShadowsSpot/screenshot.png" width="200" /> | [Spot](examples/ShadowsSpot) | A simple scene is rendered using a spot light that cast shadows on both dynamic and static objects
+<img src="examples/ShadowsPoint/screenshot.png" width="200" /> | [Point](examples/ShadowsPoint) | A scene is rendered using a point light that casting shadows for all objects in all directions
+<img src="examples/ShadowsDirectionalMultiple/screenshot.png" width="200" /> | [Directional (many lights)](examples/ShadowsDirectionalMultiple) | A simple scene is rendered using two directional lights, each one casting shadows on both dynamic and static objects.
+<img src="examples/ShadowsSpotMultiple/screenshot.png" width="200" /> | [Spot (many lights)](examples/ShadowsSpotMultiple) | A simple scene is rendered using three spot lights with different colors, each one casting shadows on both dynamic and static objects
+<img src="examples/ShadowsPointMultiple/screenshot.png" width="200" /> | [Point (many lights)](examples/ShadowsPointMultiple) | A scene is rendered using three point lights with different colors, each one casting shadows for all objects in all directions
 <a name="Image Effects">Image Effects</a> | |
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [HDR](examples/HDR) | Renders a scene with HDR enabled, providing more control over bright and dark colors
-<img src="examples/Unavailable/screenshot.png" width="200" /> | [Bloom](examples/Bloom) | Filters brigth areas, applying blur to the result, to generate a light bleeding effect
+<img src="examples/HDR/screenshot.png" width="200" /> | [HDR](examples/HDR) | Renders a scene with HDR enabled, providing more control over  bright and dark colors
+<img src="examples/Bloom/screenshot.png" width="200" /> | [Bloom](examples/Bloom) | Filters brigth areas, applying blur to the result, to generate a light bleeding effect
 <a name="PBR">PBR</a> | |
 <img src="examples/PBRBasic/screenshot.png" width="200" /> | [PBR Basic](examples/PBRBasic) | TBD
 <img src="examples/PBRTexture/screenshot.png" width="200" /> | [PBR Texture](examples/PBRTexture) | TBD
