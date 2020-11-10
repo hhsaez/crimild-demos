@@ -82,63 +82,65 @@ public:
                     return att;
                 }()
             };
-            renderPass->setPipeline(
+            renderPass->setGraphicsPipeline(
                 [&] {
-                    auto pipeline = crimild::alloc< Pipeline >();
+                    auto pipeline = crimild::alloc< GraphicsPipeline >();
                     pipeline->primitiveType = Primitive::Type::TRIANGLES;
-                    pipeline->program = [&] {
-                        auto createShader = []( Shader::Stage stage, std::string path ) {
-                            return crimild::alloc< Shader >(
-                                stage,
-                                FileSystem::getInstance().readFile(
-                                    FilePath {
-                                        .path = path,
-                                    }.getAbsolutePath()
-                                )
-                            );
-                        };
+                    pipeline->setProgram(
+                        [&] {
+                            auto createShader = []( Shader::Stage stage, std::string path ) {
+                                return crimild::alloc< Shader >(
+                                    stage,
+                                    FileSystem::getInstance().readFile(
+                                        FilePath {
+                                            .path = path,
+                                        }.getAbsolutePath()
+                                    )
+                                );
+                            };
 
-                        auto program = crimild::alloc< ShaderProgram >(
-                            Array< SharedPointer< Shader >> {
-                                createShader(
-                                    Shader::Stage::VERTEX,
-                                    "assets/shaders/scene.vert.spv"
-                                ),
-                                createShader(
-                                    Shader::Stage::FRAGMENT,
-                                    "assets/shaders/scene.frag.spv"
-                                ),
-                                }
-                        );
-                        program->vertexLayouts = { VertexP3TC2::getLayout() };
-                        program->descriptorSetLayouts = {
-                            [] {
-                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                layout->bindings = {
-                                    {
-                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                        .stage = Shader::Stage::VERTEX,
-                                    },
-                                    {
-                                        .descriptorType = DescriptorType::TEXTURE,
-                                        .stage = Shader::Stage::FRAGMENT,
-                                    },
-                                };
-                                return layout;
-                            }(),
-                            [] {
-                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                layout->bindings = {
-                                    {
-                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                        .stage = Shader::Stage::VERTEX,
-                                    },
-                                };
-                                return layout;
-                            }(),
-                        };
-                        return program;
-                    }();
+                            auto program = crimild::alloc< ShaderProgram >(
+                                Array< SharedPointer< Shader >> {
+                                    createShader(
+                                        Shader::Stage::VERTEX,
+                                        "assets/shaders/scene.vert.spv"
+                                    ),
+                                    createShader(
+                                        Shader::Stage::FRAGMENT,
+                                        "assets/shaders/scene.frag.spv"
+                                    ),
+                                    }
+                            );
+                            program->vertexLayouts = { VertexP3TC2::getLayout() };
+                            program->descriptorSetLayouts = {
+                                [] {
+                                    auto layout = crimild::alloc< DescriptorSetLayout >();
+                                    layout->bindings = {
+                                        {
+                                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                            .stage = Shader::Stage::VERTEX,
+                                        },
+                                        {
+                                            .descriptorType = DescriptorType::TEXTURE,
+                                            .stage = Shader::Stage::FRAGMENT,
+                                        },
+                                    };
+                                    return layout;
+                                }(),
+                                [] {
+                                    auto layout = crimild::alloc< DescriptorSetLayout >();
+                                    layout->bindings = {
+                                        {
+                                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                            .stage = Shader::Stage::VERTEX,
+                                        },
+                                    };
+                                    return layout;
+                                }(),
+                            };
+                            return program;
+                        }()
+                    );
                     return pipeline;
                 }()
             );
@@ -194,7 +196,7 @@ public:
                             auto vertices = p->getVertexData()[ 0 ];
                             auto indices = p->getIndices();
 
-                            commandBuffer->bindGraphicsPipeline( renderPass->getPipeline() );
+                            commandBuffer->bindGraphicsPipeline( renderPass->getGraphicsPipeline() );
                             commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
                             commandBuffer->bindDescriptorSet( g->getDescriptors() );
                             commandBuffer->bindVertexBuffer( get_ptr( vertices ) );

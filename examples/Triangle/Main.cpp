@@ -109,24 +109,14 @@ public:
                     auto pipeline = crimild::alloc< GraphicsPipeline >();
                     pipeline->setProgram(
                         [ & ] {
-                            auto createShader = []( Shader::Stage stage, std::string path ) {
-                                return crimild::alloc< Shader >(
-                                    stage,
-                                    FileSystem::getInstance().readFile(
-                                        FilePath {
-                                            .path = path,
-                                        }
-                                            .getAbsolutePath() ) );
-                            };
-
                             auto program = crimild::alloc< ShaderProgram >(
                                 Array< SharedPointer< Shader > > {
-                                    createShader(
+                                    Shader::withBinary(
                                         Shader::Stage::VERTEX,
-                                        "assets/shaders/scene.vert.spv" ),
-                                    createShader(
+                                        FilePath { .path = "assets/shaders/scene.vert.spv" } ),
+                                    Shader::withBinary(
                                         Shader::Stage::FRAGMENT,
-                                        "assets/shaders/scene.frag.spv" ),
+                                        FilePath { .path = "assets/shaders/scene.frag.spv" } ),
                                 } );
                             program->vertexLayouts = { VertexLayout::P3_C3 };
                             program->descriptorSetLayouts = {
