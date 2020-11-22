@@ -25,13 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
-#include <Crimild_GLFW.hpp>
-
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
+
+#include <Crimild.hpp>
+#include <Crimild_GLFW.hpp>
+#include <Crimild_Vulkan.hpp>
 
 using namespace crimild;
 using namespace crimild::glfw;
@@ -43,8 +43,6 @@ public:
         Vector2f scale;
     };
 
-    using VertexTransformBuffer = UniformBufferImpl< VertexTransform >;
-
 public:
     void start( void ) noexcept
     {
@@ -54,8 +52,8 @@ public:
         ImGui::StyleColorsDark();
 
         auto &io = ImGui::GetIO();
-//        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-//        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+        //        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        //        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
         io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
         io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
 
@@ -79,12 +77,12 @@ public:
         ImGui::ShowDemoWindow();
 
         {
-//            ImGui::Begin( "Another Window" );
-//            ImGui::Text( "Hello from another window" );
-//            if ( ImGui::Button( "Close" ) ) {
-//                std::cout << "Should close window" << std::endl;
-//            }
-//            ImGui::End();
+            //            ImGui::Begin( "Another Window" );
+            //            ImGui::Text( "Hello from another window" );
+            //            if ( ImGui::Button( "Close" ) ) {
+            //                std::cout << "Should close window" << std::endl;
+            //            }
+            //            ImGui::End();
         }
 
         ImGui::Render();
@@ -96,7 +94,7 @@ public:
     {
         commandBuffer->clear();
         commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-        commandBuffer->beginRenderPass( nullptr );
+        commandBuffer->beginRenderPass( nullptr, nullptr );
 
         renderDrawData( commandBuffer );
 
@@ -110,7 +108,6 @@ public:
     }
 
     CommandBuffer *getCommandBuffer( void ) noexcept { return crimild::get_ptr( m_commandBuffer ); }
-
 
 private:
     void createFonts( void ) noexcept
@@ -132,73 +129,62 @@ private:
 
     void createRenderObjects( void ) noexcept
     {
-        m_pipeline = [&] {
-            auto pipeline = crimild::alloc< Pipeline >();
-            pipeline->program = [&] {
-                auto program = crimild::alloc< ShaderProgram >(
-                    containers::Array< SharedPointer< Shader >> {
-                        crimild::alloc< Shader >(
-                            Shader::Stage::VERTEX,
-                            FileSystem::getInstance().readFile(
-                                FilePath {
+        m_pipeline = [ & ] {
+            auto pipeline = crimild::alloc< GraphicsPipeline >();
+            pipeline->setProgram(
+                [] {
+                    auto program = crimild::alloc< ShaderProgram >(
+                        Array< SharedPointer< Shader > > {
+                            Shader::withBinary(
+                                Shader::Stage::VERTEX,
+                                {
                                     .path = "assets/shaders/imgui.vert.spv",
-                                }.getAbsolutePath()
-                            )
-                        ),
-                        crimild::alloc< Shader >(
-                            Shader::Stage::FRAGMENT,
-                            FileSystem::getInstance().readFile(
-                                FilePath {
+                                } ),
+                            Shader::withBinary(
+                                Shader::Stage::FRAGMENT,
+                                {
                                     .path = "assets/shaders/imgui.frag.spv",
-                                }.getAbsolutePath()
-                            )
-                        ),
-                    }
-                );
-                program->attributeDescriptions = VertexP2TC2C4::getAttributeDescriptions( 0 );
-                program->bindingDescription = VertexP2TC2C4::getBindingDescription( 0 );
-                program->descriptorSetLayout = [] {
-                    auto layout = crimild::alloc< DescriptorSetLayout >();
-                    layout->bindings = {
-                        {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .stage = Shader::Stage::VERTEX,
-                        },
-                        {
-                            .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
-                            .stage = Shader::Stage::FRAGMENT,
-                        },
+                                } ),
+                        } );
+                    program->vertexLayouts = { VertexP2TC2C4::getLayout() };
+                    program->descriptorSetLayouts = {
+                        [] {
+                            auto layout = crimild::alloc< DescriptorSetLayout >();
+                            layout->bindings = {
+                                {
+                                    .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                    .stage = Shader::Stage::VERTEX,
+                                },
+                                {
+                                    .descriptorType = DescriptorType::TEXTURE,
+                                    .stage = Shader::Stage::FRAGMENT,
+                                },
+                            };
+                            return layout;
+                        }()
                     };
-                    return layout;
-                }();
-                return program;
-            }();
-            pipeline->descriptorSetLayout = pipeline->program->descriptorSetLayout;
-            pipeline->attributeDescriptions = pipeline->program->attributeDescriptions;
-            pipeline->bindingDescription = pipeline->program->bindingDescription;
-            pipeline->depthState = DepthState::DISABLED;
-            pipeline->cullFaceState = CullFaceState::DISABLED;
+                    return program;
+                }() );
+            //pipeline->depthState = DepthState::DISABLED;
+            //pipeline->cullFaceState = CullFaceState::DISABLED;
             return pipeline;
         }();
 
-        m_uniformBuffer = [&] {
-            return crimild::alloc< VertexTransformBuffer >();
+        m_uniformBuffer = [ & ] {
+            return crimild::alloc< UniformBuffer >( VertexTransform {} );
         }();
 
-        m_descriptorSet = [&] {
+        m_descriptorSet = [ & ] {
             auto descriptorSet = crimild::alloc< DescriptorSet >();
-            descriptorSet->descriptorSetLayout = m_pipeline->descriptorSetLayout;
-            descriptorSet->descriptorPool = crimild::alloc< DescriptorPool >();
-            descriptorSet->descriptorPool->descriptorSetLayout = descriptorSet->descriptorSetLayout;
-            descriptorSet->writes = {
-                {
+            descriptorSet->descriptors = {
+                Descriptor {
                     .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                    .buffer = crimild::get_ptr( m_uniformBuffer ),
+                    .obj = m_uniformBuffer,
                 },
-                {
-                    .descriptorType = DescriptorType::COMBINED_IMAGE_SAMPLER,
-//                    .texture = crimild::get_ptr( Texture::CHECKERBOARD_32 ),
-                    .texture = crimild::get_ptr( m_fontAtlas ),
+                Descriptor {
+                    .descriptorType = DescriptorType::TEXTURE,
+                    //                    .texture = crimild::get_ptr( Texture::CHECKERBOARD_32 ),
+                    .obj = m_fontAtlas,
                 }
             };
             return descriptorSet;
@@ -223,19 +209,16 @@ private:
     {
         auto scale = Vector2f(
             -2.0f / drawData->DisplaySize.x,
-            2.0f / drawData->DisplaySize.y
-        );
+            2.0f / drawData->DisplaySize.y );
         auto translate = Vector2f(
             -1.0f - drawData->DisplayPos.x * scale.x(),
-            -1.0f - drawData->DisplayPos.y * scale.y()
-        );
+            -1.0f - drawData->DisplayPos.y * scale.y() );
 
-        m_uniformBuffer->setData(
-            {
-				.scale = scale,
+        m_uniformBuffer->setValue(
+            VertexTransform {
+                .scale = scale,
                 .translate = translate,
-            }
-        );
+            } );
     }
 
     void renderDrawData( CommandBuffer *commandBuffer ) noexcept
@@ -264,10 +247,9 @@ private:
                     .texCoord = Vector2f( vertex.uv.x, vertex.uv.y ),
                     .color = RGBAColorf(
                         ( ( vertex.col >> 0 ) & 0xFF ) / 255.0f,
-                    	( ( vertex.col >> 8 ) & 0xFF ) / 255.0f,
-                    	( ( vertex.col >> 16 ) & 0xFF ) / 255.0f,
-                    	( ( vertex.col >> 24 ) & 0xFF ) / 255.0f
-                    ),
+                        ( ( vertex.col >> 8 ) & 0xFF ) / 255.0f,
+                        ( ( vertex.col >> 16 ) & 0xFF ) / 255.0f,
+                        ( ( vertex.col >> 24 ) & 0xFF ) / 255.0f ),
                 };
             }
             for ( auto j = 0l; j < cmdList->IdxBuffer.Size; j++ ) {
@@ -296,17 +278,14 @@ private:
                 if ( cmd->UserCallback != nullptr ) {
                     if ( cmd->UserCallback == ImDrawCallback_ResetRenderState ) {
                         // Do nothing?
-                    }
-                    else {
+                    } else {
                         cmd->UserCallback( cmds, cmd );
                     }
-                }
-                else {
+                } else {
                     commandBuffer->drawIndexed(
-                           cmd->ElemCount,
+                        cmd->ElemCount,
                         cmd->IdxOffset + indexOffset,
-                        cmd->VtxOffset + vertexOffset
-                    );
+                        cmd->VtxOffset + vertexOffset );
                 }
             }
             indexOffset += cmds->IdxBuffer.Size;
@@ -316,9 +295,9 @@ private:
 
 private:
     SharedPointer< CommandBuffer > m_commandBuffer;
-    SharedPointer< VertexTransformBuffer > m_uniformBuffer;
+    SharedPointer< UniformBuffer > m_uniformBuffer;
     SharedPointer< Texture > m_fontAtlas;
-    SharedPointer< Pipeline > m_pipeline;
+    SharedPointer< GraphicsPipeline > m_pipeline;
     SharedPointer< DescriptorSet > m_descriptorSet;
 };
 
@@ -334,7 +313,7 @@ public:
 
         auto program = ShaderProgramLibrary::getInstance()->get( constants::SHADER_PROGRAM_UNLIT_P2C3_COLOR );
 
-        auto pipeline = [&] {
+        auto pipeline = [ & ] {
             auto pipeline = crimild::alloc< Pipeline >();
             pipeline->program = crimild::retain( program );
             return pipeline;
@@ -358,19 +337,18 @@ public:
                     .position = Vector2f( 0.5f, 0.5f ),
                     .color = RGBColorf( 1.0f, 1.0f, 1.0f ),
                 },
-            }
-        );
+            } );
 
         auto ibo = crimild::alloc< IndexUInt32Buffer >(
             containers::Array< crimild::UInt32 > {
-                0, 1, 2,
-            }
-        );
-
+                0,
+                1,
+                2,
+            } );
 
         auto texture = Texture::CHECKERBOARD;
 
-        auto triBuilder = [&]( const Vector3f &position ) {
+        auto triBuilder = [ & ]( const Vector3f &position ) {
             auto node = crimild::alloc< Node >();
 
             auto renderable = node->attachComponent< RenderStateComponent >();
@@ -378,7 +356,7 @@ public:
             renderable->vbo = vbo;
             renderable->ibo = ibo;
             renderable->uniforms = {
-                [&] {
+                [ & ] {
                     auto ubo = crimild::alloc< ModelViewProjectionUniformBuffer >();
                     ubo->node = crimild::get_ptr( node );
                     return ubo;
@@ -395,20 +373,19 @@ public:
                 [ startAngle, speed ]( Node *node, const Clock &clock ) {
                     auto time = clock.getAccumTime();
                     node->local().rotate().fromAxisAngle( Vector3f::UNIT_Z, startAngle + ( speed * time * -90.0f * Numericf::DEG_TO_RAD ) );
-                }
-            );
+                } );
 
             return node;
         };
 
-        m_scene = [&] {
+        m_scene = [ & ] {
             auto scene = crimild::alloc< Group >();
             for ( auto x = -5.0f; x <= 5.0f; x += 1.0f ) {
                 for ( auto z = -5.0f; z <= 5.0f; z += 1.0f ) {
                     scene->attachNode( triBuilder( Vector3f( x, 0.0f, z + ( 0.1f * x / 10.0f ) ) ) );
                 }
             }
-            scene->attachNode([] {
+            scene->attachNode( [] {
                 auto settings = Simulation::getInstance()->getSettings();
                 auto width = settings->get< crimild::Real32 >( "video.width", 0 );
                 auto height = settings->get< crimild::Real32 >( "video.height", 1 );
@@ -417,7 +394,7 @@ public:
                 camera->local().lookAt( Vector3f::ZERO );
                 Camera::setMainCamera( camera );
                 return camera;
-            }());
+            }() );
             return scene;
         }();
 
@@ -431,7 +408,7 @@ public:
                 if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
                     renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
                 }
-            }));
+            } ) );
 
             commandBuffer->endRenderPass( nullptr );
             commandBuffer->end();
@@ -440,11 +417,10 @@ public:
         }();
 
         setCommandBuffers(
-        	{
-//            	m_commandBuffer,
-            	crimild::retain( m_imguiController.getCommandBuffer() ),
-        	}
-        );
+            {
+                //            	m_commandBuffer,
+                crimild::retain( m_imguiController.getCommandBuffer() ),
+            } );
 
         return true;
     }
@@ -490,4 +466,3 @@ int main( int argc, char **argv )
     sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
     return sim->run();
 }
-

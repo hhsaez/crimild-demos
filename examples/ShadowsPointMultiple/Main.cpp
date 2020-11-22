@@ -172,6 +172,7 @@ public:
                             [&] {
                                 auto material = crimild::alloc< UnlitMaterial >();
                                 material->setColor( color );
+                                material->setCastShadows( false );
                                 return material;
                             }()
                         );
