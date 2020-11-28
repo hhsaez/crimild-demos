@@ -7,6 +7,7 @@ layout( set = 0, binding = 0 ) uniform RenderPassUniforms
 {
     mat4 view;
     mat4 proj;
+    vec2 viewport;
 };
 
 layout( set = 2, binding = 0 ) uniform GeometryUniforms
@@ -32,9 +33,7 @@ void main()
             eyePos.z,
             eyePos.w );
 
-    vec2 viewportDim = vec2( 2048, 1536 );
-
-    gl_PointSize = inAlive * viewportDim.x * projectedCorner.x / projectedCorner.w;
+    gl_PointSize = inAlive * viewport.x * projectedCorner.x / projectedCorner.w;
 
     outColor = inColor;
 }

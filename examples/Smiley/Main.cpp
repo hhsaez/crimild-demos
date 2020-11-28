@@ -26,28 +26,19 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
-#include <Crimild_GLFW.hpp>
-#include <Crimild_STB.hpp>
 
 using namespace crimild;
-using namespace crimild::glfw;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
-
-		m_frameGraph = crimild::alloc< FrameGraph >();
-
-        m_composition = [&] {
-            using namespace crimild::compositions;
-            return present(
-                shader(
-                    R"(
+        setComposition(
+            [ & ] {
+                using namespace crimild::compositions;
+                return present(
+                    shader(
+                        R"(
                         float circleMask( vec2 uv, vec2 p, float r, float blur )
                         {
                             float d = length( uv - p );
@@ -77,47 +68,9 @@ public:
 
                             outColor = vec4( color, 1.0 );
                         }
-                    )"
-                )
-            );
-        }();
-
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
-
-        return true;
+                    )" ) );
+            }() );
     }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        m_frameGraph = nullptr;
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< FrameGraph > m_frameGraph;
-    compositions::Composition m_composition;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Smiley", crimild::alloc< Settings >( argc, argv ) );
-
-    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
-
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "Smiley" );
