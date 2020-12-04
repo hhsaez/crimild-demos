@@ -26,215 +26,119 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
-#include <Crimild_GLFW.hpp>
-#include <Crimild_STB.hpp>
-
-namespace crimild {
-
-    template< typename T >
-    class DynamicUniformBuffer : public UniformBuffer {
-    private:
-        using PreRenderCallback = std::function< T( void ) >;
-
-    public:
-        explicit DynamicUniformBuffer( const T &value ) noexcept : UniformBuffer( value ) { }
-        explicit DynamicUniformBuffer( PreRenderCallback callback ) noexcept : UniformBuffer( T() ) { onPreRender( callback ); }
-        virtual ~DynamicUniformBuffer( void ) = default;
-
-        inline void onPreRender( PreRenderCallback callback ) noexcept { m_callback = callback; }
-
-        virtual void onPreRender( void ) noexcept override
-        {
-            if ( m_callback != nullptr ) {
-                setValue( m_callback() );
-            }
-        }
-
-    private:
-        std::function< T( void ) > m_callback;
-    };
-
-}
 
 using namespace crimild;
-using namespace crimild::glfw;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
+        setScene(
+            [ & ] {
+                auto scene = crimild::alloc< Group >();
 
-		m_frameGraph = crimild::alloc< FrameGraph >();
-
-        m_scene = [&] {
-            auto scene = crimild::alloc< Group >();
-
-            scene->attachNode(
-                [] {
-                    auto earth = crimild::alloc< Group >();
-                    earth->attachNode(
-                        [] {
-                            auto geometry = crimild::alloc< Geometry >();
-                            geometry->attachPrimitive(
-                                crimild::alloc< SpherePrimitive >(
-                                    SpherePrimitive::Params {
-                                        .type = Primitive::Type::TRIANGLES,
-                                        .layout = VertexP3N3TC2::getLayout(),
-                                    }
-                                )
-                            );
-                            geometry->attachComponent< MaterialComponent >()->attachMaterial(
-                                [&] {
-                                    auto material = crimild::alloc< SimpleLitMaterial >();
-                                    material->setAmbient( RGBAColorf( 0.05f, 0.05f, 0.1f, 1.0f ) );
-                                    material->setDiffuseMap(
-                                        [] {
-                                            auto texture = crimild::alloc< Texture >();
-                                            texture->imageView = [&] {
-                                                auto imageView = crimild::alloc< ImageView >();
-                                                imageView->image = [&] {
-                                                    return ImageManager::getInstance()->loadImage(
-                                                        {
-                                                            .filePath = {
-                                                                .path = "assets/textures/earth-diffuse.tga"
-                                                            },
-                                                        }
-                                                    );
+                scene->attachNode(
+                    [] {
+                        auto earth = crimild::alloc< Group >();
+                        earth->attachNode(
+                            [] {
+                                auto geometry = crimild::alloc< Geometry >();
+                                geometry->attachPrimitive(
+                                    crimild::alloc< SpherePrimitive >(
+                                        SpherePrimitive::Params {
+                                            .type = Primitive::Type::TRIANGLES,
+                                            .layout = VertexP3N3TC2::getLayout(),
+                                        } ) );
+                                geometry->attachComponent< MaterialComponent >()->attachMaterial(
+                                    [ & ] {
+                                        auto material = crimild::alloc< SimpleLitMaterial >();
+                                        material->setAmbient( RGBAColorf( 0.05f, 0.05f, 0.1f, 1.0f ) );
+                                        material->setDiffuseMap(
+                                            [] {
+                                                auto texture = crimild::alloc< Texture >();
+                                                texture->imageView = [ & ] {
+                                                    auto imageView = crimild::alloc< ImageView >();
+                                                    imageView->image = [ & ] {
+                                                        return ImageManager::getInstance()->loadImage(
+                                                            {
+                                                                .filePath = {
+                                                                    .path = "assets/textures/earth-diffuse.tga" },
+                                                            } );
+                                                    }();
+                                                    return imageView;
                                                 }();
-                                                return imageView;
-                                            }();
-                                            texture->sampler = crimild::alloc< Sampler >();
-                                            return texture;
-                                        }()
-                                    );
-                                    material->setSpecular( RGBAColorf( 0.95f, 0.95f, 1.0f, 1.0f ) );
-                                    material->setShininess( 4.0f );
-                                    return material;
-                                }()
-                            );
-                            return geometry;
-                        }()
-                    );
-                    earth->attachComponent< RotationComponent >( Vector3f::UNIT_Y, 0.05f );
-                    return earth;
-                }()
-            );
+                                                texture->sampler = crimild::alloc< Sampler >();
+                                                return texture;
+                                            }() );
+                                        material->setSpecular( RGBAColorf( 0.95f, 0.95f, 1.0f, 1.0f ) );
+                                        material->setShininess( 4.0f );
+                                        return material;
+                                    }() );
+                                return geometry;
+                            }() );
+                        earth->attachComponent< RotationComponent >( Vector3f::UNIT_Y, 0.05f );
+                        return earth;
+                    }() );
 
-            scene->attachNode(
-                [] {
-                    auto group = crimild::alloc< Group >();
-                    group->attachNode(
-                        [] {
-                            auto geometry = crimild::alloc< Geometry >();
-                            geometry->attachPrimitive(
-                                crimild::alloc< SpherePrimitive >(
-                                    SpherePrimitive::Params {
-                                        .type = Primitive::Type::TRIANGLES,
-                                        .layout = VertexP3N3TC2::getLayout(),
-                                        .radius = 0.1f,
-                                    }
-                                )
-                            );
-                            geometry->attachComponent< MaterialComponent >()->attachMaterial(
-                                [] {
-                                    auto material = crimild::alloc< UnlitMaterial >();
-                                    material->setColor( RGBAColorf::ONE );
-                                    return material;
-                                }()
-                            );
-                            return geometry;
-                        }()
-                    );
-                    group->attachNode(
-                        [] {
-                            auto light = crimild::alloc< Light >();
-                            return light;
-                        }()
-                    );
-                    group->attachComponent< LambdaComponent >(
-                        [] ( auto node, auto &clock ) {
-                            auto speed = 0.1f;
-                            auto t = speed * clock.getCurrentTime();
-                            auto x = Numericf::remapCos( -5.0f, 5.0f, t );
-                            auto y = 0.0f;
-                            auto z = Numericf::remapSin( -5.0f, 5.0f, t );
-                            node->local().setTranslate( x, y, z );
-                        }
-                    );
-                    return group;
-                }()
-            );
+                scene->attachNode(
+                    [] {
+                        auto group = crimild::alloc< Group >();
+                        group->attachNode(
+                            [] {
+                                auto geometry = crimild::alloc< Geometry >();
+                                geometry->attachPrimitive(
+                                    crimild::alloc< SpherePrimitive >(
+                                        SpherePrimitive::Params {
+                                            .type = Primitive::Type::TRIANGLES,
+                                            .layout = VertexP3N3TC2::getLayout(),
+                                            .radius = 0.1f,
+                                        } ) );
+                                geometry->attachComponent< MaterialComponent >()->attachMaterial(
+                                    [] {
+                                        auto material = crimild::alloc< UnlitMaterial >();
+                                        material->setColor( RGBAColorf::ONE );
+                                        return material;
+                                    }() );
+                                return geometry;
+                            }() );
+                        group->attachNode(
+                            [] {
+                                auto light = crimild::alloc< Light >();
+                                return light;
+                            }() );
+                        group->attachComponent< LambdaComponent >(
+                            []( auto node, auto &clock ) {
+                                auto speed = 0.1f;
+                                auto t = speed * clock.getCurrentTime();
+                                auto x = Numericf::remapCos( -5.0f, 5.0f, t );
+                                auto y = 0.0f;
+                                auto z = Numericf::remapSin( -5.0f, 5.0f, t );
+                                node->local().setTranslate( x, y, z );
+                            } );
+                        return group;
+                    }() );
 
-            scene->attachNode(
-                [&] {
-                    auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-                    Camera::setMainCamera( camera );
-                    return camera;
-                }()
-            );
+                scene->attachNode(
+                    [ & ] {
+                        auto camera = crimild::alloc< Camera >();
+                        camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
+                        Camera::setMainCamera( camera );
+                        return camera;
+                    }() );
 
-            return scene;
-        }();
+                scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.045f, 0.05f, 0.125f ) ) );
 
-		m_composition = [ & ] {
-            using namespace crimild::compositions;
-            return present( renderScene( m_scene ) );
-        }();
+                scene->perform( StartComponents() );
 
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
+                return scene;
+            }() );
 
-        return true;
+        setComposition(
+            [ scene = getScene() ] {
+                using namespace crimild::compositions;
+                return present( renderScene( scene ) );
+            }() );
     }
-
-    void update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-
-        auto updateScene = [ & ]( auto &scene ) {
-            scene->perform( UpdateComponents( clock ) );
-            scene->perform( UpdateWorldState() );
-        };
-
-        updateScene( m_scene );
-
-        GLFWVulkanSystem::update();
-    }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< FrameGraph > m_frameGraph;
-    SharedPointer< Node > m_scene;
-    compositions::Composition m_composition;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Lighting: Diffuse Map", crimild::alloc< Settings >( argc, argv ) );
-
-    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
-
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "Lighting: Diffuse Map" );

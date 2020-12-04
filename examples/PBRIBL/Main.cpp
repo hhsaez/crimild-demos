@@ -26,177 +26,92 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
-#include <Crimild_STB.hpp>
-#include <Crimild_Vulkan.hpp>
 
 using namespace crimild;
-using namespace crimild::glfw;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
+        setScene(
+            [ & ] {
+                auto scene = crimild::alloc< Group >();
 
-        auto settings = Simulation::getInstance()->getSettings();
+                auto primitive = crimild::alloc< SpherePrimitive >(
+                    SpherePrimitive::Params {
+                        .type = Primitive::Type::TRIANGLES,
+                        .layout = VertexP3N3TC2::getLayout(),
+                    } );
 
-        m_frameGraph = crimild::alloc< FrameGraph >();
-
-        m_scene = [ & ] {
-            auto scene = crimild::alloc< Group >();
-
-            auto primitive = crimild::alloc< SpherePrimitive >(
-                SpherePrimitive::Params {
-                    .type = Primitive::Type::TRIANGLES,
-                    .layout = VertexP3N3TC2::getLayout(),
-                } );
-
-            for ( auto y = 0; y < 7; ++y ) {
-                for ( auto x = 0; x < 7; ++x ) {
-                    auto geometry = crimild::alloc< Geometry >();
-                    geometry->attachPrimitive( primitive );
-                    geometry->local().setTranslate( 2.5f * Vector3f( -3.0f + x, 3.0f - y, 0 ) );
-                    geometry->attachComponent< MaterialComponent >()->attachMaterial(
-                        [ x, y ] {
-                            auto material = crimild::alloc< LitMaterial >();
-                            material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
-                            material->setMetallic( 1.0f - float( y ) / 6.0f );
-                            material->setRoughness( float( x ) / 6.0f );
-                            return material;
-                        }() );
-                    scene->attachNode( geometry );
+                for ( auto y = 0; y < 7; ++y ) {
+                    for ( auto x = 0; x < 7; ++x ) {
+                        auto geometry = crimild::alloc< Geometry >();
+                        geometry->attachPrimitive( primitive );
+                        geometry->local().setTranslate( 2.5f * Vector3f( -3.0f + x, 3.0f - y, 0 ) );
+                        geometry->attachComponent< MaterialComponent >()->attachMaterial(
+                            [ x, y ] {
+                                auto material = crimild::alloc< LitMaterial >();
+                                material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
+                                material->setMetallic( 1.0f - float( y ) / 6.0f );
+                                material->setRoughness( float( x ) / 6.0f );
+                                return material;
+                            }() );
+                        scene->attachNode( geometry );
+                    }
                 }
-            }
 
-            scene->attachNode(
-                crimild::alloc< Skybox >(
-                    [ settings ] {
-                        auto texture = crimild::alloc< Texture >();
-                        texture->imageView = [ settings ] {
-                            auto imageView = crimild::alloc< ImageView >();
-                            imageView->image = ImageManager::getInstance()->loadImage(
-                                {
-                                    .filePath = {
-                                        .path = settings->get< std::string >( "skybox", "assets/textures/Newport_Loft_Ref.hdr" ),
-                                    },
-                                    .hdr = true,
-                                } );
-                            return imageView;
-                        }();
-                        texture->sampler = [ & ] {
-                            auto sampler = crimild::alloc< Sampler >();
-                            sampler->setMinFilter( Sampler::Filter::LINEAR );
-                            sampler->setMagFilter( Sampler::Filter::LINEAR );
-                            sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
-                            sampler->setCompareOp( CompareOp::NEVER );
-                            return sampler;
-                        }();
-                        return texture;
-                    }() ) );
+                scene->attachNode(
+                    crimild::alloc< Skybox >(
+                        [ settings = getSettings() ] {
+                            auto texture = crimild::alloc< Texture >();
+                            texture->imageView = [ settings ] {
+                                auto imageView = crimild::alloc< ImageView >();
+                                imageView->image = ImageManager::getInstance()->loadImage(
+                                    {
+                                        .filePath = {
+                                            .path = settings->get< std::string >( "skybox", "assets/textures/Newport_Loft_Ref.hdr" ),
+                                        },
+                                        .hdr = true,
+                                    } );
+                                return imageView;
+                            }();
+                            texture->sampler = [ & ] {
+                                auto sampler = crimild::alloc< Sampler >();
+                                sampler->setMinFilter( Sampler::Filter::LINEAR );
+                                sampler->setMagFilter( Sampler::Filter::LINEAR );
+                                sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                                sampler->setCompareOp( CompareOp::NEVER );
+                                return sampler;
+                            }();
+                            return texture;
+                        }() ) );
 
-            auto createLight = []( const auto &position ) {
-                auto light = crimild::alloc< Light >( Light::Type::POINT );
-                light->local().setTranslate( position );
-                light->setColor( RGBAColorf( 55, 55, 55 ) );
-                return light;
-            };
+                auto createLight = []( const auto &position ) {
+                    auto light = crimild::alloc< Light >( Light::Type::POINT );
+                    light->local().setTranslate( position );
+                    light->setColor( RGBAColorf( 55, 55, 55 ) );
+                    return light;
+                };
 
-            scene->attachNode( createLight( Vector3f( -15.0f, +15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( +15.0f, +15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( -15.0f, -15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( +15.0f, -15.0f, 10.0f ) ) );
+                scene->attachNode( createLight( Vector3f( -15.0f, +15.0f, 10.0f ) ) );
+                scene->attachNode( createLight( Vector3f( +15.0f, +15.0f, 10.0f ) ) );
+                scene->attachNode( createLight( Vector3f( -15.0f, -15.0f, 10.0f ) ) );
+                scene->attachNode( createLight( Vector3f( +15.0f, -15.0f, 10.0f ) ) );
 
-            scene->attachNode(
-                [ & ] {
-                    auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 15.0f, 5.0f, 20.0f );
-                    camera->local().lookAt( Vector3f::ZERO );
-                    camera->attachComponent< FreeLookCameraComponent >();
-                    return camera;
-                }() );
+                scene->attachNode(
+                    [ & ] {
+                        auto camera = crimild::alloc< Camera >();
+                        camera->local().setTranslate( 15.0f, 5.0f, 20.0f );
+                        camera->local().lookAt( Vector3f::ZERO );
+                        camera->attachComponent< FreeLookCameraComponent >();
+                        return camera;
+                    }() );
 
-            scene->perform( StartComponents() );
+                scene->perform( StartComponents() );
 
-            return scene;
-        }();
-
-        m_composition = [ & ] {
-            using namespace crimild::compositions;
-            auto enableTonemapping = settings->get< Bool >( "tonemapping", true );
-            auto enableBloom = settings->get< Bool >( "bloom", false );
-            auto enableDebug = settings->get< Bool >( "debug", false );
-
-            auto withTonemapping = [ enableTonemapping ]( auto cmp ) {
-                return enableTonemapping ? tonemapping( cmp, 1.0 ) : cmp;
-            };
-
-            auto withDebug = [ enableDebug ]( auto cmp ) {
-                return enableDebug ? debug( cmp ) : cmp;
-            };
-
-            auto withBloom = [ enableBloom ]( auto cmp ) {
-                return enableBloom ? bloom( cmp ) : cmp;
-            };
-
-            return present( withDebug( withTonemapping( withBloom( renderSceneHDR( m_scene ) ) ) ) );
-        }();
-
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
-
-        return true;
+                return scene;
+            }() );
     }
-
-    void
-    update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-
-        auto updateScene = [ & ]( auto &scene ) {
-            scene->perform( UpdateComponents( clock ) );
-            scene->perform( UpdateWorldState() );
-        };
-
-        updateScene( m_scene );
-
-        GLFWVulkanSystem::update();
-    }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< FrameGraph > m_frameGraph;
-    SharedPointer< Node > m_scene;
-    compositions::Composition m_composition;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    auto settings = crimild::alloc< Settings >( argc, argv );
-    settings->set( "video.width", 1280 );
-    settings->set( "video.height", 900 );
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "PBR: IBL", settings );
-
-    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
-
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "PBR: IBL" );

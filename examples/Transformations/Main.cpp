@@ -26,257 +26,120 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
-#include <Crimild_GLFW.hpp>
 
 using namespace crimild;
-using namespace crimild::glfw;
-using namespace crimild::vulkan;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
+        setScene(
+            [] {
+                auto scene = crimild::alloc< Group >();
 
-		m_frameGraph = crimild::alloc< FrameGraph >();
+                auto createPrimitive = [] {
+                    auto primitive = crimild::alloc< Primitive >( Primitive::Type::TRIANGLES );
+                    primitive->setVertexData(
+                        {
+                            [] {
+                                return crimild::alloc< VertexBuffer >(
+                                    VertexP3C3::getLayout(),
+                                    Array< VertexP3C3 > {
+                                        {
+                                            .position = Vector3f( -0.5f, -0.5f, 0.0f ),
+                                            .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
+                                        },
+                                        {
+                                            .position = Vector3f( 0.5f, -0.5f, 0.0f ),
+                                            .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
+                                        },
+                                        {
+                                            .position = Vector3f( 0.0f, 0.5f, 0.0f ),
+                                            .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
+                                        },
+                                    } );
+                            }(),
+                        } );
+                    primitive->setIndices(
+                        crimild::alloc< IndexBuffer >(
+                            Format::INDEX_32_UINT,
+                            Array< crimild::UInt32 > {
+                                0,
+                                1,
+                                2,
+                            } ) );
+                    return primitive;
+                };
 
-        m_scene = [&] {
-            auto scene = crimild::alloc< Group >();
+                auto createMaterial = [] {
+                    auto material = crimild::alloc< UnlitMaterial >();
+                    material->setGraphicsPipeline(
+                        [] {
+                            auto pipeline = crimild::alloc< GraphicsPipeline >();
+                            pipeline->setProgram(
+                                [] {
+                                    auto program = crimild::alloc< UnlitShaderProgram >();
+                                    program->setShaders(
+                                        Array< SharedPointer< Shader > > {
+                                            Shader::withSource(
+                                                Shader::Stage::VERTEX,
+                                                FilePath { .path = "assets/shaders/scene.vert" } ),
+                                            Shader::withSource(
+                                                Shader::Stage::FRAGMENT,
+                                                FilePath { .path = "assets/shaders/scene.frag" } ),
+                                        } );
+                                    program->vertexLayouts = { VertexLayout::P3_C3 };
+                                    return program;
+                                }() );
+                            return pipeline;
+                        }() );
+                    return material;
+                };
 
-            auto createTriangle = []( const Transformation &pose ) {
-				auto geometry = crimild::alloc< Geometry >();
-				geometry->attachPrimitive(
-					[&] {
-						auto primitive = crimild::alloc< Primitive >(
-							Primitive::Type::TRIANGLES
-						);
-						primitive->setVertexData(
-                            {
-                                [&] {
-                                    return crimild::alloc< VertexBuffer >(
-                                        VertexP3C3::getLayout(),
-                                        Array< VertexP3C3 > {
-                                            {
-                                                .position = Vector3f( -0.5f, -0.5f, 0.0f ),
-                                                .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
-                                                },
-                                            {
-                                                .position = Vector3f( 0.5f, -0.5f, 0.0f ),
-                                                .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
-                                                },
-                                            {
-                                                .position = Vector3f( 0.0f, 0.5f, 0.0f ),
-                                                .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
-                                                },
-                                            }
-                                    );
-                                }(),
-                            }
-                        );
-						primitive->setIndices(
-                            crimild::alloc< IndexBuffer >(
-                                Format::INDEX_32_UINT,
-                                Array< crimild::UInt32 > {
-                                    0, 1, 2,
-                                    }
-                            )
-                        );
-                        return primitive;
-                    }()
-				);
-                geometry->setLocal( pose );
-                return geometry;
-            };
+                auto createTriangle = [ primitive = createPrimitive(),
+                                        material = createMaterial() ]( const Transformation &pose ) {
+                    auto geometry = crimild::alloc< Geometry >();
+                    geometry->attachPrimitive( primitive );
+                    geometry->attachComponent< MaterialComponent >( material );
+                    geometry->setLocal( pose );
+                    return geometry;
+                };
 
-            auto rnd = Random::Generator( 1982 );
+                auto rnd = Random::Generator( 1982 );
 
-            for ( auto x = -10.0f; x <= 10.0f; x += 1.0f ) {
-                for ( auto z = -10.0f; z <= 10.0f; z += 1.0f ) {
-                    scene->attachNode(
-                        createTriangle(
-                            Transformation(
-                                Vector3f( x, 0.0f, z + ( 0.1f * x / 10.0f ) ),
-                                Quaternion4f::createFromAxisAngle(
-                                    Vector3f(
-                                        rnd.generate(),
-                                        rnd.generate(),
-                                        rnd.generate()
-                                    ).getNormalized(),
-                                    rnd.generate( 0.0f, Numericf::TWO_PI )
-                                ),
-                                rnd.generate( 0.5f, 1.5f )
-                            )
-                        )
-                    );
+                for ( auto x = -10.0f; x <= 10.0f; x += 1.0f ) {
+                    for ( auto z = -10.0f; z <= 10.0f; z += 1.0f ) {
+                        scene->attachNode(
+                            createTriangle(
+                                Transformation(
+                                    Vector3f( x, 0.0f, z + ( 0.1f * x / 10.0f ) ),
+                                    Quaternion4f::createFromAxisAngle(
+                                        Vector3f(
+                                            rnd.generate(),
+                                            rnd.generate(),
+                                            rnd.generate() )
+                                            .getNormalized(),
+                                        rnd.generate( 0.0f, Numericf::TWO_PI ) ),
+                                    rnd.generate( 0.5f, 1.5f ) ) ) );
+                    }
                 }
-            }
 
-            scene->attachNode([] {
-                auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 5.0f, 10.0f, 10.0f );
-                camera->local().lookAt( -Vector3f::UNIT_Y );
-                Camera::setMainCamera( camera );
-                return camera;
-            }());
-            return scene;
-        }();
+                scene->attachNode( [] {
+                    auto camera = crimild::alloc< Camera >();
+                    camera->local().setTranslate( 5.0f, 10.0f, 10.0f );
+                    camera->local().lookAt( -Vector3f::UNIT_Y );
+                    Camera::setMainCamera( camera );
+                    return camera;
+                }() );
+                return scene;
+            }() );
 
-		m_renderPass = [&] {
-            auto renderPass = crimild::alloc< RenderPass >();
-            renderPass->attachments = {
-                [&] {
-                    auto att = crimild::alloc< Attachment >();
-                    att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
-                    return att;
-                }()
-            };
-            renderPass->setPipeline(
-                [&] {
-                    auto pipeline = crimild::alloc< Pipeline >();
-                    pipeline->program = [&] {
-                        auto createShader = []( Shader::Stage stage, std::string path ) {
-                            return crimild::alloc< Shader >(
-                                stage,
-                                FileSystem::getInstance().readFile(
-                                    FilePath {
-                                        .path = path,
-                                    }.getAbsolutePath()
-                                )
-                            );
-                        };
-
-                        auto program = crimild::alloc< ShaderProgram >(
-                            Array< SharedPointer< Shader >> {
-                                createShader(
-                                    Shader::Stage::VERTEX,
-                                    "assets/shaders/scene.vert.spv"
-                                ),
-                                createShader(
-                                    Shader::Stage::FRAGMENT,
-                                    "assets/shaders/scene.frag.spv"
-                                ),
-                                }
-                        );
-                        program->vertexLayouts = { VertexLayout::P3_C3 };
-                        program->descriptorSetLayouts = {
-                            [] {
-                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                layout->bindings = {
-                                    {
-                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                        .stage = Shader::Stage::VERTEX,
-                                    },
-                                };
-                                return layout;
-                            }(),
-                            [] {
-                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                layout->bindings = {
-                                    {
-                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                        .stage = Shader::Stage::VERTEX,
-                                    },
-                                };
-                                return layout;
-                            }(),
-                        };
-                        return program;
-                    }();
-                    return pipeline;
-                }()
-            );
-            renderPass->setDescriptors(
-                [&] {
-                    auto descriptorSet = crimild::alloc< DescriptorSet >();
-                    descriptorSet->descriptors = {
-                        Descriptor {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
-                                FetchCameras fetch;
-                                m_scene->perform( fetch );
-                                auto camera = fetch.anyCamera();
-                                return crimild::alloc< CameraViewProjectionUniform >( camera );
-                            }(),
-                        },
-                    };
-                    return descriptorSet;
-                }()
-            );
-            renderPass->commands = [&] {
-                auto commandBuffer = crimild::alloc< CommandBuffer >();
-                m_scene->perform(
-                    ApplyToGeometries(
-                        [&]( Geometry *g ) {
-                            commandBuffer->bindGraphicsPipeline( renderPass->getPipeline() );
-                            commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
-                            commandBuffer->bindDescriptorSet( g->getDescriptors() );
-                            commandBuffer->bindVertexBuffer( crimild::get_ptr( g->anyPrimitive()->getVertexData()[ 0 ] ) );
-                            commandBuffer->bindIndexBuffer( g->anyPrimitive()->getIndices() );
-                            commandBuffer->drawIndexed( g->anyPrimitive()->getIndices()->getIndexCount() );
-						}
-					)
-				);
-				return commandBuffer;
-			}();
-
-			return renderPass;
-		}();
-
-		m_master = [&] {
-            auto master = crimild::alloc< PresentationMaster >();
-            master->colorAttachment = m_renderPass->attachments[ 0 ];
-			return master;
-        }();
-
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
-
-        return true;
+        setComposition(
+            [ scene = getScene() ] {
+                using namespace crimild::compositions;
+                return present( renderScene( scene ) );
+            }() );
     }
-
-    void update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
-
-        GLFWVulkanSystem::update();
-    }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        m_scene = nullptr;
-        m_renderPass = nullptr;
-        m_master = nullptr;
-        m_frameGraph = nullptr;
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< Node > m_scene;
-    SharedPointer< FrameGraph > m_frameGraph;
-	SharedPointer< RenderPass > m_renderPass;
-	SharedPointer< PresentationMaster > m_master;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Transformations", crimild::alloc< Settings >( argc, argv ) );
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "Transformations" );

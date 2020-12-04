@@ -26,128 +26,69 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
-#include <Crimild_GLFW.hpp>
-#include <Crimild_STB.hpp>
 
 using namespace crimild;
-using namespace crimild::glfw;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
+        setScene(
+            [ & ] {
+                auto scene = crimild::alloc< Group >();
 
-		m_frameGraph = crimild::alloc< FrameGraph >();
+                auto createMaterial = []( auto program ) {
+                    auto material = crimild::alloc< SimpleLitMaterial >();
+                    material->getGraphicsPipeline()->setProgram( crimild::retain( program ) );
+                    material->setDiffuse( RGBAColorf( 1.0f, 0.1f, 0.1f, 1.0f ) );
+                    return material;
+                };
 
-        m_scene = [&] {
-            auto scene = crimild::alloc< Group >();
+                auto gouraudMaterial = createMaterial( AssetManager::getInstance()->get< GouraudLitShaderProgram >() );
+                auto phongMaterial = createMaterial( AssetManager::getInstance()->get< PhongLitShaderProgram >() );
 
-            auto createMaterial = []( auto program ) {
-                auto material = crimild::alloc< SimpleLitMaterial >();
-                material->getPipeline()->program = crimild::retain( program );
-                material->setDiffuse( RGBAColorf( 1.0f, 0.1f, 0.1f, 1.0f ) );
-                return material;
-            };
+                auto sphere = []( auto position, auto material ) {
+                    auto geometry = crimild::alloc< Geometry >();
+                    geometry->attachPrimitive(
+                        crimild::alloc< SpherePrimitive >(
+                            SpherePrimitive::Params {
+                                .type = Primitive::Type::TRIANGLES,
+                                .layout = VertexP3N3TC2::getLayout(),
+                            } ) );
+                    geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
+                    geometry->local().setTranslate( position );
+                    return geometry;
+                };
 
-            auto gouraudMaterial = createMaterial( AssetManager::getInstance()->get< GouraudLitShaderProgram >() );
-            auto phongMaterial = createMaterial( AssetManager::getInstance()->get< PhongLitShaderProgram >() );
+                scene->attachNode( sphere( Vector3f( -1.25f, 0.0f, 0.0f ), gouraudMaterial ) );
+                scene->attachNode( sphere( Vector3f( 1.25f, 0.0f, 0.0f ), phongMaterial ) );
 
-            auto sphere = []( auto position, auto material ) {
-                auto geometry = crimild::alloc< Geometry >();
-                geometry->attachPrimitive(
-                    crimild::alloc< SpherePrimitive >(
-                        SpherePrimitive::Params {
-                            .type = Primitive::Type::TRIANGLES,
-                            .layout = VertexP3N3TC2::getLayout(),
-                        }
-                    )
-                );
-                geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
-                geometry->local().setTranslate( position );
-                return geometry;
-            };
+                scene->attachNode(
+                    [] {
+                        auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+                        light->local().setTranslate( 10.0f, 10.0f, 10.0f );
+                        light->local().lookAt( Vector3f::ZERO );
+                        return light;
+                    }() );
 
-            scene->attachNode( sphere( Vector3f( -1.25f, 0.0f, 0.0f ), gouraudMaterial ) );
-            scene->attachNode( sphere( Vector3f( 1.25f, 0.0f, 0.0f ), phongMaterial ) );
+                scene->attachNode( [] {
+                    auto camera = crimild::alloc< Camera >();
+                    camera->local().setTranslate( 0.0f, 0.0f, 5.0f );
+                    camera->local().lookAt( Vector3f::ZERO );
+                    Camera::setMainCamera( camera );
+                    return camera;
+                }() );
 
-            scene->attachNode(
-                [] {
-                    auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-                    light->local().setTranslate( 10.0f, 10.0f, 10.0f );
-                    light->local().lookAt( Vector3f::ZERO );
-                    return light;
-                }()
-            );
+                scene->perform( StartComponents() );
 
-            scene->attachNode([] {
-                auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 0.0f, 0.0f, 5.0f );
-                camera->local().lookAt( Vector3f::ZERO );
-                Camera::setMainCamera( camera );
-                return camera;
-            }());
+                return scene;
+            }() );
 
-            return scene;
-        }();
-
-		m_composition = [ & ] {
-            using namespace crimild::compositions;
-            return present( renderScene( m_scene ) );
-        }();
-
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
-
-        return true;
+        // m_composition = [ & ] {
+        //     using namespace crimild::compositions;
+        //     return present( renderScene( m_scene ) );
+        // }();
     }
-
-    void update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-
-        auto updateScene = [ & ]( auto &scene ) {
-            scene->perform( UpdateComponents( clock ) );
-            scene->perform( UpdateWorldState() );
-        };
-
-        updateScene( m_scene );
-
-        GLFWVulkanSystem::update();
-    }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< FrameGraph > m_frameGraph;
-    SharedPointer< Node > m_scene;
-    compositions::Composition m_composition;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Lighting: Gouraud vs Phong", crimild::alloc< Settings >( argc, argv ) );
-
-    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
-
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "Lighting: Basic" );

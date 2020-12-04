@@ -108,3 +108,4 @@ examples/ImGUI/ImGUI
 compile_commands.json
 
 /include
+build-xcode

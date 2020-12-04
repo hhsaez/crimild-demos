@@ -26,303 +26,186 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
-#include <Crimild_GLFW.hpp>
-#include <Crimild_STB.hpp>
 
 using namespace crimild;
-using namespace crimild::glfw;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
+        setScene(
+            [ & ] {
+                auto scene = crimild::alloc< Group >();
 
-		m_frameGraph = crimild::alloc< FrameGraph >();
-
-        m_scene = [&] {
-            auto scene = crimild::alloc< Group >();
-
-            auto environmentTexture = [] {
-                auto texture = crimild::alloc< Texture >();
-                texture->imageView = [&] {
-                    auto imageView = crimild::alloc< ImageView >();
-                    imageView->image = ImageManager::getInstance()->loadCubemap(
-                        {
-                            .filePaths = {
-                                { .path = "assets/textures/right.png" },
-                                { .path = "assets/textures/left.png" },
-                                { .path = "assets/textures/top.png" },
-                                { .path = "assets/textures/bottom.png" },
-                                { .path = "assets/textures/back.png" },
-                                { .path = "assets/textures/front.png" },
-                            },
-                        }
-                    );
-                    return imageView;
-                }();
-                texture->sampler = [&] {
-                    auto sampler = crimild::alloc< Sampler >();
-                    sampler->setMinFilter( Sampler::Filter::NEAREST );
-                    sampler->setMagFilter( Sampler::Filter::NEAREST );
-                    sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
-                    sampler->setCompareOp( CompareOp::NEVER );
-                    return sampler;
-                }();
-                return texture;
-            }();
-
-            auto createMaterial = [&]( std::string fs, auto texture ) {
-                auto material = crimild::alloc< Material >();
-                material->setPipeline(
-                    [&] {
-                        auto pipeline = crimild::alloc< Pipeline >();
-                        pipeline->program = [&] {
-                            auto program = crimild::alloc< ShaderProgram >();
-                            program->setShaders(
-                                Array< SharedPointer< Shader >> {
-                                    crimild::alloc< Shader >(
-                                        Shader::Stage::VERTEX,
-                                        CRIMILD_TO_STRING(
-                                            layout ( location = 0 ) in vec3 inPosition;
-                                            layout ( location = 1 ) in vec3 inNormal;
-
-                                            layout ( set = 0, binding = 0 ) uniform RenderPassUniforms {
-                                                mat4 view;
-                                                mat4 proj;
-                                            };
-
-                                            layout ( set = 2, binding = 0 ) uniform GeometryUniforms {
-                                                mat4 model;
-                                            };
-
-                                            layout ( location = 0 ) out vec3 outWorldPos;
-                                            layout ( location = 1 ) out vec3 outWorldNormal;
-                                            layout ( location = 2 ) out vec3 outWorldEye;
-
-                                            void main()
-                                            {
-                                                vec4 worldPos = model * vec4( inPosition, 1.0 );
-                                                gl_Position = proj * view * worldPos;
-                                                outWorldPos = worldPos.xyz;
-
-                                                outWorldNormal = normalize( mat3( transpose( inverse( model ) ) ) * inNormal );
-
-                                                mat4 invView = inverse( view );
-                                                outWorldEye = vec3( invView[ 3 ].x, invView[ 3 ].y, invView[ 3 ].z );
-                                            }
-                                        )
-                                    ),
-                                    crimild::alloc< Shader >(
-                                        Shader::Stage::FRAGMENT,
-                                        fs
-                                    ),
-                                }
-                            );
-
-                            program->vertexLayouts = { VertexP3N3::getLayout() };
-
-                            program->descriptorSetLayouts = {
-                                [] {
-                                    auto layout = crimild::alloc< DescriptorSetLayout >();
-                                    layout->bindings = {
-                                        {
-                                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                            .stage = Shader::Stage::VERTEX,
-                                        },
-                                    };
-                                    return layout;
-                                }(),
-                                [] {
-                                    auto layout = crimild::alloc< DescriptorSetLayout >();
-                                    layout->bindings = {
-                                        {
-                                            .descriptorType = DescriptorType::TEXTURE,
-                                            .stage = Shader::Stage::FRAGMENT,
-                                        },
-                                    };
-                                    return layout;
-                                }(),
-                                [] {
-                                    auto layout = crimild::alloc< DescriptorSetLayout >();
-                                    layout->bindings = {
-                                        {
-                                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                            .stage = Shader::Stage::VERTEX,
-                                        },
-                                    };
-                                    return layout;
-                                }(),
-                            };
-                            return program;
-                        }();
-                        return pipeline;
-                    }()
-                );
-                material->setDescriptors(
-                    [&] {
-                        auto descriptors = crimild::alloc< DescriptorSet >();
-                        descriptors->descriptors = {
+                auto environmentTexture = [] {
+                    auto texture = crimild::alloc< Texture >();
+                    texture->imageView = [ & ] {
+                        auto imageView = crimild::alloc< ImageView >();
+                        imageView->image = ImageManager::getInstance()->loadCubemap(
                             {
-                                .descriptorType = DescriptorType::TEXTURE,
-                                .obj = texture,
-                            },
-                        };
-                        return descriptors;
-                    }()
-                );
-                return material;
-            };
+                                .filePaths = {
+                                    { .path = "assets/textures/right.png" },
+                                    { .path = "assets/textures/left.png" },
+                                    { .path = "assets/textures/top.png" },
+                                    { .path = "assets/textures/bottom.png" },
+                                    { .path = "assets/textures/back.png" },
+                                    { .path = "assets/textures/front.png" },
+                                },
+                            } );
+                        return imageView;
+                    }();
+                    texture->sampler = [ & ] {
+                        auto sampler = crimild::alloc< Sampler >();
+                        sampler->setMinFilter( Sampler::Filter::NEAREST );
+                        sampler->setMagFilter( Sampler::Filter::NEAREST );
+                        sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                        sampler->setCompareOp( CompareOp::NEVER );
+                        return sampler;
+                    }();
+                    return texture;
+                }();
 
-            auto reflectionMaterial = createMaterial(
-                CRIMILD_TO_STRING(
-                    layout ( location = 0 ) in vec3 inWorldPos;
-                    layout ( location = 1 ) in vec3 inWorldNormal;
-                    layout ( location = 2 ) in vec3 inWorldEye;
+                auto createMaterial = [ & ]( std::string fs, auto texture ) {
+                    auto material = crimild::alloc< UnlitMaterial >();
+                    material->setGraphicsPipeline(
+                        [ & ] {
+                            auto pipeline = crimild::alloc< GraphicsPipeline >();
+                            pipeline->setProgram(
+                                [ & ] {
+                                    auto program = crimild::alloc< UnlitShaderProgram >();
+                                    program->setShaders(
+                                        Array< SharedPointer< Shader > > {
+                                            crimild::alloc< Shader >(
+                                                Shader::Stage::VERTEX,
+                                                CRIMILD_TO_STRING(
+                                                    layout( location = 0 ) in vec3 inPosition;
+                                                    layout( location = 1 ) in vec3 inNormal;
+                                                    layout( location = 2 ) in vec3 inTexCoord;
 
-                    layout ( set = 1, binding = 0 ) uniform samplerCube uSampler;
+                                                    layout( set = 0, binding = 0 ) uniform RenderPassUniforms {
+                                                        mat4 view;
+                                                        mat4 proj;
+                                                    };
 
-                    layout ( location = 0 ) out vec4 outColor;
+                                                    layout( set = 2, binding = 0 ) uniform GeometryUniforms {
+                                                        mat4 model;
+                                                    };
 
-                    vec3 reflected(vec3 I)
-                    {
-                        vec3 R = reflect( I, normalize( inWorldNormal ) );
-                        return texture( uSampler, R ).rgb;
-                    }
+                                                    layout( location = 0 ) out vec3 outWorldPos;
+                                                    layout( location = 1 ) out vec3 outWorldNormal;
+                                                    layout( location = 2 ) out vec3 outWorldEye;
 
-                    void main()
-                    {
-                        vec3 I = normalize( inWorldPos - inWorldEye );
-                        outColor = vec4( reflected( I ), 1.0 );
-                    }
-                ),
-                environmentTexture
-            );
+                                                    void main() {
+                                                        vec4 worldPos = model * vec4( inPosition, 1.0 );
+                                                        gl_Position = proj * view * worldPos;
+                                                        outWorldPos = worldPos.xyz;
 
-            auto refractionMaterial = createMaterial(
-                CRIMILD_TO_STRING(
-                    layout ( location = 0 ) in vec3 inWorldPos;
-                    layout ( location = 1 ) in vec3 inWorldNormal;
-                    layout ( location = 2 ) in vec3 inWorldEye;
+                                                        outWorldNormal = normalize( mat3( transpose( inverse( model ) ) ) * inNormal );
 
-                    layout ( set = 1, binding = 0 ) uniform samplerCube uSampler;
+                                                        mat4 invView = inverse( view );
+                                                        outWorldEye = vec3( invView[ 3 ].x, invView[ 3 ].y, invView[ 3 ].z );
+                                                    } ) ),
+                                                crimild::alloc< Shader >(
+                                                    Shader::Stage::FRAGMENT,
+                                                    fs ),
+                                        } );
 
-                    layout ( location = 0 ) out vec4 outColor;
+                                    return program;
+                                }() );
+                            return pipeline;
+                        }() );
+                    material->setTexture( texture );
+                    return material;
+                };
 
-                    vec3 refracted(vec3 I)
-                    {
-                        float ratio = 1.0 / 1.33;
-                        vec3 R = refract( I, normalize( inWorldNormal ), ratio );
-                        return texture( uSampler, R ).rgb;
-                    }
+                auto reflectionMaterial = createMaterial(
+                    CRIMILD_TO_STRING(
+                        layout( location = 0 ) in vec3 inWorldPos;
+                        layout( location = 1 ) in vec3 inWorldNormal;
+                        layout( location = 2 ) in vec3 inWorldEye;
 
-                    void main()
-                    {
-                        vec3 I = normalize( inWorldPos - inWorldEye );
+                        layout( set = 1, binding = 0 ) uniform samplerCube uSampler;
 
-                        outColor = vec4( refracted( I ), 1.0 );
-                    }
-                ),
-                environmentTexture
-            );
+                        layout( location = 0 ) out vec4 outColor;
 
-            math::fibonacciSquares( 20 ).each(
-                [&, i = 0]( auto &it ) mutable {
-                    scene->attachNode(
-                        [&] {
-                            auto geometry = crimild::alloc< Geometry >();
-                            geometry->attachPrimitive(
-                                crimild::alloc< ParametricSpherePrimitive >(
-                                    ParametricSpherePrimitive::Params {
-                                        .type = Primitive::Type::TRIANGLES,
-                                        .layout = VertexP3N3::getLayout(),
-                                    }
-                                )
-                            );
-                            geometry->local().setTranslate( it.first + Vector3f::UNIT_Z * it.second );
-                            geometry->local().setScale( 0.25f * it.second );
-                            auto material = ( i++ % 2 == 0 ? reflectionMaterial : refractionMaterial );
-                            geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
-                            return geometry;
-                        }()
-                    );
-                }
-            );
+                        vec3 reflected( vec3 I ) {
+                            vec3 R = reflect( I, normalize( inWorldNormal ) );
+                            return texture( uSampler, R ).rgb;
+                        }
 
-            scene->attachNode(
-                [&] {
-                    return crimild::alloc< Skybox >( environmentTexture );
-                }()
-            );
+                        void main() {
+                            vec3 I = normalize( inWorldPos - inWorldEye );
+                            outColor = vec4( reflected( I ), 1.0 );
+                        } ),
+                    environmentTexture );
 
-            scene->attachNode([] {
-                auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 0.0f, 10.0f, 100.0f );
-                camera->local().lookAt( Vector3f::ZERO );
-                camera->attachComponent< FreeLookCameraComponent >();
-                Camera::setMainCamera( camera );
-                return camera;
-            }());
+                auto refractionMaterial = createMaterial(
+                    CRIMILD_TO_STRING(
+                        layout( location = 0 ) in vec3 inWorldPos;
+                        layout( location = 1 ) in vec3 inWorldNormal;
+                        layout( location = 2 ) in vec3 inWorldEye;
 
-            scene->perform( StartComponents() );
+                        layout( set = 1, binding = 0 ) uniform samplerCube uSampler;
 
-            return scene;
-        }();
+                        layout( location = 0 ) out vec4 outColor;
 
-        m_composition = [&] {
-            using namespace crimild::compositions;
-            return present( renderScene( m_scene ) );
-        }();
+                        vec3 refracted( vec3 I ) {
+                            float ratio = 1.0 / 1.33;
+                            vec3 R = refract( I, normalize( inWorldNormal ), ratio );
+                            return texture( uSampler, R ).rgb;
+                        }
 
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
+                        void main() {
+                            vec3 I = normalize( inWorldPos - inWorldEye );
 
-        return true;
+                            outColor = vec4( refracted( I ), 1.0 );
+                        } ),
+                    environmentTexture );
+
+                math::fibonacciSquares( 20 ).each(
+                    [ &, i = 0 ]( auto &it ) mutable {
+                        scene->attachNode(
+                            [ & ] {
+                                auto geometry = crimild::alloc< Geometry >();
+                                geometry->attachPrimitive(
+                                    crimild::alloc< ParametricSpherePrimitive >(
+                                        ParametricSpherePrimitive::Params {
+                                            .type = Primitive::Type::TRIANGLES,
+                                            .layout = VertexP3N3TC2::getLayout(),
+                                        } ) );
+                                geometry->local().setTranslate( it.first + Vector3f::UNIT_Z * it.second );
+                                geometry->local().setScale( 0.25f * it.second );
+                                auto material = ( i++ % 2 == 0 ? reflectionMaterial : refractionMaterial );
+                                geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
+                                return geometry;
+                            }() );
+                    } );
+
+                scene->attachNode(
+                    [ & ] {
+                        return crimild::alloc< Skybox >( environmentTexture );
+                    }() );
+
+                scene->attachNode( [] {
+                    auto camera = crimild::alloc< Camera >();
+                    camera->local().setTranslate( 0.0f, 10.0f, 100.0f );
+                    camera->local().lookAt( Vector3f::ZERO );
+                    camera->attachComponent< FreeLookCameraComponent >();
+                    Camera::setMainCamera( camera );
+                    return camera;
+                }() );
+
+                scene->perform( StartComponents() );
+
+                return scene;
+            }() );
+
+        setComposition(
+            [ scene = getScene() ] {
+                using namespace crimild::compositions;
+                return present( renderScene( scene ) );
+            }() );
     }
-
-    void update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
-
-        GLFWVulkanSystem::update();
-    }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        m_scene = nullptr;
-        m_frameGraph = nullptr;
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< Node > m_scene;
-    SharedPointer< FrameGraph > m_frameGraph;
-    compositions::Composition m_composition;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Environment Map: Reflection & Refraction", crimild::alloc< Settings >( argc, argv ) );
-
-    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
-
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "Environment Mapping" );

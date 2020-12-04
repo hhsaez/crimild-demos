@@ -26,173 +26,114 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
-#include <Crimild_GLFW.hpp>
-#include <Crimild_STB.hpp>
 
 using namespace crimild;
-using namespace crimild::glfw;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
+        setScene(
+            [ & ] {
+                getSettings()->set( "debug", true );
 
-		m_frameGraph = crimild::alloc< FrameGraph >();
+                auto scene = crimild::alloc< Group >();
 
-        m_scene = [&] {
-            auto scene = crimild::alloc< Group >();
+                auto primitive = crimild::alloc< BoxPrimitive >(
+                    BoxPrimitive::Params {
+                        .type = Primitive::Type::TRIANGLES,
+                        .layout = VertexP3N3TC2::getLayout(),
+                    } );
 
-            auto primitive = crimild::alloc< BoxPrimitive >(
-                BoxPrimitive::Params {
-                    .type = Primitive::Type::TRIANGLES,
-                    .layout = VertexP3N3TC2::getLayout(),
-                }
-            );
-
-            auto material = [] {
-                auto material = crimild::alloc< UnlitMaterial >();
-                material->setColor( RGBAColorf( 1.0f, 0.0f, 1.0f, 1.0f ) );
-                material->setTexture(
-                    [] {
-                        auto texture = crimild::alloc< Texture >();
-                        texture->imageView = [&] {
-                            auto imageView = crimild::alloc< ImageView >();
-                            imageView->image = Image::CHECKERBOARD_16;
-                            return imageView;
-                        }();
-                        texture->sampler = [&] {
-                            auto sampler = crimild::alloc< Sampler >();
-                            sampler->setMinFilter( Sampler::Filter::NEAREST );
-                            sampler->setMagFilter( Sampler::Filter::NEAREST );
-                            sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
-                            return sampler;
-                        }();
-                        return texture;
-                    }()
-                );
-                return material;
-            }();
-
-            math::fibonacciSquares( 20 ).each(
-                [&]( auto &it ) {
-                    scene->attachNode(
-                        [&] {
-                            auto geometry = crimild::alloc< Geometry >();
-                            geometry->attachPrimitive( primitive );
-                            geometry->local().setTranslate( it.first + Vector3f::UNIT_Z * it.second );
-                            geometry->local().setScale( 0.25f * it.second );
-                            geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
-                            return geometry;
-                        }()
-                    );
-                }
-            );
-
-            scene->attachNode(
-                [&] {
-                    auto skybox = crimild::alloc< Skybox >(
+                auto material = [] {
+                    auto material = crimild::alloc< UnlitMaterial >();
+                    material->setColor( RGBAColorf( 1.0f, 0.0f, 1.0f, 1.0f ) );
+                    material->setTexture(
                         [] {
                             auto texture = crimild::alloc< Texture >();
-                            texture->imageView = [&] {
+                            texture->imageView = [ & ] {
                                 auto imageView = crimild::alloc< ImageView >();
-                                imageView->image = ImageManager::getInstance()->loadCubemap(
-                                    {
-                                        .filePaths = {
-                                            { .path = "assets/textures/right.tga" },
-                                            { .path = "assets/textures/left.tga" },
-                                            { .path = "assets/textures/top.tga" },
-                                            { .path = "assets/textures/bottom.tga" },
-                                            { .path = "assets/textures/back.tga" },
-                                            { .path = "assets/textures/front.tga" },
-                                        },
-                                    }
-                                );
+                                imageView->image = Image::CHECKERBOARD_16;
                                 return imageView;
                             }();
-                            texture->sampler = [&] {
+                            texture->sampler = [ & ] {
                                 auto sampler = crimild::alloc< Sampler >();
-                                sampler->setMinFilter( Sampler::Filter::LINEAR );
-                                sampler->setMagFilter( Sampler::Filter::LINEAR );
+                                sampler->setMinFilter( Sampler::Filter::NEAREST );
+                                sampler->setMagFilter( Sampler::Filter::NEAREST );
                                 sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
-                                sampler->setCompareOp( CompareOp::NEVER );
                                 return sampler;
                             }();
                             return texture;
-                        }()
-                    );
-                    return skybox;
-                }()
-            );
+                        }() );
+                    return material;
+                }();
 
-            scene->attachNode([] {
-                auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 0.0f, 10.0f, 100.0f );
-                camera->local().lookAt( Vector3f::ZERO );
-                camera->attachComponent< FreeLookCameraComponent >();
-                Camera::setMainCamera( camera );
-                return camera;
-            }());
+                math::fibonacciSquares( 20 ).each(
+                    [ & ]( auto &it ) {
+                        scene->attachNode(
+                            [ & ] {
+                                auto geometry = crimild::alloc< Geometry >();
+                                geometry->attachPrimitive( primitive );
+                                geometry->local().setTranslate( it.first + Vector3f::UNIT_Z * it.second );
+                                geometry->local().setScale( 0.25f * it.second );
+                                geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
+                                return geometry;
+                            }() );
+                    } );
 
-            scene->perform( StartComponents() );
+                scene->attachNode(
+                    [ & ] {
+                        auto skybox = crimild::alloc< Skybox >(
+                            [] {
+                                auto texture = crimild::alloc< Texture >();
+                                texture->imageView = [ & ] {
+                                    auto imageView = crimild::alloc< ImageView >();
+                                    imageView->image = ImageManager::getInstance()->loadCubemap(
+                                        {
+                                            .filePaths = {
+                                                { .path = "assets/textures/right.tga" },
+                                                { .path = "assets/textures/left.tga" },
+                                                { .path = "assets/textures/top.tga" },
+                                                { .path = "assets/textures/bottom.tga" },
+                                                { .path = "assets/textures/back.tga" },
+                                                { .path = "assets/textures/front.tga" },
+                                            },
+                                        } );
+                                    return imageView;
+                                }();
+                                texture->sampler = [ & ] {
+                                    auto sampler = crimild::alloc< Sampler >();
+                                    sampler->setMinFilter( Sampler::Filter::LINEAR );
+                                    sampler->setMagFilter( Sampler::Filter::LINEAR );
+                                    sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                                    sampler->setCompareOp( CompareOp::NEVER );
+                                    return sampler;
+                                }();
+                                return texture;
+                            }() );
+                        return skybox;
+                    }() );
 
-            return scene;
-        }();
+                scene->attachNode( [] {
+                    auto camera = crimild::alloc< Camera >();
+                    camera->local().setTranslate( 0.0f, 10.0f, 100.0f );
+                    camera->local().lookAt( Vector3f::ZERO );
+                    camera->attachComponent< FreeLookCameraComponent >();
+                    Camera::setMainCamera( camera );
+                    return camera;
+                }() );
 
-        m_composition = [&] {
-            using namespace crimild::compositions;
-            return present( renderScene( crimild::get_ptr( m_scene ) ) );
-        }();
+                scene->perform( StartComponents() );
 
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
+                return scene;
+            }() );
 
-        return true;
+        setComposition(
+            [ scene = getScene() ] {
+                using namespace crimild::compositions;
+                return present( renderScene( scene ) );
+            }() );
     }
-
-    void update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
-
-        GLFWVulkanSystem::update();
-    }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        m_scene = nullptr;
-        m_frameGraph = nullptr;
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< Node > m_scene;
-    SharedPointer< FrameGraph > m_frameGraph;
-    compositions::Composition m_composition;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Skybox", crimild::alloc< Settings >( argc, argv ) );
-
-    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
-
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "Skybox" );

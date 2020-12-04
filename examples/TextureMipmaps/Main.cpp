@@ -26,279 +26,94 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
-#include <Crimild_GLFW.hpp>
 
 using namespace crimild;
-using namespace crimild::glfw;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
+        setScene(
+            [ & ] {
+                auto scene = crimild::alloc< Group >();
 
-        m_frameGraph = crimild::alloc< FrameGraph >();
-
-        m_scene = [&] {
-            auto scene = crimild::alloc< Group >();
-
-            auto textureBuilder = []( crimild::Bool mipmapping ) {
-                auto texture = crimild::alloc< Texture >();
-                texture->imageView = [&] {
-                    auto imageView = crimild::alloc< ImageView >();
-                    imageView->image = Image::CHECKERBOARD_128;
-                    // Enable/Disable mipmapping at the image view
-                    imageView->mipLevels = mipmapping ? 0 : 1;
-                    return imageView;
-                }();
-                texture->sampler = [&] {
-                    auto sampler = crimild::alloc< Sampler >();
-                    sampler->setMinFilter( Sampler::Filter::NEAREST );
-                    sampler->setMagFilter( Sampler::Filter::NEAREST );
-                    sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
-                    if ( mipmapping ) {
-                        sampler->setMaxLod( texture->imageView->image->getMipLevels() );
-                    }
-                    return sampler;
-                }();
-                return texture;
-            };
-
-            auto quadBuilder = [&]( const Vector3f &position, float scale, SharedPointer< Texture > const &texture ) {
-                auto geometry = crimild::alloc< Geometry >();
-                geometry->attachPrimitive(
-                    crimild::alloc< QuadPrimitive >(
-                        QuadPrimitive::Params {
-                            .layout = VertexP3TC2::getLayout(),
-                            .size = 0.5f * Vector2f::ONE,
-                        }
-                    )
-                );
-                geometry->attachComponent< MaterialComponent >()->attachMaterial(
-                    [&] {
-                        auto material = crimild::alloc< UnlitMaterial >();
-                        material->setTexture( texture );
-                        return material;
-                    }()
-                );
-                geometry->local().setTranslate( position );
-                geometry->local().setScale( scale );
-                return geometry;
-            };
-
-            auto sampleBuilder = [&]( const Vector3f &position, crimild::Bool mipmapping ) {
-                auto texture = textureBuilder( mipmapping );
-                auto group = crimild::alloc< Group >();
-
-                math::fibonacciSquares( 8 ).each(
-                    [&]( auto &it ) {
-                        group->attachNode(
-                            quadBuilder(
-                                it.first,
-                                0.9f * it.second,
-                                texture
-                            )
-                        );
-                    }
-                );
-
-                group->local().setTranslate( position );
-                return group;
-            };
-
-            scene->attachNode( sampleBuilder( Vector3f( -7.0f, 7.0f, 0.0f ), true ) );
-            scene->attachNode( sampleBuilder( Vector3f( -7.0f, -19.0f, 0.0f ), false ) );
-
-            scene->attachNode([] {
-                auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 0.0f, 0.0f, 80.0f );
-                camera->local().lookAt( Vector3f::ZERO );
-                Camera::setMainCamera( camera );
-                return camera;
-            }());
-            return scene;
-        }();
-
-		m_renderPass = [&] {
-            auto renderPass = crimild::alloc< RenderPass >();
-            renderPass->attachments = {
-                [&] {
-                    auto att = crimild::alloc< Attachment >();
-                    att->format = Format::COLOR_SWAPCHAIN_OPTIMAL;
-                    return att;
-                }(),
-            };
-            renderPass->setPipeline(
-                [&] {
-                    auto pipeline = crimild::alloc< Pipeline >();
-                    pipeline->primitiveType = Primitive::Type::TRIANGLES;
-                    pipeline->program = [&] {
-                        auto createShader = []( Shader::Stage stage, std::string path ) {
-                            return crimild::alloc< Shader >(
-                                stage,
-                                FileSystem::getInstance().readFile(
-                                    FilePath {
-                                        .path = path,
-                                    }.getAbsolutePath()
-                                )
-                            );
-                        };
-
-                        auto program = crimild::alloc< ShaderProgram >(
-                            Array< SharedPointer< Shader >> {
-                                createShader(
-                                    Shader::Stage::VERTEX,
-                                    "assets/shaders/scene.vert.spv"
-                                ),
-                                createShader(
-                                    Shader::Stage::FRAGMENT,
-                                    "assets/shaders/scene.frag.spv"
-                                ),
-                                }
-                        );
-                        program->vertexLayouts = { VertexP3TC2::getLayout() };
-                        program->descriptorSetLayouts = {
-                            [] {
-                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                layout->bindings = {
-                                    {
-                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                        .stage = Shader::Stage::VERTEX,
-                                    },
-                                };
-                                return layout;
-                            }(),
-                            [] {
-                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                layout->bindings = {
-                                    {
-                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                        .stage = Shader::Stage::FRAGMENT,
-                                    },
-                                    {
-                                        .descriptorType = DescriptorType::TEXTURE,
-                                        .stage = Shader::Stage::FRAGMENT,
-                                    },
-                                };
-                                return layout;
-                            }(),
-                            [] {
-                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                layout->bindings = {
-                                    {
-                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                        .stage = Shader::Stage::VERTEX,
-                                    },
-                                };
-                                return layout;
-                            }(),
-                        };
-                        return program;
+                auto textureBuilder = []( crimild::Bool mipmapping ) {
+                    auto texture = crimild::alloc< Texture >();
+                    texture->imageView = [ & ] {
+                        auto imageView = crimild::alloc< ImageView >();
+                        imageView->image = Image::CHECKERBOARD_128;
+                        // Enable/Disable mipmapping at the image view
+                        imageView->mipLevels = mipmapping ? 0 : 1;
+                        return imageView;
                     }();
-                    return pipeline;
-                }()
-            );
-            renderPass->setDescriptors(
-                [&] {
-                    auto descriptorSet = crimild::alloc< DescriptorSet >();
-                    descriptorSet->descriptors = {
-                        {
-                            .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                            .obj = [&] {
-                                FetchCameras fetch;
-                                m_scene->perform( fetch );
-                                auto camera = fetch.anyCamera();
-                                return crimild::alloc< CameraViewProjectionUniform >( camera );
-                            }(),
-                        },
-                    };
-                    return descriptorSet;
-                }()
-            );
-            renderPass->commands = [&] {
-                auto commandBuffer = crimild::alloc< CommandBuffer >();
-                m_scene->perform(
-                    ApplyToGeometries(
-                        [&]( Geometry *g ) {
-                            auto p = g->anyPrimitive();
-                            auto vertices = p->getVertexData()[ 0 ];
-                            auto indices = p->getIndices();
+                    texture->sampler = [ & ] {
+                        auto sampler = crimild::alloc< Sampler >();
+                        sampler->setMinFilter( Sampler::Filter::NEAREST );
+                        sampler->setMagFilter( Sampler::Filter::NEAREST );
+                        sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                        if ( mipmapping ) {
+                            sampler->setMaxLod( texture->imageView->image->getMipLevels() );
+                        }
+                        return sampler;
+                    }();
+                    return texture;
+                };
 
-                            commandBuffer->bindGraphicsPipeline( renderPass->getPipeline() );
-                            commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
-                            if ( auto m = static_cast< UnlitMaterial * >( g->getComponent< MaterialComponent >()->first() ) ) {
-                                commandBuffer->bindDescriptorSet( m->getDescriptors() );
-                            }
-                            commandBuffer->bindDescriptorSet( g->getDescriptors() );
-                            commandBuffer->bindVertexBuffer( get_ptr( vertices ) );
-                            commandBuffer->bindIndexBuffer( indices );
-                            commandBuffer->drawIndexed( indices->getIndexCount() );
-						}
-					)
-				);
-				return commandBuffer;
-			}();
+                auto quadBuilder = [ & ]( const Vector3f &position, float scale, SharedPointer< Texture > const &texture ) {
+                    auto geometry = crimild::alloc< Geometry >();
+                    geometry->attachPrimitive(
+                        crimild::alloc< QuadPrimitive >(
+                            QuadPrimitive::Params {
+                                .layout = VertexP3N3TC2::getLayout(),
+                                .size = 0.5f * Vector2f::ONE,
+                            } ) );
+                    geometry->attachComponent< MaterialComponent >()->attachMaterial(
+                        [ & ] {
+                            auto material = crimild::alloc< UnlitMaterial >();
+                            material->setTexture( texture );
+                            return material;
+                        }() );
+                    geometry->local().setTranslate( position );
+                    geometry->local().setScale( scale );
+                    return geometry;
+                };
 
-			return renderPass;
-		}();
+                auto sampleBuilder = [ & ]( const Vector3f &position, crimild::Bool mipmapping ) {
+                    auto texture = textureBuilder( mipmapping );
+                    auto group = crimild::alloc< Group >();
 
-		m_master = [&] {
-            auto master = crimild::alloc< PresentationMaster >();
-            master->colorAttachment = m_renderPass->attachments[ 0 ];
-			return master;
-        }();
+                    math::fibonacciSquares( 8 ).each(
+                        [ & ]( auto &it ) {
+                            group->attachNode(
+                                quadBuilder(
+                                    it.first,
+                                    0.9f * it.second,
+                                    texture ) );
+                        } );
 
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
+                    group->local().setTranslate( position );
+                    return group;
+                };
 
-        return true;
+                scene->attachNode( sampleBuilder( Vector3f( -7.0f, 7.0f, 0.0f ), true ) );
+                scene->attachNode( sampleBuilder( Vector3f( -7.0f, -19.0f, 0.0f ), false ) );
+
+                scene->attachNode( [] {
+                    auto camera = crimild::alloc< Camera >();
+                    camera->local().setTranslate( 0.0f, 0.0f, 80.0f );
+                    camera->local().lookAt( Vector3f::ZERO );
+                    Camera::setMainCamera( camera );
+                    return camera;
+                }() );
+                return scene;
+            }() );
+
+        setComposition(
+            [ scene = getScene() ] {
+                using namespace crimild::compositions;
+                return present( renderScene( scene ) );
+            }() );
     }
-
-    void update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
-
-        GLFWVulkanSystem::update();
-    }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        m_scene = nullptr;
-        m_renderPass = nullptr;
-        m_master = nullptr;
-        m_frameGraph = nullptr;
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< Node > m_scene;
-    SharedPointer< FrameGraph > m_frameGraph;
-	SharedPointer< RenderPass > m_renderPass;
-	SharedPointer< PresentationMaster > m_master;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Texture Mipmapping", crimild::alloc< Settings >( argc, argv ) );
-
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "Texture Mipmaps" );

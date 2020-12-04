@@ -60,8 +60,8 @@ It's safe to ignore SDL_Mixer2 warnings, if any.
 <a name="Primitives">Primitives</a> | |
 <img src="examples/Points/screenshot.png" width=200 /> | [Points](examples/Points) |Shows how to use a POINTS primitive to build a point cloud.
 <img src="examples/Lines/screenshot.png" width=200 /> | [Lines](examples/Lines) | Shows how to use a LINES primitive.
-<img src="examples/Spheres/screenshot.png" width=200 /> | [Spheres](examples/Lines) | Shows how to use a Sphere primitive.
-<img src="examples/Boxes/screenshot.png" width=200 /> | [Boxes](examples/Lines) |Shows how to use a Box primitive.
+<img src="examples/Spheres/screenshot.png" width=200 /> | [Spheres](examples/Spheres) | Shows how to use a Sphere primitive.
+<img src="examples/Boxes/screenshot.png" width=200 /> | [Boxes](examples/Boxes) |Shows how to use a Box primitive.
 <img src="examples/ParametricPrimitives/screenshot.png" width=200 /> | [Parametric Primitives](examples/ParametricPrimitives) | Shows how to use each of the parametric primitives, using different generator params, to construct several objects objects.
 <a name="Textures">Textures</a> | |
 <img src="examples/Textures/screenshot.png" width=200 /> | [Textures](examples/Textures/) | Loads an image from disk and create an image view, a sampler and a texture to display it on screen. Shows how to use primitives with texture coordinates as well.
