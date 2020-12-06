@@ -26,24 +26,14 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
-#include <Crimild_STB.hpp>
-#include <Crimild_Vulkan.hpp>
 
 using namespace crimild;
-using namespace crimild::glfw;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
-
-        m_frameGraph = crimild::alloc< FrameGraph >();
-
-        m_scene = [ & ] {
+        setScene( [ & ] {
             auto scene = crimild::alloc< Group >();
 
             scene->attachNode(
@@ -172,66 +162,8 @@ public:
             scene->perform( StartComponents() );
 
             return scene;
-        }();
-
-        m_composition = [ & ] {
-            using namespace crimild::compositions;
-            return present( debug( renderScene( m_scene ) ) );
-        }();
-
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
-
-        return true;
+        }() );
     }
-
-    void update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-
-        auto updateScene = [ & ]( auto &scene ) {
-            scene->perform( UpdateComponents( clock ) );
-            scene->perform( UpdateWorldState() );
-        };
-
-        updateScene( m_scene );
-
-        GLFWVulkanSystem::update();
-    }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< FrameGraph > m_frameGraph;
-    SharedPointer< Node > m_scene;
-    compositions::Composition m_composition;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    auto settings = crimild::alloc< Settings >( argc, argv );
-    //settings->set( "video.width", 720 );
-    //settings->set( "video.height", 720 );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Shadows: Directional Light", settings );
-
-    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
-
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "Shadows: Directional" );

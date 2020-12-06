@@ -26,24 +26,14 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
-#include <Crimild_STB.hpp>
-#include <Crimild_Vulkan.hpp>
 
 using namespace crimild;
-using namespace crimild::glfw;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
-
-        m_frameGraph = crimild::alloc< FrameGraph >();
-
-        m_scene = [ & ] {
+        setScene( [ & ] {
             auto scene = crimild::alloc< Group >();
 
             auto loadTexture = []( std::string path ) {
@@ -99,7 +89,7 @@ public:
             scene->attachNode(
                 crimild::alloc< Skybox >(
                     [] {
-                    	auto imageWithRGBA = []( auto r, auto g, auto b, auto a ) {
+                        auto imageWithRGBA = []( auto r, auto g, auto b, auto a ) {
                             auto image = crimild::alloc< Image >();
                             image->extent = {
                                 .width = 1,
@@ -125,7 +115,6 @@ public:
                                     },
                                     .hdr = true,
                                 } );
-//                            imageView->image = imageWithRGBA( 0.68, 0.78, 0.88, 1 );
                             return imageView;
                         }();
                         texture->sampler = [ & ] {
@@ -162,82 +151,8 @@ public:
             scene->perform( StartComponents() );
 
             return scene;
-        }();
-
-        m_composition = [ & ] {
-            using namespace crimild::compositions;
-            auto enableTonemapping = true;
-            auto enableBloom = false;
-            auto enableDebug = false;
-
-            auto withTonemapping = [ enableTonemapping ]( auto cmp ) {
-                return enableTonemapping ? tonemapping( cmp, 1.0 ) : cmp;
-            };
-
-            auto withDebug = [ enableDebug ]( auto cmp ) {
-                return enableDebug ? debug( cmp ) : cmp;
-            };
-
-            auto withBloom = [ enableBloom ]( auto cmp ) {
-                return enableBloom ? bloom( cmp ) : cmp;
-            };
-
-            return present( withDebug( withTonemapping( withBloom( renderSceneHDR( m_scene ) ) ) ) );
-        }();
-
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
-
-        return true;
+        }() );
     }
-
-    void
-    update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-
-        auto updateScene = [ & ]( auto &scene ) {
-            scene->perform( UpdateComponents( clock ) );
-            scene->perform( UpdateWorldState() );
-        };
-
-        updateScene( m_scene );
-
-        GLFWVulkanSystem::update();
-    }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< FrameGraph > m_frameGraph;
-    SharedPointer< Node > m_scene;
-    compositions::Composition m_composition;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    auto settings = crimild::alloc< Settings >( argc, argv );
-    settings->set( "video.width", 1280 );
-    settings->set( "video.height", 900 );
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "PBR: 3D Model", settings );
-
-    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
-
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "PBR: Model" );

@@ -108,9 +108,12 @@ It's safe to ignore SDL_Mixer2 warnings, if any.
 <a name="Image Effects">Image Effects</a> | |
 <img src="examples/HDR/screenshot.png" width="200" /> | [HDR](examples/HDR) | Renders a scene with HDR enabled, providing more control over  bright and dark colors
 <img src="examples/Bloom/screenshot.png" width="200" /> | [Bloom](examples/Bloom) | Filters brigth areas, applying blur to the result, to generate a light bleeding effect
+<a name="Shaders">Shaders</a> | |
+<img src="examples/Smiley/screenshot.png" width="200" /> | [Smiley](examples/Smiley) | TBD
 <a name="PBR">PBR</a> | |
 <img src="examples/PBRBasic/screenshot.png" width="200" /> | [PBR Basic](examples/PBRBasic) | TBD
 <img src="examples/PBRTexture/screenshot.png" width="200" /> | [PBR Texture](examples/PBRTexture) | TBD
 <img src="examples/PBRIBL/screenshot.png" width="200" /> | [PBR Image Based Lighting](examples/PBRIBL) | TBD
 <img src="examples/PBRModel/screenshot.png" width="200" /> | [PBR 3D Model](examples/PBRModel) | TBD 
- 
+<a name="Particles">Particles</a> | |
+<img src="examples/ParticlesFire/screenshot.png" width="200" /> | [Fire](examples/ParticlesFire) | TBD

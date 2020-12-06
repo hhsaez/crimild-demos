@@ -26,216 +26,135 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_Vulkan.hpp>
-#include <Crimild_GLFW.hpp>
-#include <Crimild_STB.hpp>
 
 using namespace crimild;
 using namespace crimild::compositions;
-using namespace crimild::glfw;
 
-class ExampleVulkanSystem : public GLFWVulkanSystem {
+class Example : public Simulation {
 public:
-    crimild::Bool start( void ) override
+    void onStarted( void ) noexcept override
     {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
-
-		m_frameGraph = crimild::alloc< FrameGraph >();
-
         auto rnd = Random::Generator( 1982 );
 
-        m_scene = [&] {
-            auto scene = crimild::alloc< Group >();
+        setScene(
+            [ & ] {
+                auto scene = crimild::alloc< Group >();
 
-            auto primitive = crimild::alloc< BoxPrimitive >(
-                BoxPrimitive::Params {
-                    .type = Primitive::Type::TRIANGLES,
-                    .layout = VertexP3N3TC2::getLayout(),
-                }
-            );
+                auto primitive = crimild::alloc< BoxPrimitive >(
+                    BoxPrimitive::Params {
+                        .type = Primitive::Type::TRIANGLES,
+                        .layout = VertexP3N3TC2::getLayout(),
+                    } );
 
-
-            auto material = [] {
-                auto material = crimild::alloc< SimpleLitMaterial >(
-                    SimpleLitMaterial::Props {
-                        .ambient = RGBAColorf( 0.0215f, 0.1745f, 0.0215f, 1.0f ),
-                        .diffuse = RGBAColorf( 0.07568f, 0.61424f, 0.07568f, 1.0f ),
-                        .specular = RGBAColorf( 0.633f, 0.727811f, 0.633f, 1.0f ),
-                        .shininess = 128.0f * 0.6f
-                    }
-                );
-                material->setDiffuseMap(
-                    [] {
-                        auto texture = crimild::alloc< Texture >();
-                        texture->imageView = [] {
-                            auto imageView = crimild::alloc< ImageView >();
-                            imageView->image = Image::CHECKERBOARD_4;
-                            return imageView;
-                        }();
-                        texture->sampler = [] {
-                            auto sampler = crimild::alloc< Sampler >();
-                            sampler->setMinFilter( Sampler::Filter::NEAREST );
-                            sampler->setMagFilter( Sampler::Filter::NEAREST );
-                            return sampler;
-                        }();
-                        return texture;
-                    }()
-                );
-                return material;
-            }();
-
-            for ( auto i = 0; i < 30; ++i ) {
-                scene->attachNode(
-                    [&] {
-                        auto geometry = crimild::alloc< Geometry >();
-                        geometry->attachPrimitive( primitive );
-
-                        geometry->local().setTranslate(
-                            rnd.generate( -10.0f, 10.0f ),
-                            rnd.generate( -10.0f, 10.0f ),
-                            rnd.generate( -10.0f, 10.0f )
-                        );
-
-                        geometry->local().setScale( rnd.generate( 0.75f, 1.5f ) );
-
-                        geometry->local().rotate().fromAxisAngle(
-                            Vector3f(
-                                rnd.generate( 0.01f, 1.0f ),
-                                rnd.generate( 0.01f, 1.0f ),
-                                rnd.generate( 0.01f, 1.0f )
-                            ).getNormalized(),
-                            rnd.generate( 0.0f, Numericf::TWO_PI )
-                        );
-
-                        geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
-
-                        return geometry;
-                    }()
-                );
-            }
-
-            scene->attachNode(
-                [] {
-                    auto group = crimild::alloc< Group >();
-                    group->attachNode(
+                auto material = [] {
+                    auto material = crimild::alloc< SimpleLitMaterial >(
+                        SimpleLitMaterial::Props {
+                            .ambient = RGBAColorf( 0.0215f, 0.1745f, 0.0215f, 1.0f ),
+                            .diffuse = RGBAColorf( 0.07568f, 0.61424f, 0.07568f, 1.0f ),
+                            .specular = RGBAColorf( 0.633f, 0.727811f, 0.633f, 1.0f ),
+                            .shininess = 128.0f * 0.6f } );
+                    material->setDiffuseMap(
                         [] {
+                            auto texture = crimild::alloc< Texture >();
+                            texture->imageView = [] {
+                                auto imageView = crimild::alloc< ImageView >();
+                                imageView->image = Image::CHECKERBOARD_4;
+                                return imageView;
+                            }();
+                            texture->sampler = [] {
+                                auto sampler = crimild::alloc< Sampler >();
+                                sampler->setMinFilter( Sampler::Filter::NEAREST );
+                                sampler->setMagFilter( Sampler::Filter::NEAREST );
+                                return sampler;
+                            }();
+                            return texture;
+                        }() );
+                    return material;
+                }();
+
+                for ( auto i = 0; i < 30; ++i ) {
+                    scene->attachNode(
+                        [ & ] {
                             auto geometry = crimild::alloc< Geometry >();
-                            geometry->attachPrimitive(
-                                crimild::alloc< SpherePrimitive >(
-                                    SpherePrimitive::Params {
-                                        .type = Primitive::Type::TRIANGLES,
-                                        .layout = VertexP3N3TC2::getLayout(),
-                                        .radius = 0.1f,
-                                    }
-                                )
-                            );
-                            geometry->attachComponent< MaterialComponent >()->attachMaterial(
-                                [] {
-                                    auto material = crimild::alloc< UnlitMaterial >();
-                                    material->setColor( RGBAColorf::ONE );
-                                    return material;
-                                }()
-                            );
+                            geometry->attachPrimitive( primitive );
+
+                            geometry->local().setTranslate(
+                                rnd.generate( -10.0f, 10.0f ),
+                                rnd.generate( -10.0f, 10.0f ),
+                                rnd.generate( -10.0f, 10.0f ) );
+
+                            geometry->local().setScale( rnd.generate( 0.75f, 1.5f ) );
+
+                            geometry->local().rotate().fromAxisAngle(
+                                Vector3f(
+                                    rnd.generate( 0.01f, 1.0f ),
+                                    rnd.generate( 0.01f, 1.0f ),
+                                    rnd.generate( 0.01f, 1.0f ) )
+                                    .getNormalized(),
+                                rnd.generate( 0.0f, Numericf::TWO_PI ) );
+
+                            geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
+
                             return geometry;
-                        }()
-                    );
-                    group->attachNode(
-                        [] {
-                            auto light = crimild::alloc< Light >(
-                                Light::Type::POINT
-                            );
-                            light->setAttenuation( Vector3f( 1.0f, 0.027f, 0.0028f ) );
-                            light->setAmbient( RGBAColorf::ONE );
-                            return light;
-                        }()
-                    );
-                    group->attachComponent< LambdaComponent >(
-                        [] ( auto node, auto &clock ) {
-                            auto speed = 0.25f;
-                            auto t = speed * clock.getCurrentTime();
-                            auto x = Numericf::remap( -1.0f, 1.0f, -15.0f, 15.0f, Numericf::cos( t ) * Numericf::sin( t ) );
-                            auto y = Numericf::remapSin( -3.0f, 3.0f, t );
-                            auto z = Numericf::remapCos( -15.0f, 15.0f, t );;
-                            node->local().setTranslate( x, y, z );
-                        }
-                    );
-                    return group;
-                }()
-            );
+                        }() );
+                }
 
-            scene->attachNode(
-                [&] {
-                    auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
-                    return camera;
-                }()
-            );
+                scene->attachNode(
+                    [] {
+                        auto group = crimild::alloc< Group >();
+                        group->attachNode(
+                            [] {
+                                auto geometry = crimild::alloc< Geometry >();
+                                geometry->attachPrimitive(
+                                    crimild::alloc< SpherePrimitive >(
+                                        SpherePrimitive::Params {
+                                            .type = Primitive::Type::TRIANGLES,
+                                            .layout = VertexP3N3TC2::getLayout(),
+                                            .radius = 0.1f,
+                                        } ) );
+                                geometry->attachComponent< MaterialComponent >()->attachMaterial(
+                                    [] {
+                                        auto material = crimild::alloc< UnlitMaterial >();
+                                        material->setColor( RGBAColorf::ONE );
+                                        return material;
+                                    }() );
+                                return geometry;
+                            }() );
+                        group->attachNode(
+                            [] {
+                                auto light = crimild::alloc< Light >(
+                                    Light::Type::POINT );
+                                light->setAttenuation( Vector3f( 1.0f, 0.027f, 0.0028f ) );
+                                light->setAmbient( RGBAColorf::ONE );
+                                return light;
+                            }() );
+                        group->attachComponent< LambdaComponent >(
+                            []( auto node, auto &clock ) {
+                                auto speed = 0.25f;
+                                auto t = speed * clock.getCurrentTime();
+                                auto x = Numericf::remap( -1.0f, 1.0f, -15.0f, 15.0f, Numericf::cos( t ) * Numericf::sin( t ) );
+                                auto y = Numericf::remapSin( -3.0f, 3.0f, t );
+                                auto z = Numericf::remapCos( -15.0f, 15.0f, t );
+                                ;
+                                node->local().setTranslate( x, y, z );
+                            } );
+                        return group;
+                    }() );
 
-            scene->perform( StartComponents() );
+                scene->attachNode(
+                    [ & ] {
+                        auto camera = crimild::alloc< Camera >();
+                        camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
+                        return camera;
+                    }() );
 
-            return scene;
-        }();
+                scene->perform( StartComponents() );
 
-        m_composition = present(
-            invert(
-                renderScene( crimild::get_ptr( m_scene ) )
-            )
-        );
+                return scene;
+            }() );
 
-        if ( m_frameGraph->compile() ) {
-            auto commands = m_frameGraph->recordCommands();
-            setCommandBuffers( { commands } );
-        }
-
-        return true;
+        setComposition( present( invert( renderScene( getScene() ) ) ) );
     }
-
-    void update( void ) override
-    {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
-
-        GLFWVulkanSystem::update();
-    }
-
-    void stop( void ) override
-    {
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        m_scene = nullptr;
-        m_renderPass = nullptr;
-        m_master = nullptr;
-        m_frameGraph = nullptr;
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< Node > m_scene;
-    SharedPointer< FrameGraph > m_frameGraph;
-	SharedPointer< RenderPass > m_renderPass;
-    SharedPointer< RenderPass > m_screenPass;
-	SharedPointer< PresentationMaster > m_master;
-    Composition m_composition;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
-
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
-
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "Postprocessing: Negative", crimild::alloc< Settings >( argc, argv ) );
-
-    SharedPointer< ImageManager > imageManager = crimild::alloc< crimild::stb::ImageManager >();
-
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-
-    return sim->run();
-}
+CRIMILD_CREATE_SIMULATION( Example, "Postprocessing: Negative" );
