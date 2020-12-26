@@ -72,6 +72,10 @@ namespace crimild {
                                         .descriptorType = DescriptorType::STORAGE_IMAGE,
                                         .stage = Shader::Stage::COMPUTE,
                                     },
+                                    {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .stage = Shader::Stage::COMPUTE,
+                                    },
                                 };
                                 return layout;
                             }(),
@@ -87,6 +91,37 @@ namespace crimild {
                     Descriptor {
                         .descriptorType = DescriptorType::STORAGE_IMAGE,
                         .obj = crimild::retain( texture ),
+                    },
+                    Descriptor {
+                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                        .obj = [] {
+                            struct Uniforms {
+                                alignas( 4 ) UInt32 sampleCount;
+                                alignas( 4 ) UInt32 seed;
+                                alignas( 16 ) Matrix4f view;
+                            };
+
+                            return crimild::alloc< CallbackUniformBuffer< Uniforms > >(
+                                [] {
+                                    static UInt32 sampleCount = 1;
+                                    static auto view = Matrix4f::IDENTITY;
+
+                                    auto camera = Camera::getMainCamera();
+                                    if ( camera != nullptr ) {
+                                        const auto cameraView = camera->getWorld().computeModelMatrix();
+                                        if ( cameraView != view ) {
+                                            view = cameraView;
+                                            sampleCount = 1;
+                                        }
+                                    }
+
+                                    return Uniforms {
+                                        .sampleCount = sampleCount++,
+                                        .seed = sampleCount,
+                                        .view = view,
+                                    };
+                                } );
+                        }(),
                     },
                 };
                 return ds;
@@ -106,7 +141,7 @@ namespace crimild {
                 commands->end();
                 return commands;
             }();
-            computePass->setConditional( true );
+            // computePass->setConditional( true );
 
             cmp.setOutput( nullptr );
             cmp.setOutputTexture( texture );
@@ -120,24 +155,48 @@ public:
     void onStarted( void ) noexcept override
     {
         auto settings = getSettings();
-        const float resolutionScale = 0.25f;
+        const float resolutionScale = 0.5f;
         const int width = resolutionScale * settings->get< Int32 >( "video.width", 1024 );
         const int height = resolutionScale * settings->get< Int32 >( "video.height", 768 );
+
+        setScene(
+            [ width, height ] {
+                auto scene = crimild::alloc< Group >();
+
+                scene->attachNode(
+                    [ width, height ] {
+                        auto camera = crimild::alloc< Camera >( 30.0f, Real32( width ) / Real32( height ), 0.001f, 1024.0f );
+                        Camera::setMainCamera( camera );
+                        camera->attachComponent< FreeLookCameraComponent >();
+                        return camera;
+                    }() );
+
+                scene->perform( StartComponents() );
+
+                return scene;
+            }() );
 
         setComposition(
             [ & ] {
                 using namespace crimild::compositions;
                 return present(
-                    computeImage(
-                        width,
-                        height,
-                        crimild::alloc< Shader >(
-                            Shader::Stage::COMPUTE,
-                            R"(
+                    tonemapping(
+                        computeImage(
+                            width,
+                            height,
+                            crimild::alloc< Shader >(
+                                Shader::Stage::COMPUTE,
+                                R"(
                                 layout( local_size_x = 32, local_size_y = 32 ) in;
                                 layout( set = 0, binding = 0, rgba8 ) uniform image2D resultImage;
 
-                                int seed = 0;
+                                layout ( set = 0, binding = 1 ) uniform Uniforms {
+                                    uint sampleCount;
+                                    uint seedStart;
+                                    mat4 view;
+                                };
+
+                                uint seed = 0;
                                 int flat_idx = 0;
 
                                 struct Sphere {
@@ -198,7 +257,7 @@ public:
                                     uvec2 arg = uvec2( flat_idx, seed++);
                                     encrypt_tea(arg);
                                     vec2 r = fract(vec2(arg) / vec2(0xffffffffu));
-                                    return r.x * r.y;
+                                    return r.x;
                                 }
 
                                 float getRandomRange( float min, float max )
@@ -233,6 +292,21 @@ public:
                                         }
                                     }
                                     return vec3( 0 );
+                                }
+
+                                vec3 getRandomUnitVector()
+                                {
+                                    return normalize( getRandomInUnitSphere() );
+                                }
+
+                                vec3 getRandomInHemisphere( vec3 N )
+                                {
+                                    vec3 inUnitSphere = getRandomInUnitSphere();
+                                    if ( dot( inUnitSphere, N ) > 0.0 ) {
+                                        return inUnitSphere;
+                                    } else {
+                                        return -inUnitSphere;
+                                    }
                                 }
 
                                 HitRecord setFaceNormal( Ray ray, vec3 N, HitRecord rec )
@@ -294,10 +368,11 @@ public:
                                     Camera camera;
                                     camera.viewport = vec2( 2.0 * aspectRatio, 2.0 );
                                     camera.focalLength = 1.0;
-                                    camera.origin = vec3( 0, 0, 0 );
-                                    camera.horizontal = vec3( camera.viewport.x, 0, 0 );
-                                    camera.vertical = vec3( 0, camera.viewport.y, 0 );
-                                    camera.lowerLeftCorner = camera.origin - camera.horizontal / 2.0 - camera.vertical / 2.0 - vec3( 0, 0, camera.focalLength );
+                                    camera.origin = ( view * vec4( 0, 0, 0, 1 ) ).xyz;
+                                    camera.horizontal = normalize( view * vec4( 1, 0, 0, 0 ) ).xyz;
+                                    camera.vertical = normalize( view * vec4( 0, 1, 0, 0 ) ).xyz;
+                                    vec3 forward = normalize( view * vec4( 0, 0, -1, 0 ) ).xyz;
+                                    camera.lowerLeftCorner = camera.origin - camera.horizontal / 2.0 - camera.vertical / 2.0 + camera.focalLength * forward;
                                     return camera;
                                 }
 
@@ -310,14 +385,14 @@ public:
                                 }
 
                                 vec3 rayColor( Ray ray ) {
-                                    int maxDepth = 20;
+                                    int maxDepth = 50;
 
                                     float multiplier = 1.0;
                                     HitRecord hit = hitScene( ray, 0.001, 9999.9 );
 
                                     int depth = 0;
                                     while ( depth < maxDepth && hit.hasResult ) {
-                                        vec3 target = hit.point + hit.normal + getRandomInUnitSphere();
+                                        vec3 target = hit.point + hit.normal + getRandomInHemisphere( hit.normal );
                                         ray.origin = hit.point;
                                         ray.direction = normalize( target - hit.point );
                                         hit = hitScene( ray, 0.001, 9999.9 );
@@ -333,25 +408,20 @@ public:
                                     float t = 0.5 * ( D.y + 1.0 );
                                     vec3 color = ( 1.0 - t ) * vec3( 1.0, 1.0, 1.0 ) + t * vec3( 0.5, 0.7, 1.0 );
                                     return multiplier * color;
+                                }
 
-                                    // HitRecord hit = hitScene( ray, 0.0, 9999.9 );
-                                    // if ( hit.hasResult ) {
-                                    //     vec3 target = hit.point + hit.normal + getRandomInUnitSphere();
-                                    //     ray.origin = hit.point;
-                                    //     ray.direction = target - hit.point;
-                                    //     return 0.5 * rayColor( ray );
-                                    // }
-
-                                    // vec3 D = normalize( ray.direction );
-                                    // float t = 0.5 * ( D.y + 1.0 );
-                                    // return ( 1.0 - t ) * vec3( 1.0, 1.0, 1.0 ) + t * vec3( 0.5, 0.7, 1.0 );
+                                vec3 gammaCorrection( vec3 color, int samplesPerPixel )
+                                {
+                                    float scale = 1.0 / float( samplesPerPixel );
+                                    return sqrt( scale * color );
                                 }
 
                                 void main() {
-                                    seed = 0;
+                                    seed = seedStart;
+
                                     flat_idx = int(dot(gl_GlobalInvocationID.xy, vec2(1, 4096)));
 
-                                    int samplesPerPixel = 100;
+                                    // int samplesPerPixel = int( destinationColor.a ) + 1;
 
                                     vec2 size = imageSize( resultImage );
                                     float aspectRatio = size.x / size.y;
@@ -365,19 +435,25 @@ public:
                                     spheres[ 0 ] = createSphere( vec3( 0.0, 0.0, -1.0 ), 0.5 );
                                     spheres[ 1 ] = createSphere( vec3( 0, -100.5, -1.0 ), 100.0 );
 
-                                    vec3 color = vec3( 0 );
-                                    for ( int s = 0; s < samplesPerPixel; ++s ) {
-                                        vec2 uv = gl_GlobalInvocationID.xy;
-                                        uv += vec2( getRandom(), getRandom() );
-                                        uv /= ( size.xy - vec2( 1 ) );
-                                        uv.y = 1.0 - uv.y;
-                                        Ray ray = getCameraRay( camera, uv.x, uv.y );
-                                        color += rayColor( ray );
+                                    vec2 uv = gl_GlobalInvocationID.xy;
+                                    uv += vec2( getRandom(), getRandom() );
+                                    uv /= ( size.xy - vec2( 1 ) );
+                                    uv.y = 1.0 - uv.y;
+                                    Ray ray = getCameraRay( camera, uv.x, uv.y );
+                                    vec3 color = rayColor( ray );
+
+                                    // color = gammaCorrection( color, samplesPerPixel );
+
+                                    vec3 destinationColor = imageLoad( resultImage, ivec2( gl_GlobalInvocationID.xy ) ).rgb;
+                                    color = ( destinationColor * float( sampleCount - 1 ) + color ) / float( sampleCount );
+
+                                    if ( sampleCount == 0 ) {
+                                        color = vec3( 0 );
                                     }
-                                    color /= vec3( samplesPerPixel );
 
                                     imageStore( resultImage, ivec2( gl_GlobalInvocationID.xy ), vec4( color, 1.0 ) );
-                                } )" ) ) );
+                                } )" ) ),
+                        1.0 ) );
             }() );
     }
 };
