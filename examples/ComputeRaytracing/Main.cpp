@@ -155,7 +155,7 @@ public:
     void onStarted( void ) noexcept override
     {
         auto settings = getSettings();
-        const float resolutionScale = 0.5f;
+        const float resolutionScale = 0.25f;
         const int width = resolutionScale * settings->get< Int32 >( "video.width", 1024 );
         const int height = resolutionScale * settings->get< Int32 >( "video.height", 768 );
 
@@ -166,6 +166,7 @@ public:
                 scene->attachNode(
                     [ width, height ] {
                         auto camera = crimild::alloc< Camera >( 30.0f, Real32( width ) / Real32( height ), 0.001f, 1024.0f );
+                        camera->local().setTranslate( 0, 0, 3 );
                         Camera::setMainCamera( camera );
                         camera->attachComponent< FreeLookCameraComponent >();
                         return camera;
@@ -202,19 +203,49 @@ public:
                                 struct Sphere {
                                     vec3 center;
                                     float radius;
+                                    int materialID;
                                 };
 
-                                Sphere createSphere( vec3 center, float radius )
+                                Sphere createSphere( vec3 center, float radius, int materialID )
                                 {
                                     Sphere s;
                                     s.center = center;
                                     s.radius = radius;
+                                    s.materialID = materialID;
                                     return s;
+                                }
+
+                                #define MATERIAL_TYPE_LAMBERTIAN 0
+                                #define MATERIAL_TYPE_METAL 1
+
+                                struct Material {
+                                    int type;
+                                    vec3 albedo;
+                                    float fuzz;
+                                };
+
+                                Material createLambertianMaterial( vec3 albedo )
+                                {
+                                    Material m;
+                                    m.type = MATERIAL_TYPE_LAMBERTIAN;
+                                    m.albedo = albedo;
+                                    m.fuzz = 1.0;
+                                    return m;
+                                }
+
+                                Material createMetalMaterial( vec3 albedo, float fuzz )
+                                {
+                                    Material m;
+                                    m.type = MATERIAL_TYPE_METAL;
+                                    m.albedo = albedo;
+                                    m.fuzz = fuzz < 1.0 ? fuzz : 1.0;
+                                    return m;
                                 }
 
                                 struct HitRecord {
                                     bool hasResult;
                                     float t;
+                                    int materialID;
                                     vec3 point;
                                     vec3 normal;
                                     bool frontFace;
@@ -234,7 +265,11 @@ public:
                                     vec3 lowerLeftCorner;
                                 };
 
-                                Sphere spheres[ 2 ];
+                                #define MATERIAL_COUNT 4
+                                Material materials[ 4 ];
+
+                                #define SPHERE_COUNT 4
+                                Sphere spheres[ 4 ];
 
                                 void encrypt_tea(inout uvec2 arg)
                                 {
@@ -320,6 +355,41 @@ public:
                                     return ray.origin + t * ray.direction;
                                 }
 
+                                struct Scattered {
+                                    bool hasResult;
+                                    Ray ray;
+                                    vec3 attenuation;
+                                };
+
+                                bool isZero( vec3 v )
+                                {
+                                    float s = 0.00001;
+                                    return abs( v.x ) < s && abs( v.y ) < s && abs( v.z ) < s;
+                                }
+
+                                Scattered scatter( Material material, Ray ray, HitRecord rec )
+                                {
+                                    Scattered scattered;
+                                    scattered.hasResult = false;
+                                    if ( material.type == MATERIAL_TYPE_LAMBERTIAN ) {
+                                        vec3 scatterDirection = rec.normal + getRandomUnitVector();
+                                        if ( isZero( scatterDirection ) ) {
+                                            scatterDirection = rec.normal;
+                                        }
+                                        scattered.ray.origin = rec.point;
+                                        scattered.ray.direction = scatterDirection;
+                                        scattered.attenuation = material.albedo;
+                                        scattered.hasResult = true;
+                                    } else if ( material.type == MATERIAL_TYPE_METAL ) {
+                                        vec3 reflected = reflect( normalize( ray.direction ), rec.normal );
+                                        scattered.ray.origin = rec.point;
+                                        scattered.ray.direction = reflected + material.fuzz * getRandomInUnitSphere();
+                                        scattered.attenuation = material.albedo;
+                                        scattered.hasResult = dot( scattered.ray.direction, rec.normal ) > 0.0;
+                                    }
+                                    return scattered;
+                                }
+
                                 HitRecord hitSphere( Sphere sphere, Ray ray, float tMin, float tMax ) {
                                     HitRecord rec;
                                     vec3 OC = ray.origin - sphere.center;
@@ -345,6 +415,7 @@ public:
 
                                     rec.hasResult = true;
                                     rec.t = root;
+                                    rec.materialID = sphere.materialID;
                                     rec.point = rayAt( ray, root );
                                     vec3 normal = ( rec.point - sphere.center ) / sphere.radius;
                                     return setFaceNormal( ray, normal, rec );
@@ -354,7 +425,7 @@ public:
                                 {
                                     HitRecord hit;
                                     hit.t = tMax;
-                                    for ( int i = 0; i < 2; i++ ) {
+                                    for ( int i = 0; i < SPHERE_COUNT; i++ ) {
                                         HitRecord candidate = hitSphere( spheres[ i ], ray, tMin, hit.t );
                                         if ( candidate.hasResult ) {
                                             hit = candidate;
@@ -385,29 +456,43 @@ public:
                                 }
 
                                 vec3 rayColor( Ray ray ) {
-                                    int maxDepth = 50;
+                                    int maxDepth = 30;
 
                                     float multiplier = 1.0;
-                                    HitRecord hit = hitScene( ray, 0.001, 9999.9 );
+                                    float tMin = 0.001;
+                                    float tMax = 9999.9;
+                                    vec3 attenuation = vec3( 1.0 );
+
+                                    vec3 color = vec3( 1.0 );
 
                                     int depth = 0;
-                                    while ( depth < maxDepth && hit.hasResult ) {
-                                        vec3 target = hit.point + hit.normal + getRandomInHemisphere( hit.normal );
-                                        ray.origin = hit.point;
-                                        ray.direction = normalize( target - hit.point );
-                                        hit = hitScene( ray, 0.001, 9999.9 );
-                                        multiplier *= 0.5;
-                                        ++depth;
+                                    while ( true ) {
+                                        if ( depth >= maxDepth ) {
+                                            return color;
+                                        }
+
+                                        HitRecord hit = hitScene( ray, tMin, tMax );
+                                        if ( !hit.hasResult ) {
+                                            // no hit. use background color
+                                            vec3 D = normalize( ray.direction );
+                                            float t = 0.5 * ( D.y + 1.0 );
+                                            vec3 backgroundColor = ( 1.0 - t ) * vec3( 1.0, 1.0, 1.0 ) + t * vec3( 0.5, 0.7, 1.0 );
+                                            color *= backgroundColor;
+                                            return color;
+                                        } else {
+                                            Scattered scattered = scatter( materials[ hit.materialID ], ray, hit );
+                                            if ( scattered.hasResult ) {
+                                                color *= scattered.attenuation;
+                                                ray = scattered.ray;
+                                                ++depth;
+                                            } else {
+                                                return color;
+                                            }                                            
+                                        }
                                     }
 
-                                    if ( depth >= maxDepth ) {
-                                        return vec3( 0 );
-                                    }
-
-                                    vec3 D = normalize( ray.direction );
-                                    float t = 0.5 * ( D.y + 1.0 );
-                                    vec3 color = ( 1.0 - t ) * vec3( 1.0, 1.0, 1.0 ) + t * vec3( 0.5, 0.7, 1.0 );
-                                    return multiplier * color;
+                                    // never happens
+                                    return vec3( 0 );
                                 }
 
                                 vec3 gammaCorrection( vec3 color, int samplesPerPixel )
@@ -421,8 +506,6 @@ public:
 
                                     flat_idx = int(dot(gl_GlobalInvocationID.xy, vec2(1, 4096)));
 
-                                    // int samplesPerPixel = int( destinationColor.a ) + 1;
-
                                     vec2 size = imageSize( resultImage );
                                     float aspectRatio = size.x / size.y;
 
@@ -432,8 +515,15 @@ public:
 
                                     Camera camera = createCamera( aspectRatio );
 
-                                    spheres[ 0 ] = createSphere( vec3( 0.0, 0.0, -1.0 ), 0.5 );
-                                    spheres[ 1 ] = createSphere( vec3( 0, -100.5, -1.0 ), 100.0 );
+                                    materials[ 0 ] = createLambertianMaterial( vec3( 0.8, 0.8, 0.0 ) );
+                                    materials[ 1 ] = createLambertianMaterial( vec3( 0.7, 0.3, 0.3 ) );
+                                    materials[ 2 ] = createMetalMaterial( vec3( 0.8, 0.8, 0.8 ), 0.0 );
+                                    materials[ 3 ] = createMetalMaterial( vec3( 0.8, 0.6, 0.2 ), 0.0 );
+
+                                    spheres[ 0 ] = createSphere( vec3( 0, -100.5, -1.0 ), 100.0, 0 );
+                                    spheres[ 1 ] = createSphere( vec3( 0.0, 0.0, -1.0 ), 0.5, 1 );
+                                    spheres[ 2 ] = createSphere( vec3( -1.0, 0.0, -1.0 ), 0.5, 2 );
+                                    spheres[ 3 ] = createSphere( vec3( 1.0, 0.0, -1.0 ), 0.5, 3 );
 
                                     vec2 uv = gl_GlobalInvocationID.xy;
                                     uv += vec2( getRandom(), getRandom() );
