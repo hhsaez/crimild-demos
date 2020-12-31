@@ -155,7 +155,7 @@ public:
     void onStarted( void ) noexcept override
     {
         auto settings = getSettings();
-        const float resolutionScale = 0.25f;
+        const float resolutionScale = 0.5f;
         const int width = resolutionScale * settings->get< Int32 >( "video.width", 1024 );
         const int height = resolutionScale * settings->get< Int32 >( "video.height", 768 );
 
@@ -177,11 +177,16 @@ public:
                 return scene;
             }() );
 
+        auto withTonemapping = []( auto cmp ) {
+            auto enabled = true;
+            return enabled ? tonemapping( cmp, 0.5 ) : cmp;
+        };
+
         setComposition(
             [ & ] {
                 using namespace crimild::compositions;
                 return present(
-                    tonemapping(
+                    withTonemapping(
                         computeImage(
                             width,
                             height,
@@ -425,6 +430,7 @@ public:
                                 {
                                     HitRecord hit;
                                     hit.t = tMax;
+                                    hit.hasResult = false;
                                     for ( int i = 0; i < SPHERE_COUNT; i++ ) {
                                         HitRecord candidate = hitSphere( spheres[ i ], ray, tMin, hit.t );
                                         if ( candidate.hasResult ) {
@@ -468,7 +474,7 @@ public:
                                     int depth = 0;
                                     while ( true ) {
                                         if ( depth >= maxDepth ) {
-                                            return color;
+                                            return vec3( 0 );
                                         }
 
                                         HitRecord hit = hitScene( ray, tMin, tMax );
@@ -486,7 +492,7 @@ public:
                                                 ray = scattered.ray;
                                                 ++depth;
                                             } else {
-                                                return color;
+                                                return vec3( 0 );
                                             }                                            
                                         }
                                     }
@@ -517,8 +523,8 @@ public:
 
                                     materials[ 0 ] = createLambertianMaterial( vec3( 0.8, 0.8, 0.0 ) );
                                     materials[ 1 ] = createLambertianMaterial( vec3( 0.7, 0.3, 0.3 ) );
-                                    materials[ 2 ] = createMetalMaterial( vec3( 0.8, 0.8, 0.8 ), 0.0 );
-                                    materials[ 3 ] = createMetalMaterial( vec3( 0.8, 0.6, 0.2 ), 0.0 );
+                                    materials[ 2 ] = createMetalMaterial( vec3( 0.8, 0.8, 0.8 ), 0.3 );
+                                    materials[ 3 ] = createMetalMaterial( vec3( 0.8, 0.6, 0.2 ), 1.0 );
 
                                     spheres[ 0 ] = createSphere( vec3( 0, -100.5, -1.0 ), 100.0, 0 );
                                     spheres[ 1 ] = createSphere( vec3( 0.0, 0.0, -1.0 ), 0.5, 1 );
@@ -542,8 +548,7 @@ public:
                                     }
 
                                     imageStore( resultImage, ivec2( gl_GlobalInvocationID.xy ), vec4( color, 1.0 ) );
-                                } )" ) ),
-                        1.0 ) );
+                                } )" ) ) ) );
             }() );
     }
 };
