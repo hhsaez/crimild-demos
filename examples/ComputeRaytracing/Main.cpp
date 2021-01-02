@@ -98,6 +98,7 @@ namespace crimild {
                             struct Uniforms {
                                 alignas( 4 ) UInt32 sampleCount;
                                 alignas( 4 ) UInt32 seed;
+                                alignas( 4 ) Real32 tanHalfFOV;
                                 alignas( 16 ) Matrix4f view;
                             };
 
@@ -118,6 +119,7 @@ namespace crimild {
                                     return Uniforms {
                                         .sampleCount = sampleCount++,
                                         .seed = sampleCount,
+                                        .tanHalfFOV = camera->getFrustum().computeTanHalfFOV(),
                                         .view = view,
                                     };
                                 } );
@@ -199,6 +201,7 @@ public:
                                 layout ( set = 0, binding = 1 ) uniform Uniforms {
                                     uint sampleCount;
                                     uint seedStart;
+                                    float tanHalfFOV;
                                     mat4 view;
                                 };
 
@@ -222,11 +225,13 @@ public:
 
                                 #define MATERIAL_TYPE_LAMBERTIAN 0
                                 #define MATERIAL_TYPE_METAL 1
+                                #define MATERIAL_TYPE_DIELECTRIC 2
 
                                 struct Material {
                                     int type;
                                     vec3 albedo;
                                     float fuzz;
+                                    float ir;
                                 };
 
                                 Material createLambertianMaterial( vec3 albedo )
@@ -244,6 +249,14 @@ public:
                                     m.type = MATERIAL_TYPE_METAL;
                                     m.albedo = albedo;
                                     m.fuzz = fuzz < 1.0 ? fuzz : 1.0;
+                                    return m;
+                                }
+
+                                Material createDielectricMaterial( float ir )
+                                {
+                                    Material m;
+                                    m.type = MATERIAL_TYPE_DIELECTRIC;
+                                    m.ir = ir;
                                     return m;
                                 }
 
@@ -372,6 +385,13 @@ public:
                                     return abs( v.x ) < s && abs( v.y ) < s && abs( v.z ) < s;
                                 }
 
+                                float reflectance( float cosine, float refIdx )
+                                {
+                                    float r0 = ( 1.0 - refIdx ) / ( 1.0 + refIdx );
+                                    r0 = r0 * r0;
+                                    return r0 + ( 1.0 - r0 ) * pow( ( 1.0 - cosine ), 5.0 );
+                                }
+
                                 Scattered scatter( Material material, Ray ray, HitRecord rec )
                                 {
                                     Scattered scattered;
@@ -391,6 +411,22 @@ public:
                                         scattered.ray.direction = reflected + material.fuzz * getRandomInUnitSphere();
                                         scattered.attenuation = material.albedo;
                                         scattered.hasResult = dot( scattered.ray.direction, rec.normal ) > 0.0;
+                                    } else if ( material.type == MATERIAL_TYPE_DIELECTRIC ) {
+                                        float ratio = rec.frontFace ? ( 1.0 / material.ir ) : material.ir;
+                                        vec3 D = normalize( ray.direction );
+                                        vec3 N = rec.normal;
+                                        float cosTheta = min( dot( -D, N ), 1.0 );
+                                        float sinTheta = sqrt( 1.0 - cosTheta * cosTheta );
+                                        bool cannotRefract = ratio * sinTheta > 1.0;
+                                        if ( cannotRefract || reflectance( cosTheta, ratio ) > getRandom() ) {
+                                            D = reflect( D, N );
+                                        } else {
+                                            D = refract( D, N, ratio );
+                                        }
+                                        scattered.ray.origin = rec.point;
+                                        scattered.ray.direction = D;
+                                        scattered.attenuation = vec3( 1.0 );
+                                        scattered.hasResult = true;
                                     }
                                     return scattered;
                                 }
@@ -462,7 +498,7 @@ public:
                                 }
 
                                 vec3 rayColor( Ray ray ) {
-                                    int maxDepth = 30;
+                                    int maxDepth = 50;
 
                                     float multiplier = 1.0;
                                     float tMin = 0.001;
@@ -522,9 +558,9 @@ public:
                                     Camera camera = createCamera( aspectRatio );
 
                                     materials[ 0 ] = createLambertianMaterial( vec3( 0.8, 0.8, 0.0 ) );
-                                    materials[ 1 ] = createLambertianMaterial( vec3( 0.7, 0.3, 0.3 ) );
-                                    materials[ 2 ] = createMetalMaterial( vec3( 0.8, 0.8, 0.8 ), 0.3 );
-                                    materials[ 3 ] = createMetalMaterial( vec3( 0.8, 0.6, 0.2 ), 1.0 );
+                                    materials[ 1 ] = createLambertianMaterial( vec3( 0.1, 0.2, 0.5 ) );
+                                    materials[ 2 ] = createDielectricMaterial( 1.5 );
+                                    materials[ 3 ] = createMetalMaterial( vec3( 0.8, 0.6, 0.2 ), 0.0 );
 
                                     spheres[ 0 ] = createSphere( vec3( 0, -100.5, -1.0 ), 100.0, 0 );
                                     spheres[ 1 ] = createSphere( vec3( 0.0, 0.0, -1.0 ), 0.5, 1 );
