@@ -99,6 +99,9 @@ namespace crimild {
                                 alignas( 4 ) UInt32 sampleCount;
                                 alignas( 4 ) UInt32 seed;
                                 alignas( 4 ) Real32 tanHalfFOV;
+                                alignas( 4 ) Real32 aspectRatio;
+                                alignas( 4 ) Real32 aperture;
+                                alignas( 4 ) Real32 focusDist;
                                 alignas( 16 ) Matrix4f view;
                             };
 
@@ -106,6 +109,7 @@ namespace crimild {
                                 [] {
                                     static UInt32 sampleCount = 1;
                                     static auto view = Matrix4f::IDENTITY;
+                                    static auto focusDist = 3.0f;
 
                                     auto camera = Camera::getMainCamera();
                                     if ( camera != nullptr ) {
@@ -116,10 +120,22 @@ namespace crimild {
                                         }
                                     }
 
+                                    if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_1 ) ) {
+                                        focusDist -= 0.01f;
+                                        sampleCount = 1;
+                                    }
+                                    if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_2 ) ) {
+                                        focusDist += 0.01f;
+                                        sampleCount = 1;
+                                    }
+
                                     return Uniforms {
                                         .sampleCount = sampleCount++,
                                         .seed = sampleCount,
                                         .tanHalfFOV = camera->getFrustum().computeTanHalfFOV(),
+                                        .aspectRatio = camera->computeAspect(),
+                                        .aperture = 0.2,
+                                        .focusDist = focusDist,
                                         .view = view,
                                     };
                                 } );
@@ -167,7 +183,7 @@ public:
 
                 scene->attachNode(
                     [ width, height ] {
-                        auto camera = crimild::alloc< Camera >( 30.0f, Real32( width ) / Real32( height ), 0.001f, 1024.0f );
+                        auto camera = crimild::alloc< Camera >( 60.0f, Real32( width ) / Real32( height ), 0.001f, 1024.0f );
                         camera->local().setTranslate( 0, 0, 3 );
                         Camera::setMainCamera( camera );
                         camera->attachComponent< FreeLookCameraComponent >();
@@ -202,6 +218,9 @@ public:
                                     uint sampleCount;
                                     uint seedStart;
                                     float tanHalfFOV;
+                                    float aspectRatio;
+                                    float aperture;
+                                    float focusDist;
                                     mat4 view;
                                 };
 
@@ -275,12 +294,14 @@ public:
                                 };
 
                                 struct Camera {
-                                    vec2 viewport;
-                                    float focalLength;
                                     vec3 origin;
+                                    vec3 lowerLeftCorner;
                                     vec3 horizontal;
                                     vec3 vertical;
-                                    vec3 lowerLeftCorner;
+                                    vec3 u;
+                                    vec3 v;
+                                    vec3 w;
+                                    float lensRadius;
                                 };
 
                                 #define MATERIAL_COUNT 4
@@ -345,6 +366,21 @@ public:
                                         }
                                     }
                                     return vec3( 0 );
+                                }
+
+                                vec3 getRandomInUnitDisc() 
+                                {
+                                    while ( true ) {
+                                        vec3 p = vec3(
+                                            getRandomRange( -1.0, 1.0 ),
+                                            getRandomRange( -1.0, 1.0 ),
+                                            0.0
+                                        );
+                                        if ( dot( p, p ) >= 1.0 ) {
+                                            break;
+                                        }
+                                        return p;
+                                    }
                                 }
 
                                 vec3 getRandomUnitVector()
@@ -478,22 +514,43 @@ public:
 
                                 Camera createCamera( float aspectRatio )
                                 {
+                                    float h = tanHalfFOV;
+                                    vec2 viewport = vec2( 2.0 * aspectRatio * h, 2.0 * h );
+
+                                    /*
+                                struct Camera {
+                                    vec3 origin;
+                                    vec3 lowerLeftCorner;
+                                    vec3 horizontal;
+                                    vec3 vertical;
+                                    vec3 u;
+                                    vec3 v;
+                                    vec3 w;
+                                    float lensRadius;
+                                };
+                                    */
+
                                     Camera camera;
-                                    camera.viewport = vec2( 2.0 * aspectRatio, 2.0 );
-                                    camera.focalLength = 1.0;
+                                    camera.u = ( view * vec4( 1, 0, 0, 0 ) ).xyz;
+                                    camera.v = ( view * vec4( 0, 1, 0, 0 ) ).xyz;
+                                    camera.w = ( view * vec4( 0, 0, -1, 0 ) ).xyz;
+
                                     camera.origin = ( view * vec4( 0, 0, 0, 1 ) ).xyz;
-                                    camera.horizontal = normalize( view * vec4( 1, 0, 0, 0 ) ).xyz;
-                                    camera.vertical = normalize( view * vec4( 0, 1, 0, 0 ) ).xyz;
-                                    vec3 forward = normalize( view * vec4( 0, 0, -1, 0 ) ).xyz;
-                                    camera.lowerLeftCorner = camera.origin - camera.horizontal / 2.0 - camera.vertical / 2.0 + camera.focalLength * forward;
+                                    camera.horizontal = focusDist * viewport.x * camera.u;
+                                    camera.vertical = focusDist * viewport.y * camera.v;
+                                    camera.lowerLeftCorner = camera.origin - camera.horizontal / 2.0 - camera.vertical / 2.0 + focusDist * camera.w;
+                                    camera.lensRadius = aperture / 2.0;
                                     return camera;
                                 }
 
                                 Ray getCameraRay( Camera camera, float u, float v )
                                 {
+                                    vec3 rd = camera.lensRadius * getRandomInUnitDisc();
+                                    vec3 offset = camera.u * rd.x + camera.v * rd.y;
+
                                     Ray ray;
-                                    ray.origin = camera.origin;
-                                    ray.direction = camera.lowerLeftCorner + u * camera.horizontal + v * camera.vertical - camera.origin;
+                                    ray.origin = camera.origin + offset;
+                                    ray.direction = camera.lowerLeftCorner + u * camera.horizontal + v * camera.vertical - camera.origin - offset;
                                     return ray;
                                 }
 
