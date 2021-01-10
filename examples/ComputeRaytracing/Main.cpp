@@ -76,6 +76,10 @@ namespace crimild {
                                         .descriptorType = DescriptorType::UNIFORM_BUFFER,
                                         .stage = Shader::Stage::COMPUTE,
                                     },
+                                    {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .stage = Shader::Stage::COMPUTE,
+                                    },
                                 };
                                 return layout;
                             }(),
@@ -109,7 +113,7 @@ namespace crimild {
                                 [] {
                                     static UInt32 sampleCount = 1;
                                     static auto view = Matrix4f::IDENTITY;
-                                    static auto focusDist = 3.0f;
+                                    static auto focusDist = 10.0f;
 
                                     auto camera = Camera::getMainCamera();
                                     if ( camera != nullptr ) {
@@ -120,13 +124,15 @@ namespace crimild {
                                         }
                                     }
 
-                                    if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_1 ) ) {
-                                        focusDist -= 0.01f;
-                                        sampleCount = 1;
-                                    }
-                                    if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_2 ) ) {
-                                        focusDist += 0.01f;
-                                        sampleCount = 1;
+                                    const auto handleFocus = [ & ]( UInt32 level ) {
+                                        if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_0 + level ) ) {
+                                            focusDist = level == 0 ? 10 : level;
+                                            sampleCount = 1;
+                                        }
+                                    };
+
+                                    for ( UInt32 i = 0; i < 10; ++i ) {
+                                        handleFocus( i );
                                     }
 
                                     return Uniforms {
@@ -134,11 +140,126 @@ namespace crimild {
                                         .seed = sampleCount,
                                         .tanHalfFOV = camera->getFrustum().computeTanHalfFOV(),
                                         .aspectRatio = camera->computeAspect(),
-                                        .aperture = 0.2,
+                                        .aperture = 0.1,
                                         .focusDist = focusDist,
                                         .view = view,
                                     };
                                 } );
+                        }(),
+                    },
+                    Descriptor {
+                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                        .obj = [] {
+                            struct SphereDesc {
+                                alignas( 16 ) Vector3f center;
+                                alignas( 4 ) Real32 radius;
+                                alignas( 4 ) UInt32 materialID;
+                            };
+
+                            struct MaterialDesc {
+                                alignas( 4 ) UInt32 type;
+                                alignas( 16 ) Vector3f albedo;
+                                alignas( 4 ) Real32 fuzz;
+                                alignas( 4 ) Real32 ir;
+                            };
+
+#define MAX_SPHERE_COUNT 500
+#define MAX_MATERIAL_COUNT 500
+
+                            struct SceneUniforms {
+                                alignas( 16 ) SphereDesc spheres[ MAX_SPHERE_COUNT ];
+                                alignas( 4 ) UInt32 sphereCount = 0;
+                                alignas( 16 ) MaterialDesc materials[ MAX_MATERIAL_COUNT ];
+                                alignas( 4 ) UInt32 materialCount = 0;
+                            };
+
+                            SceneUniforms uniforms;
+
+                            auto createSphere = [ & ]( const Vector3f &center, Real32 radius, UInt32 materialID ) {
+                                SphereDesc s;
+                                s.center = center;
+                                s.radius = radius;
+                                s.materialID = materialID;
+                                uniforms.spheres[ uniforms.sphereCount ] = s;
+                                return uniforms.sphereCount++;
+                            };
+
+                            auto createLambertianMaterial = [ & ]( Vector3f albedo ) {
+                                MaterialDesc m;
+                                m.type = 0;
+                                m.albedo = albedo;
+                                m.fuzz = 1.0;
+                                uniforms.materials[ uniforms.materialCount ] = m;
+                                return uniforms.materialCount++;
+                            };
+
+                            auto createMetalMaterial = [ & ]( Vector3f albedo, float fuzz ) {
+                                MaterialDesc m;
+                                m.type = 1;
+                                m.albedo = albedo;
+                                m.fuzz = fuzz < 1.0 ? fuzz : 1.0;
+                                uniforms.materials[ uniforms.materialCount ] = m;
+                                return uniforms.materialCount++;
+                            };
+
+                            auto createDielectricMaterial = [ & ]( float ir ) {
+                                MaterialDesc m;
+                                m.type = 2;
+                                m.ir = ir;
+                                uniforms.materials[ uniforms.materialCount ] = m;
+                                return uniforms.materialCount++;
+                            };
+
+                            int groundMaterial = createLambertianMaterial( Vector3f( 0.5, 0.5, 0.5 ) );
+                            createSphere( Vector3f( 0, -1000, 0 ), 1000, groundMaterial );
+
+                            int count = 11;
+
+                            for ( int a = -count; a < count; a++ ) {
+                                for ( int b = -count; b < count; b++ ) {
+                                    Real32 chooseMat = Random::generate< Real32 >();
+                                    Vector3f center(
+                                        a + 0.9 * Random::generate< Real32 >(),
+                                        0.2,
+                                        b + 0.9 * Random::generate< Real32 >() );
+
+                                    if ( ( center - Vector3f( 4, 0.2, 0 ) ).getMagnitude() > 0.9f ) {
+                                        if ( chooseMat < 0.8 ) {
+                                            // diffuse
+                                            Vector3f albedo(
+                                                Random::generate< Real32 >() * Random::generate< Real32 >(),
+                                                Random::generate< Real32 >() * Random::generate< Real32 >(),
+                                                Random::generate< Real32 >() * Random::generate< Real32 >() );
+                                            int sphereMaterial = createLambertianMaterial( albedo );
+                                            createSphere( center, 0.2, sphereMaterial );
+                                        } else if ( chooseMat < 0.95 ) {
+                                            // metal
+                                            Vector3f albedo(
+                                                Random::generate< Real32 >( 0.5, 1.0 ),
+                                                Random::generate< Real32 >( 0.5, 1.0 ),
+                                                Random::generate< Real32 >( 0.5, 1.0 ) );
+                                            float fuzz = Random::generate< Real32 >( 0, 0.5 );
+                                            int sphereMaterial = createMetalMaterial( albedo, fuzz );
+                                            createSphere( center, 0.2, sphereMaterial );
+                                        } else {
+                                            // glass
+                                            int sphereMaterial = createDielectricMaterial( 1.5 );
+                                            createSphere( center, 0.2, sphereMaterial );
+                                        }
+                                    }
+                                }
+                            }
+
+                            int material1 = createDielectricMaterial( 1.5 );
+                            createSphere( Vector3f( 0, 1, 0 ), 1.0, material1 );
+
+                            int material2 = createLambertianMaterial( Vector3f( 0.4, 0.2, 0.1 ) );
+                            createSphere( Vector3f( -4, 1, 0 ), 1.0, material2 );
+
+                            int material3 = createMetalMaterial( Vector3f( 0.7, 0.6, 0.5 ), 0.0 );
+                            createSphere( Vector3f( 4, 1, 0 ), 1.0, material3 );
+
+                            return crimild::alloc< UniformBuffer >( uniforms );
                         }(),
                     },
                 };
@@ -184,7 +305,8 @@ public:
                 scene->attachNode(
                     [ width, height ] {
                         auto camera = crimild::alloc< Camera >( 60.0f, Real32( width ) / Real32( height ), 0.001f, 1024.0f );
-                        camera->local().setTranslate( 0, 0, 3 );
+                        camera->local().setTranslate( 12, 2, 3 );
+                        camera->local().lookAt( Vector3f::ZERO );
                         Camera::setMainCamera( camera );
                         camera->attachComponent< FreeLookCameraComponent >();
                         return camera;
@@ -196,8 +318,8 @@ public:
             }() );
 
         auto withTonemapping = []( auto cmp ) {
-            auto enabled = true;
-            return enabled ? tonemapping( cmp, 0.5 ) : cmp;
+            auto enabled = false;
+            return enabled ? tonemapping( cmp, 0.35 ) : cmp;
         };
 
         setComposition(
@@ -227,24 +349,12 @@ public:
                                 uint seed = 0;
                                 int flat_idx = 0;
 
+
                                 struct Sphere {
                                     vec3 center;
                                     float radius;
-                                    int materialID;
+                                    uint materialID;
                                 };
-
-                                Sphere createSphere( vec3 center, float radius, int materialID )
-                                {
-                                    Sphere s;
-                                    s.center = center;
-                                    s.radius = radius;
-                                    s.materialID = materialID;
-                                    return s;
-                                }
-
-                                #define MATERIAL_TYPE_LAMBERTIAN 0
-                                #define MATERIAL_TYPE_METAL 1
-                                #define MATERIAL_TYPE_DIELECTRIC 2
 
                                 struct Material {
                                     int type;
@@ -253,36 +363,24 @@ public:
                                     float ir;
                                 };
 
-                                Material createLambertianMaterial( vec3 albedo )
-                                {
-                                    Material m;
-                                    m.type = MATERIAL_TYPE_LAMBERTIAN;
-                                    m.albedo = albedo;
-                                    m.fuzz = 1.0;
-                                    return m;
-                                }
+                                #define MATERIAL_TYPE_LAMBERTIAN 0
+                                #define MATERIAL_TYPE_METAL 1
+                                #define MATERIAL_TYPE_DIELECTRIC 2
 
-                                Material createMetalMaterial( vec3 albedo, float fuzz )
-                                {
-                                    Material m;
-                                    m.type = MATERIAL_TYPE_METAL;
-                                    m.albedo = albedo;
-                                    m.fuzz = fuzz < 1.0 ? fuzz : 1.0;
-                                    return m;
-                                }
+                                #define MAX_SPHERE_COUNT 500
+                                #define MAX_MATERIAL_COUNT 500
 
-                                Material createDielectricMaterial( float ir )
-                                {
-                                    Material m;
-                                    m.type = MATERIAL_TYPE_DIELECTRIC;
-                                    m.ir = ir;
-                                    return m;
-                                }
+                                layout ( set = 0, binding = 2 ) uniform SceneUniforms {
+                                    Sphere spheres[ MAX_SPHERE_COUNT ];
+                                    int sphereCount;
+                                    Material materials[ MAX_MATERIAL_COUNT ];
+                                    int materialCount;
+                                } uScene;
 
                                 struct HitRecord {
                                     bool hasResult;
                                     float t;
-                                    int materialID;
+                                    uint materialID;
                                     vec3 point;
                                     vec3 normal;
                                     bool frontFace;
@@ -303,12 +401,6 @@ public:
                                     vec3 w;
                                     float lensRadius;
                                 };
-
-                                #define MATERIAL_COUNT 4
-                                Material materials[ 4 ];
-
-                                #define SPHERE_COUNT 4
-                                Sphere spheres[ 4 ];
 
                                 void encrypt_tea(inout uvec2 arg)
                                 {
@@ -503,8 +595,8 @@ public:
                                     HitRecord hit;
                                     hit.t = tMax;
                                     hit.hasResult = false;
-                                    for ( int i = 0; i < SPHERE_COUNT; i++ ) {
-                                        HitRecord candidate = hitSphere( spheres[ i ], ray, tMin, hit.t );
+                                    for ( int i = 0; i < uScene.sphereCount; i++ ) {
+                                        HitRecord candidate = hitSphere( uScene.spheres[ i ], ray, tMin, hit.t );
                                         if ( candidate.hasResult ) {
                                             hit = candidate;
                                         }    
@@ -516,19 +608,6 @@ public:
                                 {
                                     float h = tanHalfFOV;
                                     vec2 viewport = vec2( 2.0 * aspectRatio * h, 2.0 * h );
-
-                                    /*
-                                struct Camera {
-                                    vec3 origin;
-                                    vec3 lowerLeftCorner;
-                                    vec3 horizontal;
-                                    vec3 vertical;
-                                    vec3 u;
-                                    vec3 v;
-                                    vec3 w;
-                                    float lensRadius;
-                                };
-                                    */
 
                                     Camera camera;
                                     camera.u = ( view * vec4( 1, 0, 0, 0 ) ).xyz;
@@ -555,7 +634,7 @@ public:
                                 }
 
                                 vec3 rayColor( Ray ray ) {
-                                    int maxDepth = 50;
+                                    int maxDepth = 20;
 
                                     float multiplier = 1.0;
                                     float tMin = 0.001;
@@ -579,7 +658,7 @@ public:
                                             color *= backgroundColor;
                                             return color;
                                         } else {
-                                            Scattered scattered = scatter( materials[ hit.materialID ], ray, hit );
+                                            Scattered scattered = scatter( uScene.materials[ hit.materialID ], ray, hit );
                                             if ( scattered.hasResult ) {
                                                 color *= scattered.attenuation;
                                                 ray = scattered.ray;
@@ -603,6 +682,10 @@ public:
                                 void main() {
                                     seed = seedStart;
 
+                                    // if ( sampleCount > 1 && getRandom() < 0.5 ) {
+                                        // return;
+                                    // }
+
                                     flat_idx = int(dot(gl_GlobalInvocationID.xy, vec2(1, 4096)));
 
                                     vec2 size = imageSize( resultImage );
@@ -614,24 +697,12 @@ public:
 
                                     Camera camera = createCamera( aspectRatio );
 
-                                    materials[ 0 ] = createLambertianMaterial( vec3( 0.8, 0.8, 0.0 ) );
-                                    materials[ 1 ] = createLambertianMaterial( vec3( 0.1, 0.2, 0.5 ) );
-                                    materials[ 2 ] = createDielectricMaterial( 1.5 );
-                                    materials[ 3 ] = createMetalMaterial( vec3( 0.8, 0.6, 0.2 ), 0.0 );
-
-                                    spheres[ 0 ] = createSphere( vec3( 0, -100.5, -1.0 ), 100.0, 0 );
-                                    spheres[ 1 ] = createSphere( vec3( 0.0, 0.0, -1.0 ), 0.5, 1 );
-                                    spheres[ 2 ] = createSphere( vec3( -1.0, 0.0, -1.0 ), 0.5, 2 );
-                                    spheres[ 3 ] = createSphere( vec3( 1.0, 0.0, -1.0 ), 0.5, 3 );
-
                                     vec2 uv = gl_GlobalInvocationID.xy;
                                     uv += vec2( getRandom(), getRandom() );
                                     uv /= ( size.xy - vec2( 1 ) );
                                     uv.y = 1.0 - uv.y;
                                     Ray ray = getCameraRay( camera, uv.x, uv.y );
                                     vec3 color = rayColor( ray );
-
-                                    // color = gammaCorrection( color, samplesPerPixel );
 
                                     vec3 destinationColor = imageLoad( resultImage, ivec2( gl_GlobalInvocationID.xy ) ).rgb;
                                     color = ( destinationColor * float( sampleCount - 1 ) + color ) / float( sampleCount );
