@@ -135,6 +135,10 @@ namespace crimild {
                                         handleFocus( i );
                                     }
 
+                                    if ( Input::getInstance()->isMouseButtonDown( CRIMILD_INPUT_MOUSE_BUTTON_LEFT ) ) {
+                                        sampleCount = 1;
+                                    }
+
                                     return Uniforms {
                                         .sampleCount = sampleCount++,
                                         .seed = sampleCount,
@@ -294,7 +298,7 @@ public:
     void onStarted( void ) noexcept override
     {
         auto settings = getSettings();
-        const float resolutionScale = 0.5f;
+        const float resolutionScale = 1.0f;
         const int width = resolutionScale * settings->get< Int32 >( "video.width", 1024 );
         const int height = resolutionScale * settings->get< Int32 >( "video.height", 768 );
 
@@ -634,7 +638,7 @@ public:
                                 }
 
                                 vec3 rayColor( Ray ray ) {
-                                    int maxDepth = 20;
+                                    int maxDepth = sampleCount > 1 ? 10 : 2;
 
                                     float multiplier = 1.0;
                                     float tMin = 0.001;
