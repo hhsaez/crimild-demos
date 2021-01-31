@@ -6,6 +6,7 @@ SET( CRIMILD_ENABLE_SCRIPTING ON CACHE BOOL "Enable scripting module for Crimild
 SET( CRIMILD_ENABLE_STB ON CACHE BOOL "Enable STB module for Crimild" )
 SET( CRIMILD_ENABLE_IMPORT ON CACHE BOOL "Enable import module for Crimild" )
 SET( CRIMILD_ENABLE_GLFW ON CACHE BOOL "Enable GLFW module for Crimild" )
+SET( CRIMILD_ENABLE_IMGUI ON CACHE BOOL "Enable ImGUI module for Crimild" )
 SET( CRIMILD_SCRIPTING_LOG_VERBOSE ON CACHE BOOL "Enable verbose logging for Crimild" )
 
 IF ( APPLE ) 

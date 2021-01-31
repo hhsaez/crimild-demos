@@ -30,439 +30,403 @@
 #include "imgui_impl_vulkan.h"
 
 #include <Crimild.hpp>
-#include <Crimild_GLFW.hpp>
-#include <Crimild_Vulkan.hpp>
 
-using namespace crimild;
-using namespace crimild::glfw;
+#define MAX_VERTEX_COUNT 10000
+#define MAX_INDEX_COUNT 10000
 
-class ImGUIController {
-public:
-    struct VertexTransform {
-        Vector2f translate;
-        Vector2f scale;
+namespace crimild {
+
+    class ImGUISystem : public System {
+        CRIMILD_IMPLEMENT_RTTI( ImGUISystem )
+    public:
+        static SharedPointer< CommandBuffer > getCommandBuffer( void ) noexcept
+        {
+            static auto commandBuffer = crimild::alloc< CommandBuffer >();
+            return commandBuffer;
+        }
+
+        virtual void start( void ) noexcept override
+        {
+            System::start();
+
+            CRIMILD_LOG_TRACE( "Starting ImGUI System" );
+
+            IMGUI_CHECKVERSION();
+
+            ImGui::CreateContext();
+            ImGui::StyleColorsDark();
+
+            auto &io = ImGui::GetIO();
+            // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+            // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+            io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
+            io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
+
+            createFonts();
+
+            m_pipeline = [ & ] {
+                auto pipeline = crimild::alloc< GraphicsPipeline >();
+                pipeline->setProgram(
+                    [ & ] {
+                        auto program = crimild::alloc< ShaderProgram >();
+                        program->setShaders(
+                            Array< SharedPointer< Shader > > {
+                                crimild::alloc< Shader >(
+                                    Shader::Stage::VERTEX,
+                                    R"(
+                                        layout ( location = 0 ) in vec2 aPosition;
+                                        layout ( location = 1 ) in vec2 aTexCoord;
+                                        layout ( location = 2 ) in vec4 aColor;
+
+                                        layout ( set = 0, binding = 0 ) uniform TransformBuffer {
+                                            vec4 scale;
+                                            vec4 translate;
+                                        } ubo;
+
+                                        layout ( location = 0 ) out vec4 vColor;
+                                        layout ( location = 1 ) out vec2 vTexCoord;
+
+                                        void main()
+                                        {
+                                            gl_Position = vec4( aPosition * ubo.scale.xy * ubo.translate.xy, 0.0, 1.0 );
+                                            vColor = aColor;
+                                            vTexCoord = aTexCoord;
+                                        }
+                                    )" ),
+                                crimild::alloc< Shader >(
+                                    Shader::Stage::FRAGMENT,
+                                    R"(
+                                        layout ( location = 0 ) in vec4 vColor;
+                                        layout ( location = 1 ) in vec2 vTexCoord;
+
+                                        layout ( set = 0, binding = 1 ) uniform sampler2D uTexture;
+
+                                        layout ( location = 0 ) out vec4 FragColor;
+
+                                        void main()
+                                        {
+                                            FragColor = vColor * texture( uTexture, vTexCoord );
+                                        }
+                                    )" ),
+                            } );
+                        program->vertexLayouts = { VertexP2TC2C4::getLayout() };
+                        program->descriptorSetLayouts = {
+                            [] {
+                                auto layout = crimild::alloc< DescriptorSetLayout >();
+                                layout->bindings = {
+                                    {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .stage = Shader::Stage::VERTEX,
+                                    },
+                                    {
+                                        .descriptorType = DescriptorType::TEXTURE,
+                                        .stage = Shader::Stage::FRAGMENT,
+                                    },
+                                };
+                                return layout;
+                            }(),
+                        };
+                        return program;
+                    }() );
+                pipeline->depthStencilState.depthTestEnable = false;
+                pipeline->rasterizationState = RasterizationState {
+                    .cullMode = CullMode::NONE,
+                };
+                return pipeline;
+            }();
+
+            m_vbo = crimild::alloc< VertexBuffer >( VertexP2TC2C4::getLayout(), MAX_VERTEX_COUNT );
+            m_vbo->getBufferView()->setUsage( BufferView::Usage::DYNAMIC );
+            m_ibo = crimild::alloc< IndexBuffer >( Format::INDEX_16_UINT, MAX_INDEX_COUNT );
+            m_ibo->getBufferView()->setUsage( BufferView::Usage::DYNAMIC );
+
+            m_descriptors = [ & ] {
+                auto descriptorSet = crimild::alloc< DescriptorSet >();
+                descriptorSet->descriptors = {
+                    {
+                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                        .obj = [ & ] {
+                            struct UITransformBuffer {
+                                alignas( 16 ) Vector4f scale;
+                                alignas( 16 ) Vector4f translate;
+                            };
+
+                            return crimild::alloc< CallbackUniformBuffer< UITransformBuffer > >(
+                                [] {
+                                    auto drawData = ImGui::GetDrawData();
+                                    if ( drawData == nullptr ) {
+                                        return UITransformBuffer {
+                                            Vector4f::ONE,
+                                            Vector4f::ZERO,
+                                        };
+                                    }
+
+                                    auto scale = Vector4f(
+                                        -2.0f / drawData->DisplaySize.x,
+                                        2.0f / drawData->DisplaySize.y,
+                                        0,
+                                        0 );
+                                    auto translate = Vector4f(
+                                        -1.0f - drawData->DisplayPos.x * scale.x(),
+                                        -1.0f - drawData->DisplayPos.y * scale.y(),
+                                        0,
+                                        0 );
+                                    return UITransformBuffer {
+                                        .scale = scale,
+                                        .translate = translate,
+                                    };
+                                } );
+                        }(),
+                    },
+                    {
+                        .descriptorType = DescriptorType::TEXTURE,
+                        .obj = [] {
+                            auto texture = crimild::alloc< Texture >();
+                            texture->imageView = crimild::alloc< ImageView >();
+                            texture->imageView->image = Image::ONE;
+                            texture->sampler = crimild::alloc< Sampler >();
+                            return texture;
+                        }(),
+                    },
+                };
+                return descriptorSet;
+            }();
+        }
+
+        virtual void onPreRender( void ) noexcept override
+        {
+            auto &io = ImGui::GetIO();
+
+            auto clock = Simulation::getInstance()->getSimulationClock();
+            io.DeltaTime = Numericf::max( 1.0f / 60.0f, clock.getDeltaTime() );
+
+            if ( !io.Fonts->IsBuilt() ) {
+                CRIMILD_LOG_ERROR( "Font atlas is not built!" );
+                return;
+            }
+
+            auto width = Simulation::getInstance()->getSettings()->get< float >( "video.width", 0 );
+            auto height = Simulation::getInstance()->getSettings()->get< float >( "video.height", 1 );
+            io.DisplaySize = ImVec2( width, height );
+            io.DisplayFramebufferScale = ImVec2( 2.0f, 2.0f );
+
+            ImGui::NewFrame();
+
+            static bool open = true;
+            ImGui::ShowDemoWindow( &open );
+
+            {
+                ImGui::Begin( "Another Window" );
+                ImGui::Text( "Hello from another window" );
+                if ( ImGui::Button( "Close" ) ) {
+                    std::cout << "Should close window" << std::endl;
+                }
+                ImGui::End();
+            }
+
+            ImGui::Render();
+
+            auto commandBuffer = getCommandBuffer();
+            commandBuffer->clear();
+
+            auto drawData = ImGui::GetDrawData();
+            if ( drawData == nullptr ) {
+                return;
+            }
+            auto vertexCount = drawData->TotalVtxCount;
+            auto indexCount = drawData->TotalIdxCount;
+            if ( vertexCount == 0 || indexCount == 0 ) {
+                CRIMILD_LOG_ERROR( "No vertex data " );
+                return;
+            }
+
+            auto positions = m_vbo->get( VertexAttribute::Name::POSITION );
+            auto texCoords = m_vbo->get( VertexAttribute::Name::TEX_COORD );
+            auto colors = m_vbo->get( VertexAttribute::Name::COLOR );
+
+            auto vertexId = 0l;
+            auto indexId = 0l;
+
+            for ( auto i = 0; i < drawData->CmdListsCount; i++ ) {
+                const auto cmdList = drawData->CmdLists[ i ];
+                for ( auto j = 0l; j < cmdList->VtxBuffer.Size; j++ ) {
+                    auto vertex = cmdList->VtxBuffer[ j ];
+                    positions->set( vertexId + j, Vector2f( vertex.pos.x, vertex.pos.y ) );
+                    texCoords->set( vertexId + j, Vector2f( vertex.uv.x, vertex.uv.y ) );
+                    colors->set( vertexId + j, RGBAColorf( ( ( vertex.col >> 0 ) & 0xFF ) / 255.0f, ( ( vertex.col >> 8 ) & 0xFF ) / 255.0f, ( ( vertex.col >> 16 ) & 0xFF ) / 255.0f, ( ( vertex.col >> 24 ) & 0xFF ) / 255.0f ) );
+                }
+                for ( auto j = 0l; j < cmdList->IdxBuffer.Size; j++ ) {
+                    m_ibo->setIndex( indexId + j, cmdList->IdxBuffer[ j ] );
+                }
+                vertexId += cmdList->VtxBuffer.Size;
+                indexId += cmdList->IdxBuffer.Size;
+            }
+
+            commandBuffer->bindGraphicsPipeline( crimild::get_ptr( m_pipeline ) );
+            commandBuffer->bindDescriptorSet( crimild::get_ptr( m_descriptors ) );
+            commandBuffer->bindVertexBuffer( crimild::get_ptr( m_vbo ) );
+            commandBuffer->bindIndexBuffer( crimild::get_ptr( m_ibo ) );
+
+            crimild::Size vertexOffset = 0;
+            crimild::Size indexOffset = 0;
+            for ( int i = 0; i < drawData->CmdListsCount; i++ ) {
+                const auto cmds = drawData->CmdLists[ i ];
+                for ( auto cmdIt = 0l; cmdIt < cmds->CmdBuffer.Size; cmdIt++ ) {
+                    const auto cmd = &cmds->CmdBuffer[ cmdIt ];
+                    if ( cmd->UserCallback != nullptr ) {
+                        if ( cmd->UserCallback == ImDrawCallback_ResetRenderState ) {
+                            // Do nothing?
+                        } else {
+                            cmd->UserCallback( cmds, cmd );
+                        }
+                    } else {
+                        commandBuffer->drawIndexed(
+                            cmd->ElemCount,
+                            cmd->IdxOffset + indexOffset,
+                            cmd->VtxOffset + vertexOffset );
+                    }
+                }
+                indexOffset += cmds->IdxBuffer.Size;
+                vertexOffset += cmds->VtxBuffer.Size;
+            }
+        }
+
+        virtual void onTerminate( void ) noexcept override
+        {
+            System::onTerminate();
+
+            ImGui::DestroyContext();
+        }
+
+    private:
+        void createFonts( void ) noexcept
+        {
+            auto &io = ImGui::GetIO();
+
+            io.Fonts->AddFontDefault();
+
+            unsigned char *pixels;
+            int width, height;
+            io.Fonts->GetTexDataAsRGBA32( &pixels, &width, &height );
+
+            // auto image = crimild::alloc< Image >( width, height, 4, pixels, Image::PixelFormat::RGBA );
+            // m_fontAtlas = crimild::alloc< Texture >( image );
+
+            int idx = 0;
+            io.Fonts->TexID = ( ImTextureID )( intptr_t ) idx;
+        }
+
+    private:
+        SharedPointer< GraphicsPipeline > m_pipeline;
+        SharedPointer< VertexBuffer > m_vbo;
+        SharedPointer< IndexBuffer > m_ibo;
+        SharedPointer< DescriptorSet > m_descriptors;
     };
 
-public:
-    void start( void ) noexcept
+    compositions::Composition renderUI( void ) noexcept
     {
-        IMGUI_CHECKVERSION();
-
-        ImGui::CreateContext();
-        ImGui::StyleColorsDark();
-
-        auto &io = ImGui::GetIO();
-        //        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        //        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-        io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
-        io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
-
-        createFonts();
-        createRenderObjects();
-
-        // init for vulkan
-        m_commandBuffer = crimild::alloc< CommandBuffer >();
-    }
-
-    void update( const Clock &c ) noexcept
-    {
-        auto &io = ImGui::GetIO();
-
-        io.DeltaTime = Numericf::max( 1.0f / 60.0f, c.getDeltaTime() );
-
-        prepareForRender();
-
-        ImGui::NewFrame();
-
-        ImGui::ShowDemoWindow();
-
-        {
-            //            ImGui::Begin( "Another Window" );
-            //            ImGui::Text( "Hello from another window" );
-            //            if ( ImGui::Button( "Close" ) ) {
-            //                std::cout << "Should close window" << std::endl;
-            //            }
-            //            ImGui::End();
-        }
-
-        ImGui::Render();
-
-        render( getCommandBuffer() );
-    }
-
-    void render( CommandBuffer *commandBuffer ) noexcept
-    {
-        commandBuffer->clear();
-        commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-        commandBuffer->beginRenderPass( nullptr, nullptr );
-
-        renderDrawData( commandBuffer );
-
-        commandBuffer->endRenderPass( nullptr );
-        commandBuffer->end();
-    }
-
-    void cleanup( void ) noexcept
-    {
-        ImGui::DestroyContext();
-    }
-
-    CommandBuffer *getCommandBuffer( void ) noexcept { return crimild::get_ptr( m_commandBuffer ); }
-
-private:
-    void createFonts( void ) noexcept
-    {
-        auto &io = ImGui::GetIO();
-
-        io.Fonts->AddFontDefault();
-
-        unsigned char *pixels;
-        int width, height;
-        io.Fonts->GetTexDataAsRGBA32( &pixels, &width, &height );
-
-        auto image = crimild::alloc< Image >( width, height, 4, pixels, Image::PixelFormat::RGBA );
-        m_fontAtlas = crimild::alloc< Texture >( image );
-
-        int idx = 0;
-        io.Fonts->TexID = ( ImTextureID )( intptr_t ) idx;
-    }
-
-    void createRenderObjects( void ) noexcept
-    {
-        m_pipeline = [ & ] {
-            auto pipeline = crimild::alloc< GraphicsPipeline >();
-            pipeline->setProgram(
-                [] {
-                    auto program = crimild::alloc< ShaderProgram >(
-                        Array< SharedPointer< Shader > > {
-                            Shader::withBinary(
-                                Shader::Stage::VERTEX,
-                                {
-                                    .path = "assets/shaders/imgui.vert.spv",
-                                } ),
-                            Shader::withBinary(
-                                Shader::Stage::FRAGMENT,
-                                {
-                                    .path = "assets/shaders/imgui.frag.spv",
-                                } ),
-                        } );
-                    program->vertexLayouts = { VertexP2TC2C4::getLayout() };
-                    program->descriptorSetLayouts = {
-                        [] {
-                            auto layout = crimild::alloc< DescriptorSetLayout >();
-                            layout->bindings = {
-                                {
-                                    .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                    .stage = Shader::Stage::VERTEX,
-                                },
-                                {
-                                    .descriptorType = DescriptorType::TEXTURE,
-                                    .stage = Shader::Stage::FRAGMENT,
-                                },
-                            };
-                            return layout;
-                        }()
-                    };
-                    return program;
-                }() );
-            //pipeline->depthState = DepthState::DISABLED;
-            //pipeline->cullFaceState = CullFaceState::DISABLED;
-            return pipeline;
-        }();
-
-        m_uniformBuffer = [ & ] {
-            return crimild::alloc< UniformBuffer >( VertexTransform {} );
-        }();
-
-        m_descriptorSet = [ & ] {
-            auto descriptorSet = crimild::alloc< DescriptorSet >();
-            descriptorSet->descriptors = {
-                Descriptor {
-                    .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                    .obj = m_uniformBuffer,
-                },
-                Descriptor {
-                    .descriptorType = DescriptorType::TEXTURE,
-                    //                    .texture = crimild::get_ptr( Texture::CHECKERBOARD_32 ),
-                    .obj = m_fontAtlas,
-                }
-            };
-            return descriptorSet;
-        }();
-    }
-
-    void prepareForRender( void ) noexcept
-    {
-        auto &io = ImGui::GetIO();
-        if ( !io.Fonts->IsBuilt() ) {
-            CRIMILD_LOG_ERROR( "Font atlas is not built!" );
-            return;
-        }
-
-        auto width = Simulation::getInstance()->getSettings()->get< float >( "video.width", 0 );
-        auto height = Simulation::getInstance()->getSettings()->get< float >( "video.height", 1 );
-        io.DisplaySize = ImVec2( width, height );
-        io.DisplayFramebufferScale = ImVec2( 2.0f, 2.0f );
-    }
-
-    void setupRenderState( ImDrawData *drawData )
-    {
-        auto scale = Vector2f(
-            -2.0f / drawData->DisplaySize.x,
-            2.0f / drawData->DisplaySize.y );
-        auto translate = Vector2f(
-            -1.0f - drawData->DisplayPos.x * scale.x(),
-            -1.0f - drawData->DisplayPos.y * scale.y() );
-
-        m_uniformBuffer->setValue(
-            VertexTransform {
-                .scale = scale,
-                .translate = translate,
-            } );
-    }
-
-    void renderDrawData( CommandBuffer *commandBuffer ) noexcept
-    {
-        auto drawData = ImGui::GetDrawData();
-
-        setupRenderState( drawData );
-
-        auto vertexCount = drawData->TotalVtxCount;
-        auto indexCount = drawData->TotalIdxCount;
-        if ( vertexCount == 0 || indexCount == 0 ) {
-            return;
-        }
-
-        auto vbo = crimild::alloc< VertexP2TC2C4Buffer >( vertexCount );
-        auto ibo = crimild::alloc< IndexUInt16Buffer >( indexCount );
-        auto vertexDst = vbo->getData();
-        auto indexDst = ibo->getData();
-        for ( auto i = 0; i < drawData->CmdListsCount; i++ ) {
-            const auto cmdList = drawData->CmdLists[ i ];
-#if 1
-            for ( auto j = 0l; j < cmdList->VtxBuffer.Size; j++ ) {
-                auto vertex = cmdList->VtxBuffer[ j ];
-                vertexDst[ j ] = {
-                    .position = Vector2f( vertex.pos.x, vertex.pos.y ),
-                    .texCoord = Vector2f( vertex.uv.x, vertex.uv.y ),
-                    .color = RGBAColorf(
-                        ( ( vertex.col >> 0 ) & 0xFF ) / 255.0f,
-                        ( ( vertex.col >> 8 ) & 0xFF ) / 255.0f,
-                        ( ( vertex.col >> 16 ) & 0xFF ) / 255.0f,
-                        ( ( vertex.col >> 24 ) & 0xFF ) / 255.0f ),
-                };
-            }
-            for ( auto j = 0l; j < cmdList->IdxBuffer.Size; j++ ) {
-                indexDst[ j ] = cmdList->IdxBuffer[ j ];
-            }
-#else
-            // Can't use it yet
-            memcpy( vertexDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof( ImDrawVert ) );
-            memcpy( indexDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof( ImDrawIdx ) );
-#endif
-            vertexDst += cmdList->VtxBuffer.Size;
-            indexDst += cmdList->IdxBuffer.Size;
-        }
-
-        commandBuffer->bindGraphicsPipeline( crimild::get_ptr( m_pipeline ) );
-        commandBuffer->bindVertexBuffer( crimild::get_ptr( vbo ) );
-        commandBuffer->bindIndexBuffer( crimild::get_ptr( ibo ) );
-        commandBuffer->bindDescriptorSet( crimild::get_ptr( m_descriptorSet ) );
-
-        crimild::Size vertexOffset = 0;
-        crimild::Size indexOffset = 0;
-        for ( int i = 0; i < drawData->CmdListsCount; i++ ) {
-            const auto cmds = drawData->CmdLists[ i ];
-            for ( auto cmdIt = 0l; cmdIt < cmds->CmdBuffer.Size; cmdIt++ ) {
-                const auto cmd = &cmds->CmdBuffer[ cmdIt ];
-                if ( cmd->UserCallback != nullptr ) {
-                    if ( cmd->UserCallback == ImDrawCallback_ResetRenderState ) {
-                        // Do nothing?
-                    } else {
-                        cmd->UserCallback( cmds, cmd );
-                    }
-                } else {
-                    commandBuffer->drawIndexed(
-                        cmd->ElemCount,
-                        cmd->IdxOffset + indexOffset,
-                        cmd->VtxOffset + vertexOffset );
-                }
-            }
-            indexOffset += cmds->IdxBuffer.Size;
-            vertexOffset += cmds->VtxBuffer.Size;
-        }
-    }
-
-private:
-    SharedPointer< CommandBuffer > m_commandBuffer;
-    SharedPointer< UniformBuffer > m_uniformBuffer;
-    SharedPointer< Texture > m_fontAtlas;
-    SharedPointer< GraphicsPipeline > m_pipeline;
-    SharedPointer< DescriptorSet > m_descriptorSet;
-};
-
-class ExampleVulkanSystem : public GLFWVulkanSystem {
-public:
-    crimild::Bool start( void ) override
-    {
-        if ( !GLFWVulkanSystem::start() ) {
-            return false;
-        }
-
-        m_imguiController.start();
-
-        auto program = ShaderProgramLibrary::getInstance()->get( constants::SHADER_PROGRAM_UNLIT_P2C3_COLOR );
-
-        auto pipeline = [ & ] {
-            auto pipeline = crimild::alloc< Pipeline >();
-            pipeline->program = crimild::retain( program );
-            return pipeline;
-        }();
-
-        auto vbo = crimild::alloc< VertexP2C3Buffer >(
-            containers::Array< VertexP2C3 > {
-                {
-                    .position = Vector2f( -0.5f, 0.5f ),
-                    .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
-                },
-                {
-                    .position = Vector2f( -0.5f, -0.5f ),
-                    .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
-                },
-                {
-                    .position = Vector2f( 0.5f, -0.5f ),
-                    .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
-                },
-                {
-                    .position = Vector2f( 0.5f, 0.5f ),
-                    .color = RGBColorf( 1.0f, 1.0f, 1.0f ),
-                },
-            } );
-
-        auto ibo = crimild::alloc< IndexUInt32Buffer >(
-            containers::Array< crimild::UInt32 > {
-                0,
-                1,
-                2,
-            } );
-
-        auto texture = Texture::CHECKERBOARD;
-
-        auto triBuilder = [ & ]( const Vector3f &position ) {
-            auto node = crimild::alloc< Node >();
-
-            auto renderable = node->attachComponent< RenderStateComponent >();
-            renderable->pipeline = pipeline;
-            renderable->vbo = vbo;
-            renderable->ibo = ibo;
-            renderable->uniforms = {
-                [ & ] {
-                    auto ubo = crimild::alloc< ModelViewProjectionUniformBuffer >();
-                    ubo->node = crimild::get_ptr( node );
-                    return ubo;
-                }(),
-            };
-            renderable->textures = { texture };
-
-            node->local().setTranslate( position );
-
-            auto startAngle = Random::generate< crimild::Real32 >( 0, Numericf::TWO_PI );
-            auto speed = Random::generate< crimild::Real32 >( -1.0f, 1.0f );
-
-            node->attachComponent< LambdaComponent >(
-                [ startAngle, speed ]( Node *node, const Clock &clock ) {
-                    auto time = clock.getAccumTime();
-                    node->local().rotate().fromAxisAngle( Vector3f::UNIT_Z, startAngle + ( speed * time * -90.0f * Numericf::DEG_TO_RAD ) );
-                } );
-
-            return node;
+        compositions::Composition cmp;
+        auto renderPass = cmp.create< RenderPass >();
+        renderPass->attachments = {
+            [ & ] {
+                auto att = cmp.createAttachment( "shader" );
+                att->usage = Attachment::Usage::COLOR_ATTACHMENT;
+                att->format = Format::R8G8B8A8_UNORM;
+                att->imageView = crimild::alloc< ImageView >();
+                att->imageView->image = crimild::alloc< Image >();
+                return crimild::retain( att );
+            }(),
         };
 
-        m_scene = [ & ] {
-            auto scene = crimild::alloc< Group >();
-            for ( auto x = -5.0f; x <= 5.0f; x += 1.0f ) {
-                for ( auto z = -5.0f; z <= 5.0f; z += 1.0f ) {
-                    scene->attachNode( triBuilder( Vector3f( x, 0.0f, z + ( 0.1f * x / 10.0f ) ) ) );
-                }
-            }
-            scene->attachNode( [] {
-                auto settings = Simulation::getInstance()->getSettings();
-                auto width = settings->get< crimild::Real32 >( "video.width", 0 );
-                auto height = settings->get< crimild::Real32 >( "video.height", 1 );
-                auto camera = crimild::alloc< Camera >( 45.0f, width / height, 0.1f, 100.0f );
-                camera->local().setTranslate( 5.0f, 10.0f, 10.0f );
-                camera->local().lookAt( Vector3f::ZERO );
-                Camera::setMainCamera( camera );
-                return camera;
-            }() );
-            return scene;
-        }();
+        renderPass->commands = ImGUISystem::getCommandBuffer();
 
-        m_commandBuffer = [ this ] {
-            auto commandBuffer = crimild::alloc< CommandBuffer >();
+        cmp.setOutput( crimild::get_ptr( renderPass->attachments[ 0 ] ) );
 
-            commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-            commandBuffer->beginRenderPass( nullptr );
-
-            m_scene->perform( Apply( [ commandBuffer ]( Node *node ) {
-                if ( auto renderState = node->getComponent< RenderStateComponent >() ) {
-                    renderState->commandRecorder( crimild::get_ptr( commandBuffer ) );
-                }
-            } ) );
-
-            commandBuffer->endRenderPass( nullptr );
-            commandBuffer->end();
-
-            return commandBuffer;
-        }();
-
-        setCommandBuffers(
-            {
-                //            	m_commandBuffer,
-                crimild::retain( m_imguiController.getCommandBuffer() ),
-            } );
-
-        return true;
+        return cmp;
     }
+}
 
-    void update( void ) override
+using namespace crimild;
+
+template< typename SimulationType, typename SystemType >
+class WithSystem : public SimulationType {
+public:
+    virtual ~WithSystem( void ) noexcept = default;
+
+    virtual void onAwake( void ) noexcept override
     {
-        auto clock = Simulation::getInstance()->getSimulationClock();
-        m_scene->perform( UpdateComponents( clock ) );
-        m_scene->perform( UpdateWorldState() );
-
-        m_imguiController.update( clock );
-
-        GLFWVulkanSystem::update();
+        SimulationType::onAwake();
+        auto s = crimild::alloc< SystemType >();
+        SimulationType::attachSystem( s );
     }
-
-    void stop( void ) override
-    {
-        m_imguiController.cleanup();
-
-        if ( auto renderDevice = getRenderDevice() ) {
-            renderDevice->waitIdle();
-        }
-
-        m_scene = nullptr;
-
-        GLFWVulkanSystem::stop();
-    }
-
-private:
-    SharedPointer< Node > m_scene;
-    SharedPointer< CommandBuffer > m_commandBuffer;
-    ImGUIController m_imguiController;
 };
 
-int main( int argc, char **argv )
-{
-    crimild::init();
-    crimild::vulkan::init();
+class Example : public WithSystem< Simulation, ImGUISystem > {
+public:
+    void onStarted( void ) noexcept override
+    {
+        setScene(
+            [ & ] {
+                auto scene = crimild::alloc< Group >();
 
-    Log::setLevel( Log::Level::LOG_LEVEL_ALL );
+                scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.1f, 0.05f, 0.5f ) ) );
 
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< GLSimulation >( "ImGUI", crimild::alloc< Settings >( argc, argv ) );
-    sim->addSystem( crimild::alloc< ExampleVulkanSystem >() );
-    return sim->run();
-}
+                scene->attachNode(
+                    [] {
+                        auto geometry = crimild::alloc< Geometry >();
+                        geometry->attachPrimitive(
+                            crimild::alloc< QuadPrimitive >(
+                                QuadPrimitive::Params {
+                                    .layout = VertexP3N3TC2::getLayout(),
+                                } ) );
+                        geometry->local().rotate().fromAxisAngle( Vector3f::UNIT_X, -Numericf::HALF_PI );
+                        geometry->local().setScale( 10.0f );
+                        geometry->attachComponent< MaterialComponent >(
+                            [] {
+                                auto material = crimild::alloc< UnlitMaterial >();
+                                material->setColor( RGBAColorf( 1.0f, 0.6f, 0.15f, 1.0f ) );
+                                return material;
+                            }() );
+                        return geometry;
+                    }() );
+
+                scene->attachNode(
+                    [] {
+                        auto geometry = crimild::alloc< Geometry >();
+                        geometry->attachPrimitive(
+                            crimild::alloc< BoxPrimitive >(
+                                BoxPrimitive::Params {
+                                    .layout = VertexP3N3TC2::getLayout(),
+                                } ) );
+                        geometry->local().setTranslate( 0.0f, 1.0f, 0.0f );
+                        geometry->attachComponent< MaterialComponent >(
+                            [] {
+                                auto material = crimild::alloc< UnlitMaterial >();
+                                material->setColor( RGBAColorf( 0.5f, 1.0f, 0.0f, 1.0f ) );
+                                return material;
+                            }() );
+                        return geometry;
+                    }() );
+
+                scene->attachNode( [] {
+                    auto camera = crimild::alloc< Camera >();
+                    camera->local().setTranslate( 3.0f, 4.0f, 10.0f );
+                    camera->local().lookAt( 0.5f * Vector3f::UNIT_Y );
+                    camera->attachComponent< FreeLookCameraComponent >();
+                    return camera;
+                }() );
+
+                scene->perform( StartComponents() );
+                return scene;
+            }() );
+
+        setComposition(
+            [ scene = getScene() ] {
+                using namespace crimild::compositions;
+                //                 return present( debug( mix( renderScene( scene ), renderUI() ) ) );
+                return present( renderUI() );
+            }() );
+    }
+};
+
+CRIMILD_CREATE_SIMULATION( Example, "ImGUI: Basics" );
