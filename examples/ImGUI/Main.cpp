@@ -62,7 +62,10 @@ namespace crimild {
             io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
             io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
 
-            createFonts();
+            auto width = Simulation::getInstance()->getSettings()->get< float >( "video.width", 0 );
+            auto height = Simulation::getInstance()->getSettings()->get< float >( "video.height", 1 );
+            io.DisplaySize = ImVec2( width, height );
+            io.DisplayFramebufferScale = ImVec2( 2.0f, 2.0f );
 
             m_pipeline = [ & ] {
                 auto pipeline = crimild::alloc< GraphicsPipeline >();
@@ -88,7 +91,7 @@ namespace crimild {
 
                                         void main()
                                         {
-                                            gl_Position = vec4( aPosition * ubo.scale.xy * ubo.translate.xy, 0.0, 1.0 );
+                                            gl_Position = vec4( aPosition * ubo.scale.xy + ubo.translate.xy, 0.0, 1.0 );
                                             vColor = aColor;
                                             vTexCoord = aTexCoord;
                                         }
@@ -105,7 +108,8 @@ namespace crimild {
 
                                         void main()
                                         {
-                                            FragColor = vColor * texture( uTexture, vTexCoord );
+                                        	vec2 uv = vTexCoord;
+                                            FragColor = vColor * texture( uTexture, uv );
                                         }
                                     )" ),
                             } );
@@ -131,6 +135,15 @@ namespace crimild {
                 pipeline->depthStencilState.depthTestEnable = false;
                 pipeline->rasterizationState = RasterizationState {
                     .cullMode = CullMode::NONE,
+                };
+                pipeline->colorBlendState = ColorBlendState {
+                    .enable = true,
+                    .srcColorBlendFactor = BlendFactor::SRC_ALPHA,
+                    .dstColorBlendFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+                    .colorBlendOp = BlendOp::ADD,
+                    .srcAlphaBlendFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+                    .dstAlphaBlendFactor = BlendFactor::ZERO,
+                    .alphaBlendOp = BlendOp::ADD,
                 };
                 return pipeline;
             }();
@@ -162,13 +175,13 @@ namespace crimild {
                                     }
 
                                     auto scale = Vector4f(
-                                        -2.0f / drawData->DisplaySize.x,
-                                        2.0f / drawData->DisplaySize.y,
+                                        2.0f / drawData->DisplaySize.x,
+                                        -2.0f / drawData->DisplaySize.y,
                                         0,
                                         0 );
                                     auto translate = Vector4f(
-                                        -1.0f - drawData->DisplayPos.x * scale.x(),
-                                        -1.0f - drawData->DisplayPos.y * scale.y(),
+                                        -0.5, //-1.0f - drawData->DisplayPos.x * scale.x(),
+                                        0.5,  //-1.0f - drawData->DisplayPos.y * scale.y(),
                                         0,
                                         0 );
                                     return UITransformBuffer {
@@ -180,13 +193,7 @@ namespace crimild {
                     },
                     {
                         .descriptorType = DescriptorType::TEXTURE,
-                        .obj = [] {
-                            auto texture = crimild::alloc< Texture >();
-                            texture->imageView = crimild::alloc< ImageView >();
-                            texture->imageView->image = Image::ONE;
-                            texture->sampler = crimild::alloc< Sampler >();
-                            return texture;
-                        }(),
+                        .obj = createFontAtlas(),
                     },
                 };
                 return descriptorSet;
@@ -215,14 +222,16 @@ namespace crimild {
             static bool open = true;
             ImGui::ShowDemoWindow( &open );
 
-            {
-                ImGui::Begin( "Another Window" );
-                ImGui::Text( "Hello from another window" );
-                if ( ImGui::Button( "Close" ) ) {
-                    std::cout << "Should close window" << std::endl;
-                }
-                ImGui::End();
-            }
+            ImGui::ShowStyleEditor();
+
+            //            {
+            //                ImGui::Begin( "Another Window" );
+            //                ImGui::Text( "Hello from another window" );
+            //                if ( ImGui::Button( "Close" ) ) {
+            //                    std::cout << "Should close window" << std::endl;
+            //                }
+            //                ImGui::End();
+            //            }
 
             ImGui::Render();
 
@@ -299,7 +308,7 @@ namespace crimild {
         }
 
     private:
-        void createFonts( void ) noexcept
+        SharedPointer< Texture > createFontAtlas( void ) noexcept
         {
             auto &io = ImGui::GetIO();
 
@@ -309,11 +318,29 @@ namespace crimild {
             int width, height;
             io.Fonts->GetTexDataAsRGBA32( &pixels, &width, &height );
 
-            // auto image = crimild::alloc< Image >( width, height, 4, pixels, Image::PixelFormat::RGBA );
-            // m_fontAtlas = crimild::alloc< Texture >( image );
+            auto texture = crimild::alloc< Texture >();
+            texture->imageView = crimild::alloc< ImageView >();
+            texture->imageView->image = [ & ] {
+                auto image = crimild::alloc< Image >();
+                image->extent = {
+                    .width = Real32( width ),
+                    .height = Real32( height ),
+                };
+                image->format = Format::R8G8B8A8_UNORM;
+                image->data.resize( width * height * 4 );
+                memset( image->data.getData(), 0, image->data.size() );
+                memcpy( image->data.getData(), pixels, image->data.size() );
+                return image;
+            }();
 
-            int idx = 0;
+            texture->sampler = crimild::alloc< Sampler >();
+            texture->sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_EDGE );
+            texture->sampler->setBorderColor( Sampler::BorderColor::FLOAT_OPAQUE_WHITE );
+
+            int idx = 1;
             io.Fonts->TexID = ( ImTextureID )( intptr_t ) idx;
+
+            return texture;
         }
 
     private:
