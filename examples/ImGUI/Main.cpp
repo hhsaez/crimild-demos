@@ -62,10 +62,45 @@ namespace crimild {
             io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
             io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
 
-            auto width = Simulation::getInstance()->getSettings()->get< float >( "video.width", 0 );
-            auto height = Simulation::getInstance()->getSettings()->get< float >( "video.height", 1 );
-            io.DisplaySize = ImVec2( width, height );
-            io.DisplayFramebufferScale = ImVec2( 2.0f, 2.0f );
+            updateDisplaySize();
+
+            registerMessageHandler< messaging::KeyPressed >( [ this ]( messaging::KeyPressed const &msg ) {
+                // int key = msg.key;
+                // self->_keys[ key ] = true;
+            } );
+
+            registerMessageHandler< messaging::KeyReleased >( [ this ]( messaging::KeyReleased const &msg ) {
+                // int key = msg.key;
+                // self->_keys[ key ] = false;
+            } );
+
+            registerMessageHandler< messaging::MouseButtonDown >( [ this ]( messaging::MouseButtonDown const &msg ) {
+                int button = msg.button;
+                auto &io = ImGui::GetIO();
+                io.MouseDown[ button ] = true;
+            } );
+
+            registerMessageHandler< messaging::MouseButtonUp >( [ this ]( messaging::MouseButtonUp const &msg ) {
+                int button = msg.button;
+                auto &io = ImGui::GetIO();
+                io.MouseDown[ button ] = false;
+            } );
+
+            registerMessageHandler< messaging::MouseMotion >( [ this ]( messaging::MouseMotion const &msg ) {
+                auto &io = ImGui::GetIO();
+                io.MousePos = ImVec2( msg.x, msg.y );
+                // Vector2f pos( msg.x, msg.y );
+                // self->_mouseDelta = pos - self->_mousePos;
+                // self->_mousePos = pos;
+
+                // Vector2f npos( msg.nx, msg.ny );
+                // self->_normalizedMouseDelta = npos - self->_normalizedMousePos;
+                // self->_normalizedMousePos = npos;
+            } );
+
+            registerMessageHandler< messaging::MouseScroll >( [ this ]( messaging::MouseScroll const &msg ) {
+                // _mouseScrollDelta = Vector2f( msg.dx, msg.dy );
+            } );
 
             m_pipeline = [ & ] {
                 auto pipeline = crimild::alloc< GraphicsPipeline >();
@@ -133,9 +168,8 @@ namespace crimild {
                         return program;
                     }() );
                 pipeline->depthStencilState.depthTestEnable = false;
-                pipeline->rasterizationState = RasterizationState {
-                    .cullMode = CullMode::NONE,
-                };
+                pipeline->depthStencilState.stencilTestEnable = false;
+                pipeline->rasterizationState.cullMode = CullMode::NONE;
                 pipeline->colorBlendState = ColorBlendState {
                     .enable = true,
                     .srcColorBlendFactor = BlendFactor::SRC_ALPHA,
@@ -174,14 +208,15 @@ namespace crimild {
                                         };
                                     }
 
+                                    // TODO: this scale value seems wrongs. It probably works only on Retina displays
                                     auto scale = Vector4f(
-                                        2.0f / drawData->DisplaySize.x,
-                                        -2.0f / drawData->DisplaySize.y,
+                                        4.0f / drawData->DisplaySize.x,
+                                        -4.0f / drawData->DisplaySize.y,
                                         0,
                                         0 );
                                     auto translate = Vector4f(
-                                        -0.5, //-1.0f - drawData->DisplayPos.x * scale.x(),
-                                        0.5,  //-1.0f - drawData->DisplayPos.y * scale.y(),
+                                        -1.0,
+                                        1.0,
                                         0,
                                         0 );
                                     return UITransformBuffer {
@@ -212,26 +247,21 @@ namespace crimild {
                 return;
             }
 
-            auto width = Simulation::getInstance()->getSettings()->get< float >( "video.width", 0 );
-            auto height = Simulation::getInstance()->getSettings()->get< float >( "video.height", 1 );
-            io.DisplaySize = ImVec2( width, height );
-            io.DisplayFramebufferScale = ImVec2( 2.0f, 2.0f );
+            updateDisplaySize();
 
             ImGui::NewFrame();
 
             static bool open = true;
             ImGui::ShowDemoWindow( &open );
 
-            ImGui::ShowStyleEditor();
+            // ImGui::ShowStyleEditor();
 
-            //            {
-            //                ImGui::Begin( "Another Window" );
-            //                ImGui::Text( "Hello from another window" );
-            //                if ( ImGui::Button( "Close" ) ) {
-            //                    std::cout << "Should close window" << std::endl;
-            //                }
-            //                ImGui::End();
-            //            }
+            {
+                ImGui::Begin( "Stats" );
+                ImGui::Text( "Frame Time: %.2f ms", 1000.0f * Simulation::getInstance()->getSimulationClock().getDeltaTime() );
+                ImGui::Text( "FPS: %d", 30 );
+                ImGui::End();
+            }
 
             ImGui::Render();
 
@@ -341,6 +371,16 @@ namespace crimild {
             io.Fonts->TexID = ( ImTextureID )( intptr_t ) idx;
 
             return texture;
+        }
+
+        void updateDisplaySize( void ) noexcept
+        {
+            auto &io = ImGui::GetIO();
+            auto width = Simulation::getInstance()->getSettings()->get< float >( "video.width", 0 );
+            auto height = Simulation::getInstance()->getSettings()->get< float >( "video.height", 1 );
+            auto scale = 1.0f;
+            io.DisplaySize = ImVec2( scale * width, scale * height );
+            io.DisplayFramebufferScale = ImVec2( 1.0f, 1.0f );
         }
 
     private:
