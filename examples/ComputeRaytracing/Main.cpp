@@ -271,20 +271,21 @@ namespace crimild {
             }();
 
             auto computePass = cmp.create< ComputePass >();
-            computePass->commands = [ & ] {
-                auto commands = crimild::alloc< CommandBuffer >();
-                commands->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-                commands->bindComputePipeline( pipeline );
-                commands->bindDescriptorSet( descriptors );
-                commands->dispatch(
-                    DispatchWorkgroup {
-                        .x = width / DispatchWorkgroup::DEFAULT_WORGROUP_SIZE,
-                        .y = height / DispatchWorkgroup::DEFAULT_WORGROUP_SIZE,
-                        .z = 1 } );
-                commands->end();
-                return commands;
-            }();
-            // computePass->setConditional( true );
+            auto commands = cmp.create< CommandBuffer >();
+            commands->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
+            commands->bindComputePipeline( pipeline );
+            commands->bindDescriptorSet( descriptors );
+            commands->dispatch(
+                DispatchWorkgroup {
+                    .x = width / DispatchWorkgroup::DEFAULT_WORGROUP_SIZE,
+                    .y = height / DispatchWorkgroup::DEFAULT_WORGROUP_SIZE,
+                    .z = 1 } );
+            commands->end();
+            computePass->setCommandRecorder(
+            	[ commands ] {
+                    return commands;
+                }
+            );
 
             cmp.setOutput( nullptr );
             cmp.setOutputTexture( texture );
