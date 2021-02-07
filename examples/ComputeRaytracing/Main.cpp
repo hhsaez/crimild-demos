@@ -282,7 +282,7 @@ namespace crimild {
                     .z = 1 } );
             commands->end();
             computePass->setCommandRecorder(
-            	[ commands ] {
+            	[ commands ]( Size ) {
                     return commands;
                 }
             );
