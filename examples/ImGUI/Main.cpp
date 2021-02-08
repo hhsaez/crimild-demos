@@ -36,8 +36,14 @@
 
 namespace crimild {
 
-    class ImGUISystem : public System {
+    class ImGUISystem
+        : public System,
+          public DynamicSingleton< ImGUISystem > {
         CRIMILD_IMPLEMENT_RTTI( ImGUISystem )
+
+    public:
+        using FrameCallback = std::function< void( void ) >;
+
     public:
         virtual void start( void ) noexcept override
         {
@@ -113,16 +119,8 @@ namespace crimild {
 
             ImGui::NewFrame();
 
-            static bool open = true;
-            ImGui::ShowDemoWindow( &open );
-
-            ImGui::ShowStyleEditor();
-
-            {
-                ImGui::Begin( "Stats" );
-                ImGui::Text( "Frame Time: %.2f ms", 1000.0f * Simulation::getInstance()->getSimulationClock().getDeltaTime() );
-                ImGui::Text( "FPS: %d", 30 );
-                ImGui::End();
+            if ( m_frameCallback != nullptr ) {
+                m_frameCallback();
             }
 
             ImGui::Render();
@@ -134,6 +132,9 @@ namespace crimild {
 
             ImGui::DestroyContext();
         }
+
+        inline void setFrameCallback( FrameCallback frameCallback ) noexcept { m_frameCallback = frameCallback; }
+        inline FrameCallback getFrameCallback( void ) noexcept { return m_frameCallback; }
 
     private:
         SharedPointer< Texture > createFontAtlas( void ) noexcept
@@ -182,41 +183,40 @@ namespace crimild {
         }
 
     private:
-        SharedPointer< GraphicsPipeline > m_pipeline;
-        SharedPointer< VertexBuffer > m_vbo;
-        SharedPointer< IndexBuffer > m_ibo;
-        SharedPointer< DescriptorSet > m_descriptors;
+        FrameCallback m_frameCallback;
     };
 
-    compositions::Composition renderUI( void ) noexcept
-    {
-        compositions::Composition cmp;
-        auto renderPass = cmp.create< RenderPass >();
-        renderPass->setName( "imgui_render_pass" );
+    namespace compositions {
 
-        renderPass->attachments = {
-            [ & ] {
-                auto att = cmp.createAttachment( "imgui_color_attachment" );
-                att->usage = Attachment::Usage::COLOR_ATTACHMENT;
-                att->format = Format::R8G8B8A8_UNORM;
-                att->imageView = crimild::alloc< ImageView >();
-                att->imageView->image = crimild::alloc< Image >();
-                att->imageView->image->format = Format::R8G8B8A8_UNORM;
-                att->imageView->image->setName( "imgui_color_attachment" );
-                return crimild::retain( att );
-            }(),
-        };
+        Composition renderUI( void ) noexcept
+        {
+            Composition cmp;
+            auto renderPass = cmp.create< RenderPass >();
+            renderPass->setName( "imgui_render_pass" );
 
-        auto pipeline = [ & ] {
-            auto pipeline = cmp.create< GraphicsPipeline >();
-            pipeline->setProgram(
+            renderPass->attachments = {
                 [ & ] {
-                    auto program = crimild::alloc< ShaderProgram >();
-                    program->setShaders(
-                        Array< SharedPointer< Shader > > {
-                            crimild::alloc< Shader >(
-                                Shader::Stage::VERTEX,
-                                R"(
+                    auto att = cmp.createAttachment( "imgui_color_attachment" );
+                    att->usage = Attachment::Usage::COLOR_ATTACHMENT;
+                    att->format = Format::R8G8B8A8_UNORM;
+                    att->imageView = crimild::alloc< ImageView >();
+                    att->imageView->image = crimild::alloc< Image >();
+                    att->imageView->image->format = Format::R8G8B8A8_UNORM;
+                    att->imageView->image->setName( "imgui_color_attachment" );
+                    return crimild::retain( att );
+                }(),
+            };
+
+            auto pipeline = [ & ] {
+                auto pipeline = cmp.create< GraphicsPipeline >();
+                pipeline->setProgram(
+                    [ & ] {
+                        auto program = crimild::alloc< ShaderProgram >();
+                        program->setShaders(
+                            Array< SharedPointer< Shader > > {
+                                crimild::alloc< Shader >(
+                                    Shader::Stage::VERTEX,
+                                    R"(
                                         layout ( location = 0 ) in vec2 aPosition;
                                         layout ( location = 1 ) in vec2 aTexCoord;
                                         layout ( location = 2 ) in vec4 aColor;
@@ -236,9 +236,9 @@ namespace crimild {
                                             vTexCoord = aTexCoord;
                                         }
                                     )" ),
-                            crimild::alloc< Shader >(
-                                Shader::Stage::FRAGMENT,
-                                R"(
+                                crimild::alloc< Shader >(
+                                    Shader::Stage::FRAGMENT,
+                                    R"(
                                         layout ( location = 0 ) in vec4 vColor;
                                         layout ( location = 1 ) in vec2 vTexCoord;
 
@@ -252,223 +252,231 @@ namespace crimild {
                                             FragColor = vColor * texture( uTexture, uv );
                                         }
                                     )" ),
-                        } );
-                    program->vertexLayouts = { VertexP2TC2C4::getLayout() };
-                    program->descriptorSetLayouts = {
-                        [] {
-                            auto layout = crimild::alloc< DescriptorSetLayout >();
-                            layout->bindings = {
-                                {
-                                    .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                    .stage = Shader::Stage::VERTEX,
-                                },
-                                {
-                                    .descriptorType = DescriptorType::TEXTURE,
-                                    .stage = Shader::Stage::FRAGMENT,
-                                },
-                            };
-                            return layout;
-                        }(),
-                    };
-                    return program;
-                }() );
-            pipeline->depthStencilState.depthTestEnable = false;
-            pipeline->depthStencilState.stencilTestEnable = false;
-            pipeline->rasterizationState.cullMode = CullMode::NONE;
-            pipeline->colorBlendState = ColorBlendState {
-                .enable = true,
-                .srcColorBlendFactor = BlendFactor::SRC_ALPHA,
-                .dstColorBlendFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
-                .colorBlendOp = BlendOp::ADD,
-                .srcAlphaBlendFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
-                .dstAlphaBlendFactor = BlendFactor::ZERO,
-                .alphaBlendOp = BlendOp::ADD,
-            };
-            return pipeline;
-        }();
-
-        static auto vbo = crimild::alloc< VertexBuffer >( VertexP2TC2C4::getLayout(), MAX_VERTEX_COUNT );
-        vbo->getBufferView()->setUsage( BufferView::Usage::DYNAMIC );
-        static auto ibo = crimild::alloc< IndexBuffer >( Format::INDEX_16_UINT, MAX_INDEX_COUNT );
-        ibo->getBufferView()->setUsage( BufferView::Usage::DYNAMIC );
-
-        auto createFontAtlas = []( void ) -> SharedPointer< Texture > {
-            auto &io = ImGui::GetIO();
-
-            io.Fonts->AddFontDefault();
-
-            unsigned char *pixels;
-            int width, height;
-            io.Fonts->GetTexDataAsRGBA32( &pixels, &width, &height );
-
-            auto texture = crimild::alloc< Texture >();
-            texture->imageView = crimild::alloc< ImageView >();
-            texture->imageView->image = [ & ] {
-                auto image = crimild::alloc< Image >();
-                image->setName( "ImGUI_font_atlas" );
-                image->extent = {
-                    .width = Real32( width ),
-                    .height = Real32( height ),
+                            } );
+                        program->vertexLayouts = { VertexP2TC2C4::getLayout() };
+                        program->descriptorSetLayouts = {
+                            [] {
+                                auto layout = crimild::alloc< DescriptorSetLayout >();
+                                layout->bindings = {
+                                    {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .stage = Shader::Stage::VERTEX,
+                                    },
+                                    {
+                                        .descriptorType = DescriptorType::TEXTURE,
+                                        .stage = Shader::Stage::FRAGMENT,
+                                    },
+                                };
+                                return layout;
+                            }(),
+                        };
+                        return program;
+                    }() );
+                pipeline->depthStencilState.depthTestEnable = false;
+                pipeline->depthStencilState.stencilTestEnable = false;
+                pipeline->rasterizationState.cullMode = CullMode::NONE;
+                pipeline->colorBlendState = ColorBlendState {
+                    .enable = true,
+                    .srcColorBlendFactor = BlendFactor::SRC_ALPHA,
+                    .dstColorBlendFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+                    .colorBlendOp = BlendOp::ADD,
+                    .srcAlphaBlendFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+                    .dstAlphaBlendFactor = BlendFactor::ZERO,
+                    .alphaBlendOp = BlendOp::ADD,
                 };
-                image->format = Format::R8G8B8A8_UNORM;
-                image->data.resize( width * height * 4 );
-                memset( image->data.getData(), 0, image->data.size() );
-                memcpy( image->data.getData(), pixels, image->data.size() );
-                return image;
+                return pipeline;
             }();
 
-            texture->sampler = crimild::alloc< Sampler >();
-            texture->sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_EDGE );
-            texture->sampler->setBorderColor( Sampler::BorderColor::FLOAT_OPAQUE_WHITE );
+            static auto vbo = crimild::alloc< VertexBuffer >( VertexP2TC2C4::getLayout(), MAX_VERTEX_COUNT );
+            vbo->getBufferView()->setUsage( BufferView::Usage::DYNAMIC );
+            static auto ibo = crimild::alloc< IndexBuffer >( Format::INDEX_16_UINT, MAX_INDEX_COUNT );
+            ibo->getBufferView()->setUsage( BufferView::Usage::DYNAMIC );
 
-            int idx = 1;
-            io.Fonts->TexID = ( ImTextureID )( intptr_t ) idx;
+            auto createFontAtlas = []( void ) -> SharedPointer< Texture > {
+                auto &io = ImGui::GetIO();
 
-            return texture;
-        };
+                io.Fonts->AddFontDefault();
 
-        auto descriptors = [ & ] {
-            auto descriptorSet = cmp.create< DescriptorSet >();
-            descriptorSet->descriptors = {
-                {
-                    .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                    .obj = [ & ] {
-                        struct UITransformBuffer {
-                            alignas( 16 ) Vector4f scale;
-                            alignas( 16 ) Vector4f translate;
-                        };
+                unsigned char *pixels;
+                int width, height;
+                io.Fonts->GetTexDataAsRGBA32( &pixels, &width, &height );
 
-                        return crimild::alloc< CallbackUniformBuffer< UITransformBuffer > >(
-                            [] {
-                                auto drawData = ImGui::GetDrawData();
-                                if ( drawData == nullptr ) {
-                                    return UITransformBuffer {
-                                        Vector4f::ONE,
-                                        Vector4f::ZERO,
-                                    };
-                                }
+                auto texture = crimild::alloc< Texture >();
+                texture->imageView = crimild::alloc< ImageView >();
+                texture->imageView->image = [ & ] {
+                    auto image = crimild::alloc< Image >();
+                    image->setName( "ImGUI_font_atlas" );
+                    image->extent = {
+                        .width = Real32( width ),
+                        .height = Real32( height ),
+                    };
+                    image->format = Format::R8G8B8A8_UNORM;
+                    image->data.resize( width * height * 4 );
+                    memset( image->data.getData(), 0, image->data.size() );
+                    memcpy( image->data.getData(), pixels, image->data.size() );
+                    return image;
+                }();
 
-                                // TODO: this scale value seems wrongs. It probably works only on Retina displays
-                                auto scale = Vector4f(
-                                    4.0f / drawData->DisplaySize.x,
-                                    -4.0f / drawData->DisplaySize.y,
-                                    0,
-                                    0 );
-                                auto translate = Vector4f(
-                                    -1.0,
-                                    1.0,
-                                    0,
-                                    0 );
-                                return UITransformBuffer {
-                                    .scale = scale,
-                                    .translate = translate,
-                                };
-                            } );
-                    }(),
-                },
-                {
-                    .descriptorType = DescriptorType::TEXTURE,
-                    .obj = createFontAtlas(),
-                },
+                texture->sampler = crimild::alloc< Sampler >();
+                texture->sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_EDGE );
+                texture->sampler->setBorderColor( Sampler::BorderColor::FLOAT_OPAQUE_WHITE );
+
+                int idx = 1;
+                io.Fonts->TexID = ( ImTextureID )( intptr_t ) idx;
+
+                return texture;
             };
-            return descriptorSet;
-        }();
 
-        renderPass->setDescriptors( crimild::retain( descriptors ) );
-        renderPass->setGraphicsPipeline( pipeline );
+            auto descriptors = [ & ] {
+                auto descriptorSet = cmp.create< DescriptorSet >();
+                descriptorSet->descriptors = {
+                    {
+                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                        .obj = [ & ] {
+                            struct UITransformBuffer {
+                                alignas( 16 ) Vector4f scale;
+                                alignas( 16 ) Vector4f translate;
+                            };
 
-        auto commandBuffers = Swapchain::getInstance()->getImages().map(
-            [ &, i = 0 ]( auto ) mutable {
-                auto commandBuffer = cmp.create< CommandBuffer >();
-                commandBuffer->setFrameIndex( i++ );
-                return commandBuffer;
-            } );
+                            return crimild::alloc< CallbackUniformBuffer< UITransformBuffer > >(
+                                [] {
+                                    auto drawData = ImGui::GetDrawData();
+                                    if ( drawData == nullptr ) {
+                                        return UITransformBuffer {
+                                            Vector4f::ONE,
+                                            Vector4f::ZERO,
+                                        };
+                                    }
 
-        renderPass->setCommandRecorder(
-            [ commandBuffers,
-              renderPass = crimild::retain( renderPass ),
-              pipeline = crimild::retain( pipeline ),
-              descriptors = crimild::retain( descriptors ) ]( Size imageIndex ) -> CommandBuffer * {
-                auto commandBuffer = commandBuffers[ imageIndex ];
-                commandBuffer->clear();
-                commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-                commandBuffer->beginRenderPass( crimild::get_ptr( renderPass ), nullptr );
+                                    // TODO: this scale value seems wrongs. It probably works only on Retina displays
+                                    auto scale = Vector4f(
+                                        4.0f / drawData->DisplaySize.x,
+                                        -4.0f / drawData->DisplaySize.y,
+                                        0,
+                                        0 );
+                                    auto translate = Vector4f(
+                                        -1.0,
+                                        1.0,
+                                        0,
+                                        0 );
+                                    return UITransformBuffer {
+                                        .scale = scale,
+                                        .translate = translate,
+                                    };
+                                } );
+                        }(),
+                    },
+                    {
+                        .descriptorType = DescriptorType::TEXTURE,
+                        .obj = createFontAtlas(),
+                    },
+                };
+                return descriptorSet;
+            }();
 
-                auto drawData = ImGui::GetDrawData();
-                if ( drawData == nullptr ) {
-                    commandBuffer->endRenderPass( crimild::get_ptr( renderPass ) );
-                    commandBuffer->end();
+            renderPass->setDescriptors( crimild::retain( descriptors ) );
+            renderPass->setGraphicsPipeline( pipeline );
+
+            auto commandBuffers = Swapchain::getInstance()->getImages().map(
+                [ &, i = 0 ]( auto ) mutable {
+                    auto commandBuffer = cmp.create< CommandBuffer >();
+                    commandBuffer->setFrameIndex( i++ );
                     return commandBuffer;
-                }
-                auto vertexCount = drawData->TotalVtxCount;
-                auto indexCount = drawData->TotalIdxCount;
-                if ( vertexCount == 0 || indexCount == 0 ) {
-                    CRIMILD_LOG_ERROR( "No vertex data " );
-                    commandBuffer->endRenderPass( crimild::get_ptr( renderPass ) );
-                    commandBuffer->end();
-                    return commandBuffer;
-                }
+                } );
 
-                auto positions = vbo->get( VertexAttribute::Name::POSITION );
-                auto texCoords = vbo->get( VertexAttribute::Name::TEX_COORD );
-                auto colors = vbo->get( VertexAttribute::Name::COLOR );
+            renderPass->setCommandRecorder(
+                [ commandBuffers,
+                  renderPass = crimild::retain( renderPass ),
+                  pipeline = crimild::retain( pipeline ),
+                  descriptors = crimild::retain( descriptors ) ]( Size imageIndex ) -> CommandBuffer * {
+                    auto commandBuffer = commandBuffers[ imageIndex ];
+                    commandBuffer->clear();
+                    commandBuffer->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
+                    commandBuffer->beginRenderPass( crimild::get_ptr( renderPass ), nullptr );
 
-                auto vertexId = 0l;
-                auto indexId = 0l;
-
-                for ( auto i = 0; i < drawData->CmdListsCount; i++ ) {
-                    const auto cmdList = drawData->CmdLists[ i ];
-                    for ( auto j = 0l; j < cmdList->VtxBuffer.Size; j++ ) {
-                        auto vertex = cmdList->VtxBuffer[ j ];
-                        positions->set( vertexId + j, Vector2f( vertex.pos.x, vertex.pos.y ) );
-                        texCoords->set( vertexId + j, Vector2f( vertex.uv.x, vertex.uv.y ) );
-                        colors->set( vertexId + j, RGBAColorf( ( ( vertex.col >> 0 ) & 0xFF ) / 255.0f, ( ( vertex.col >> 8 ) & 0xFF ) / 255.0f, ( ( vertex.col >> 16 ) & 0xFF ) / 255.0f, ( ( vertex.col >> 24 ) & 0xFF ) / 255.0f ) );
+                    auto drawData = ImGui::GetDrawData();
+                    if ( drawData == nullptr ) {
+                        commandBuffer->endRenderPass( crimild::get_ptr( renderPass ) );
+                        commandBuffer->end();
+                        return commandBuffer;
                     }
-                    for ( auto j = 0l; j < cmdList->IdxBuffer.Size; j++ ) {
-                        ibo->setIndex( indexId + j, cmdList->IdxBuffer[ j ] );
+                    auto vertexCount = drawData->TotalVtxCount;
+                    auto indexCount = drawData->TotalIdxCount;
+                    if ( vertexCount == 0 || indexCount == 0 ) {
+                        CRIMILD_LOG_ERROR( "No vertex data " );
+                        commandBuffer->endRenderPass( crimild::get_ptr( renderPass ) );
+                        commandBuffer->end();
+                        return commandBuffer;
                     }
-                    vertexId += cmdList->VtxBuffer.Size;
-                    indexId += cmdList->IdxBuffer.Size;
-                }
 
-                commandBuffer->bindGraphicsPipeline( crimild::get_ptr( pipeline ) );
-                commandBuffer->bindDescriptorSet( crimild::get_ptr( descriptors ) );
-                commandBuffer->bindVertexBuffer( crimild::get_ptr( vbo ) );
-                commandBuffer->bindIndexBuffer( crimild::get_ptr( ibo ) );
+                    auto positions = vbo->get( VertexAttribute::Name::POSITION );
+                    auto texCoords = vbo->get( VertexAttribute::Name::TEX_COORD );
+                    auto colors = vbo->get( VertexAttribute::Name::COLOR );
 
-                crimild::Size vertexOffset = 0;
-                crimild::Size indexOffset = 0;
-                for ( int i = 0; i < drawData->CmdListsCount; i++ ) {
-                    const auto cmds = drawData->CmdLists[ i ];
-                    for ( auto cmdIt = 0l; cmdIt < cmds->CmdBuffer.Size; cmdIt++ ) {
-                        const auto cmd = &cmds->CmdBuffer[ cmdIt ];
-                        if ( cmd->UserCallback != nullptr ) {
-                            if ( cmd->UserCallback == ImDrawCallback_ResetRenderState ) {
-                                // Do nothing?
-                            } else {
-                                cmd->UserCallback( cmds, cmd );
-                            }
-                        } else {
-                            commandBuffer->drawIndexed(
-                                cmd->ElemCount,
-                                cmd->IdxOffset + indexOffset,
-                                cmd->VtxOffset + vertexOffset );
+                    auto vertexId = 0l;
+                    auto indexId = 0l;
+
+                    for ( auto i = 0; i < drawData->CmdListsCount; i++ ) {
+                        const auto cmdList = drawData->CmdLists[ i ];
+                        for ( auto j = 0l; j < cmdList->VtxBuffer.Size; j++ ) {
+                            auto vertex = cmdList->VtxBuffer[ j ];
+                            positions->set( vertexId + j, Vector2f( vertex.pos.x, vertex.pos.y ) );
+                            texCoords->set( vertexId + j, Vector2f( vertex.uv.x, vertex.uv.y ) );
+                            colors->set( vertexId + j, RGBAColorf( ( ( vertex.col >> 0 ) & 0xFF ) / 255.0f, ( ( vertex.col >> 8 ) & 0xFF ) / 255.0f, ( ( vertex.col >> 16 ) & 0xFF ) / 255.0f, ( ( vertex.col >> 24 ) & 0xFF ) / 255.0f ) );
                         }
+                        for ( auto j = 0l; j < cmdList->IdxBuffer.Size; j++ ) {
+                            ibo->setIndex( indexId + j, cmdList->IdxBuffer[ j ] );
+                        }
+                        vertexId += cmdList->VtxBuffer.Size;
+                        indexId += cmdList->IdxBuffer.Size;
                     }
-                    indexOffset += cmds->IdxBuffer.Size;
-                    vertexOffset += cmds->VtxBuffer.Size;
-                }
 
-                commandBuffer->endRenderPass( crimild::get_ptr( renderPass ) );
-                commandBuffer->end();
+                    commandBuffer->bindGraphicsPipeline( crimild::get_ptr( pipeline ) );
+                    commandBuffer->bindDescriptorSet( crimild::get_ptr( descriptors ) );
+                    commandBuffer->bindVertexBuffer( crimild::get_ptr( vbo ) );
+                    commandBuffer->bindIndexBuffer( crimild::get_ptr( ibo ) );
 
-                return commandBuffer;
-            } );
+                    crimild::Size vertexOffset = 0;
+                    crimild::Size indexOffset = 0;
+                    for ( int i = 0; i < drawData->CmdListsCount; i++ ) {
+                        const auto cmds = drawData->CmdLists[ i ];
+                        for ( auto cmdIt = 0l; cmdIt < cmds->CmdBuffer.Size; cmdIt++ ) {
+                            const auto cmd = &cmds->CmdBuffer[ cmdIt ];
+                            if ( cmd->UserCallback != nullptr ) {
+                                if ( cmd->UserCallback == ImDrawCallback_ResetRenderState ) {
+                                    // Do nothing?
+                                } else {
+                                    cmd->UserCallback( cmds, cmd );
+                                }
+                            } else {
+                                commandBuffer->drawIndexed(
+                                    cmd->ElemCount,
+                                    cmd->IdxOffset + indexOffset,
+                                    cmd->VtxOffset + vertexOffset );
+                            }
+                        }
+                        indexOffset += cmds->IdxBuffer.Size;
+                        vertexOffset += cmds->VtxBuffer.Size;
+                    }
 
-        cmp.setOutput( crimild::get_ptr( renderPass->attachments[ 0 ] ) );
+                    commandBuffer->endRenderPass( crimild::get_ptr( renderPass ) );
+                    commandBuffer->end();
 
-        return cmp;
+                    return commandBuffer;
+                } );
+
+            cmp.setOutput( crimild::get_ptr( renderPass->attachments[ 0 ] ) );
+
+            return cmp;
+        }
+
+        Composition withImGUI( Composition cmp, ImGUISystem::FrameCallback frameCallback ) noexcept
+        {
+            ImGUISystem::getInstance()->setFrameCallback( frameCallback );
+            return overlay( cmp, renderUI() );
+        }
     }
+
 }
 
 using namespace crimild;
@@ -537,7 +545,7 @@ public:
                     auto camera = crimild::alloc< Camera >();
                     camera->local().setTranslate( 3.0f, 4.0f, 10.0f );
                     camera->local().lookAt( 0.5f * Vector3f::UNIT_Y );
-                    // camera->attachComponent< FreeLookCameraComponent >();
+                    camera->attachComponent< FreeLookCameraComponent >();
                     return camera;
                 }() );
 
@@ -548,9 +556,22 @@ public:
         setComposition(
             [ scene = getScene() ] {
                 using namespace crimild::compositions;
-                // return present( debug( renderScene( scene ) ) );
-                // return present( debug( mix( renderScene( scene ), renderUI() ) ) );
-                return present( renderUI() );
+                return present(
+                    withImGUI(
+                        renderScene( scene ),
+                        [] {
+                            static bool open = true;
+                            ImGui::ShowDemoWindow( &open );
+
+                            ImGui::ShowStyleEditor();
+
+                            {
+                                ImGui::Begin( "Stats" );
+                                ImGui::Text( "Frame Time: %.2f ms", 1000.0f * Simulation::getInstance()->getSimulationClock().getDeltaTime() );
+                                ImGui::Text( "FPS: %d", 30 );
+                                ImGui::End();
+                            }
+                        } ) );
             }() );
     }
 };
