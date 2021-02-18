@@ -26,10 +26,39 @@
  */
 
 #include <Crimild.hpp>
+#include <Crimild_ImGUI.hpp>
 
 using namespace crimild;
 
 namespace crimild {
+
+    struct RenderSettings {
+        alignas( 4 ) UInt32 sampleCount = 0;
+        alignas( 4 ) UInt32 maxSamples = 30;
+        alignas( 4 ) UInt32 maxBounces = 4;
+        alignas( 4 ) Real32 aperture = 0.1;
+        alignas( 4 ) Real32 focusDist = 10.0;
+
+        friend std::ostream &operator<<( std::ostream &out, RenderSettings &settings ) noexcept
+        {
+            out << settings.sampleCount << " "
+                << settings.maxSamples << " "
+                << settings.maxBounces << " "
+                << settings.aperture << " "
+                << settings.focusDist << " ";
+            return out;
+        }
+
+        friend std::istream &operator>>( std::istream &in, RenderSettings &settings ) noexcept
+        {
+            in >> settings.sampleCount >> std::skipws
+                >> settings.maxSamples >> std::skipws
+                >> settings.maxBounces >> std::skipws
+                >> settings.aperture >> std::skipws
+                >> settings.focusDist >> std::skipws;
+            return in;
+        }
+    };
 
     namespace compositions {
 
@@ -80,6 +109,10 @@ namespace crimild {
                                         .descriptorType = DescriptorType::UNIFORM_BUFFER,
                                         .stage = Shader::Stage::COMPUTE,
                                     },
+                                    {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .stage = Shader::Stage::COMPUTE,
+                                    },
                                 };
                                 return layout;
                             }(),
@@ -98,9 +131,21 @@ namespace crimild {
                     },
                     Descriptor {
                         .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                        .obj = crimild::alloc< CallbackUniformBuffer< RenderSettings > >(
+                            [] {
+                                auto settings = Simulation::getInstance()->getSettings();
+                                auto renderSettings = settings->get< RenderSettings >( "render.settings", RenderSettings {} );
+                                renderSettings.sampleCount = Numeric< UInt32 >::min( renderSettings.sampleCount + 1, renderSettings.maxSamples );
+                                settings->set( "render.settings", renderSettings );
+                                return renderSettings;
+                            } ),
+                    },
+                    Descriptor {
+                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
                         .obj = [] {
                             struct Uniforms {
                                 alignas( 4 ) UInt32 sampleCount;
+                                alignas( 4 ) UInt32 maxSamples;
                                 alignas( 4 ) UInt32 seed;
                                 alignas( 4 ) Real32 tanHalfFOV;
                                 alignas( 4 ) Real32 aspectRatio;
@@ -111,7 +156,14 @@ namespace crimild {
 
                             return crimild::alloc< CallbackUniformBuffer< Uniforms > >(
                                 [] {
-                                    static UInt32 sampleCount = 1;
+                                    auto settings = Simulation::getInstance()->getSettings();
+
+                                    auto renderSettings = settings->get< RenderSettings >( "render.settings", RenderSettings {} );
+
+                                    auto resetSampling = [ settings ] {
+                                        settings->set( "rendering.samples", UInt32( 1 ) );
+                                    };
+
                                     static auto view = Matrix4f::IDENTITY;
                                     static auto focusDist = 10.0f;
 
@@ -120,32 +172,30 @@ namespace crimild {
                                         const auto cameraView = camera->getWorld().computeModelMatrix();
                                         if ( cameraView != view ) {
                                             view = cameraView;
-                                            sampleCount = 1;
+                                            resetSampling();
                                         }
                                     }
 
-                                    const auto handleFocus = [ & ]( UInt32 level ) {
-                                        if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_0 + level ) ) {
-                                            focusDist = level == 0 ? 10 : level;
-                                            sampleCount = 1;
+                                    if ( !settings->get< Bool >( "ui.show", true ) ) {
+                                        if ( Input::getInstance()->isMouseButtonDown( CRIMILD_INPUT_MOUSE_BUTTON_LEFT ) ) {
+                                            resetSampling();
                                         }
-                                    };
-
-                                    for ( UInt32 i = 0; i < 10; ++i ) {
-                                        handleFocus( i );
                                     }
 
-                                    if ( Input::getInstance()->isMouseButtonDown( CRIMILD_INPUT_MOUSE_BUTTON_LEFT ) ) {
-                                        sampleCount = 1;
-                                    }
+                                    settings->set(
+                                        "rendering.samples",
+                                        Numeric< UInt32 >::min(
+                                            settings->get< UInt32 >( "rendering.samples", 1 ) + 1,
+                                            renderSettings.maxSamples ) );
 
                                     return Uniforms {
-                                        .sampleCount = sampleCount++,
-                                        .seed = sampleCount,
+                                        .sampleCount = settings->get< UInt32 >( "rendering.samples", 1 ),
+                                        .maxSamples = renderSettings.maxSamples,
+                                        .seed = settings->get< UInt32 >( "rendering.samples", 1 ),
                                         .tanHalfFOV = camera->getFrustum().computeTanHalfFOV(),
                                         .aspectRatio = camera->computeAspect(),
-                                        .aperture = 0.1,
-                                        .focusDist = focusDist,
+                                        .aperture = renderSettings.aperture,
+                                        .focusDist = renderSettings.focusDist,
                                         .view = view,
                                     };
                                 } );
@@ -282,10 +332,9 @@ namespace crimild {
                     .z = 1 } );
             commands->end();
             computePass->setCommandRecorder(
-            	[ commands ]( Size ) {
+                [ commands ]( Size ) {
                     return commands;
-                }
-            );
+                } );
 
             cmp.setOutput( nullptr );
             cmp.setOutputTexture( texture );
@@ -327,6 +376,75 @@ public:
             return enabled ? tonemapping( cmp, 0.35 ) : cmp;
         };
 
+        registerMessageHandler< messaging::KeyReleased >(
+            [ & ]( messaging::KeyReleased const &msg ) {
+                if ( msg.key == CRIMILD_INPUT_KEY_ESCAPE ) {
+                    getSettings()->set( "ui.show", !getSettings()->get< Bool >( "ui.show", true ) );
+                    Camera::getMainCamera()->getComponent< FreeLookCameraComponent >()->setEnabled( !getSettings()->get< Bool >( "ui.show", true ) );
+                }
+            } );
+
+        imgui::ImGUISystem::getInstance()->setFrameCallback(
+            [ & ] {
+                if ( !getSettings()->get< Bool >( "ui.show", true ) ) {
+                    return;
+                }
+
+                auto renderSettings = getSettings()->get< RenderSettings >( "render.settings", RenderSettings {} );
+
+                {
+                    auto s = Simulation::getInstance()->getSimulationClock().getDeltaTime();
+                    ImGui::Begin( "Stats" );
+                    ImGui::Text( "Frame Time: %.2f ms", 1000.0f * s );
+                    ImGui::Text( "FPS: %d", s > 0 ? int( 1.0 / s ) : 0 );
+                    ImGui::Text( "Samples: %d/%d", renderSettings.sampleCount, renderSettings.maxSamples );
+                    ImGui::End();
+                }
+
+                {
+                    ImGui::Begin( "Render Settings" );
+
+                    {
+                        // Use AlignTextToFramePadding() to align text baseline to the baseline of framed elements (otherwise a Text+SameLine+Button sequence will have the text a little too high by default)
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::Text( "Max Samples: " );
+                        ImGui::SameLine();
+
+                        // Arrow buttons with Repeater
+                        float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+                        ImGui::PushButtonRepeat( true );
+                        if ( ImGui::ArrowButton( "##left", ImGuiDir_Left ) ) {
+                            renderSettings.maxSamples--;
+                        }
+                        ImGui::SameLine( 0.0f, spacing );
+                        if ( ImGui::ArrowButton( "##right", ImGuiDir_Right ) ) {
+                            renderSettings.maxSamples++;
+                        }
+                        ImGui::PopButtonRepeat();
+                        ImGui::SameLine();
+                        ImGui::Text( "%d", UInt32( renderSettings.maxSamples ) );
+                    }
+
+                    {
+                        ImGui::SliderFloat( "f", &renderSettings.focusDist, 0.0f, 10.0f, "Focus Distance = %.3f" );
+                    }
+
+                    {
+                        ImGui::SliderFloat( "a", &renderSettings.aperture, 0.0f, 1.0f, "Aperture = %.3f" );
+                    }
+
+                    {
+                        if ( ImGui::Button( "Reset" ) ) {
+                            settings->set( "rendering.samples", UInt32( 1 ) );
+                        }
+                    }
+
+                    getSettings()->set( "render.settings", renderSettings );
+
+                    ImGui::End();
+                }
+            } );
+
         setComposition(
             [ & ] {
                 using namespace crimild::compositions;
@@ -341,8 +459,17 @@ public:
                                 layout( local_size_x = 32, local_size_y = 32 ) in;
                                 layout( set = 0, binding = 0, rgba8 ) uniform image2D resultImage;
 
-                                layout ( set = 0, binding = 1 ) uniform Uniforms {
+                                layout ( set = 0, binding = 1 ) uniform RenderSettings {
                                     uint sampleCount;
+                                    uint maxSamples;
+                                    uint maxBounces;
+                                    float aperture;
+                                    float focusDist;
+                                } uRenderSettings;
+
+                                layout ( set = 0, binding = 2 ) uniform Uniforms {
+                                    uint sampleCount;
+                                    uint maxSamples;
                                     uint seedStart;
                                     float tanHalfFOV;
                                     float aspectRatio;
@@ -375,7 +502,7 @@ public:
                                 #define MAX_SPHERE_COUNT 500
                                 #define MAX_MATERIAL_COUNT 500
 
-                                layout ( set = 0, binding = 2 ) uniform SceneUniforms {
+                                layout ( set = 0, binding = 3 ) uniform SceneUniforms {
                                     Sphere spheres[ MAX_SPHERE_COUNT ];
                                     int sphereCount;
                                     Material materials[ MAX_MATERIAL_COUNT ];
@@ -639,7 +766,7 @@ public:
                                 }
 
                                 vec3 rayColor( Ray ray ) {
-                                    int maxDepth = sampleCount > 1 ? 10 : 2;
+                                    uint maxDepth = uRenderSettings.maxBounces;
 
                                     float multiplier = 1.0;
                                     float tMin = 0.001;
@@ -687,9 +814,9 @@ public:
                                 void main() {
                                     seed = seedStart;
 
-                                    // if ( sampleCount > 1 && getRandom() < 0.5 ) {
-                                        // return;
-                                    // }
+                                    if ( sampleCount >= uRenderSettings.maxSamples ) {
+                                        return;
+                                    }
 
                                     flat_idx = int(dot(gl_GlobalInvocationID.xy, vec2(1, 4096)));
 
