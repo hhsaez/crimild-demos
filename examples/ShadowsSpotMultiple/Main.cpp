@@ -45,8 +45,10 @@ public:
                         } );
 
                     auto material = [] {
-                        auto material = crimild::alloc< SimpleLitMaterial >(
-                            SimpleLitMaterial::Props {} );
+                        auto material = crimild::alloc< LitMaterial >();
+                        material->setAlbedo( RGBColorf::ONE );
+                        material->setMetallic( 0.0f );
+                        material->setRoughness( 1.0f );
                         return material;
                     }();
 
@@ -96,8 +98,10 @@ public:
                         } );
 
                     auto material = [] {
-                        auto material = crimild::alloc< SimpleLitMaterial >(
-                            SimpleLitMaterial::Props {} );
+                        auto material = crimild::alloc< LitMaterial >();
+                        material->setAlbedo( RGBColorf::ONE );
+                        material->setMetallic( 0.0f );
+                        material->setRoughness( 1.0f );
                         return material;
                     }();
 
@@ -120,6 +124,7 @@ public:
                     auto light = crimild::alloc< Light >( Light::Type::SPOT );
                     light->setColor( RGBAColorf( 0.0f, 1.0f, 0.0f ) );
                     light->setCastShadows( true );
+                    light->setEnergy( 1000.0f );
                     light->setInnerCutoff( Numericf::DEG_TO_RAD * 20.0f );
                     light->setOuterCutoff( Numericf::DEG_TO_RAD * 25.0f );
                     light->local().setTranslate( 20.0f, 20.0f, 0.0f );
@@ -132,6 +137,7 @@ public:
                     auto light = crimild::alloc< Light >( Light::Type::SPOT );
                     light->setColor( RGBAColorf( 1.0f, 0.0f, 0.0f ) );
                     light->setCastShadows( true );
+                    light->setEnergy( 1000.0f );
                     light->setInnerCutoff( Numericf::DEG_TO_RAD * 20.0f );
                     light->setOuterCutoff( Numericf::DEG_TO_RAD * 25.0f );
                     light->local().setTranslate( 0.0f, 20.0f, 20.0f );
@@ -144,6 +150,7 @@ public:
                     auto light = crimild::alloc< Light >( Light::Type::SPOT );
                     light->setColor( RGBAColorf( 0.0f, 1.0f, 1.0f ) );
                     light->setCastShadows( true );
+                    light->setEnergy( 1000.0f );
                     light->setInnerCutoff( Numericf::DEG_TO_RAD * 20.0f );
                     light->setOuterCutoff( Numericf::DEG_TO_RAD * 25.0f );
                     light->local().setTranslate( -20.0f, 20.0f, 0.0f );
@@ -154,11 +161,6 @@ public:
             scene->perform( StartComponents() );
 
             return scene;
-        }() );
-
-        setComposition( [ & ] {
-            using namespace crimild::compositions;
-            return present( debug( renderScene( getScene() ) ) );
         }() );
     }
 };

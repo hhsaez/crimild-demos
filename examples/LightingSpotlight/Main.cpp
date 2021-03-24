@@ -67,17 +67,17 @@ public:
 
                             geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                 [ & ] {
-                                    auto material = crimild::alloc< SimpleLitMaterial >(
-                                        SimpleLitMaterial::Props {
-                                            .ambient = RGBAColorf( 0.0215f, 0.1745f, 0.0215f, 1.0f ),
-                                            .diffuse = RGBAColorf( 0.07568f, 0.61424f, 0.07568f, 1.0f ),
-                                            .specular = RGBAColorf( 0.633f, 0.727811f, 0.633f, 1.0f ),
-                                            .shininess = 128.0f * 0.6f } );
+                                    auto material = crimild::alloc< LitMaterial >();
+                                    material->setAlbedo( RGBColorf( 0.0f, 1.0f, 0.0f ) );
+                                    material->setMetallic( 0.0f );
+                                    material->setRoughness( 1.0f );
                                     return material;
                                 }() );
                             return geometry;
                         }() );
                 }
+
+                scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.01f, 0.0f, 0.01f ) ) );
 
                 scene->attachNode(
                     [ & ] {
@@ -86,11 +86,11 @@ public:
                         camera->attachComponent< FreeLookCameraComponent >();
                         camera->attachNode(
                             [] {
-                                auto light = crimild::alloc< Light >(
-                                    Light::Type::SPOT );
-                                light->setAmbient( RGBAColorf( 0.1f, 0.1f, 0.1f, 0.0f ) );
+                                auto light = crimild::alloc< Light >( Light::Type::SPOT );
+                                light->setColor( RGBAColorf::ONE );
+                                light->setEnergy( 100.0f );
                                 light->setInnerCutoff( Numericf::DEG_TO_RAD * 15.0f );
-                                light->setOuterCutoff( Numericf::DEG_TO_RAD * 20.0f );
+                                light->setOuterCutoff( Numericf::DEG_TO_RAD * 25.0f );
                                 light->local().setTranslate( 0.0f, 1.0f, 0.0f );
                                 light->local().lookAt( -5.0f * Vector3f::UNIT_Z );
                                 return light;

@@ -67,12 +67,10 @@ public:
 
                             geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                 [ & ] {
-                                    auto material = crimild::alloc< SimpleLitMaterial >(
-                                        SimpleLitMaterial::Props {
-                                            .ambient = RGBAColorf( 0.0215f, 0.1745f, 0.0215f, 1.0f ),
-                                            .diffuse = RGBAColorf( 0.07568f, 0.61424f, 0.07568f, 1.0f ),
-                                            .specular = RGBAColorf( 0.633f, 0.727811f, 0.633f, 1.0f ),
-                                            .shininess = 128.0f * 0.6f } );
+                                    auto material = crimild::alloc< LitMaterial >();
+                                    material->setAlbedo( RGBColorf( 0.0f, 1.0f, 0.0f ) );
+                                    material->setMetallic( 0.0f );
+                                    material->setRoughness( 1.0f );
                                     return material;
                                 }() );
                             return geometry;
@@ -102,10 +100,9 @@ public:
                             }() );
                         group->attachNode(
                             [] {
-                                auto light = crimild::alloc< Light >(
-                                    Light::Type::POINT );
-                                light->setAttenuation( Vector3f( 1.0f, 0.09f, 0.032f ) );
-                                light->setAmbient( RGBAColorf::ONE );
+                                auto light = crimild::alloc< Light >( Light::Type::POINT );
+                                light->setColor( RGBAColorf::ONE );
+                                light->setEnergy( 50.0f );
                                 return light;
                             }() );
                         group->attachComponent< LambdaComponent >(
@@ -131,12 +128,6 @@ public:
                 scene->perform( StartComponents() );
 
                 return scene;
-            }() );
-
-        setComposition(
-            [ scene = getScene() ] {
-                using namespace crimild::compositions;
-                return present( renderScene( scene ) );
             }() );
     }
 };

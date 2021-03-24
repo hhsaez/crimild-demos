@@ -89,32 +89,56 @@ public:
                 }
             }
 
-            scene->attachNode(
-                crimild::alloc< Skybox >(
-                    [] {
-                        auto texture = crimild::alloc< Texture >();
-                        texture->imageView = [] {
-                            auto imageView = crimild::alloc< ImageView >();
-                            imageView->image = Image::ZERO;
-                            return imageView;
-                        }();
-                        texture->sampler = [ & ] {
-                            auto sampler = crimild::alloc< Sampler >();
-                            sampler->setMinFilter( Sampler::Filter::LINEAR );
-                            sampler->setMagFilter( Sampler::Filter::LINEAR );
-                            sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
-                            sampler->setCompareOp( CompareOp::NEVER );
-                            return sampler;
-                        }();
-                        return texture;
-                    }() ) );
-
-            scene->attachNode(
-                [] {
-                    auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-                    light->setColor( RGBAColorf( 25, 25, 25 ) );
+            auto createLight = []( const auto &color, auto energy ) {
+                auto group = crimild::alloc< Group >();
+                auto light = [ & ] {
+                    auto light = crimild::alloc< Light >( Light::Type::POINT );
+                    light->setColor( color );
+                    light->setEnergy( energy );
                     return light;
-                }() );
+                }();
+                group->attachNode( light );
+
+                auto lightPositionIndicator = [ & ] {
+                    auto geometry = crimild::alloc< Geometry >();
+                    geometry->attachPrimitive(
+                        crimild::alloc< SpherePrimitive >(
+                            SpherePrimitive::Params {
+                                .type = Primitive::Type::TRIANGLES,
+                                .layout = VertexP3N3TC2::getLayout(),
+                                .radius = 0.1f,
+                            } ) );
+                    geometry->attachComponent< MaterialComponent >()->attachMaterial(
+                        [ & ] {
+                            auto material = crimild::alloc< UnlitMaterial >();
+                            material->setColor( color );
+                            material->setCastShadows( false );
+                            return material;
+                        }() );
+                    return geometry;
+                }();
+                group->attachNode( lightPositionIndicator );
+
+                group->attachComponent< LambdaComponent >(
+                    [ maxX = Random::generate( 5.0, 25.0 ),
+                      maxY = Random::generate( 5.0, 15.0 ),
+                      maxZ = Random::generate( 5.0, 15.0 ),
+                      direction = Numericf::sign( Random::generate( -1.0f, 1.0f ) ),
+                      speed = Random::generate( 0.125f, 0.5f ) ]( auto node, auto &clock ) {
+                        auto t = Numericf::sign( direction ) * speed * clock.getCurrentTime();
+                        auto x = Numericf::remap( -1.0f, 1.0f, -maxX, maxX, Numericf::cos( t ) * Numericf::sin( t ) );
+                        auto y = Numericf::remapSin( -maxY, maxY, t );
+                        auto z = Numericf::remapCos( -maxZ, maxZ, t );
+                        if ( !Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_SPACE ) ) {
+                            node->local().setTranslate( x, y, z );
+                        }
+                    } );
+                return group;
+            };
+
+            scene->attachNode( createLight( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ), 500.0f ) );
+
+            scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.25f, 0.25f, 0.5f ) ) );
 
             scene->attachNode(
                 [ & ] {

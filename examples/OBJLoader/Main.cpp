@@ -49,10 +49,13 @@ public:
                 return group;
             }() );
 
+            scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.25f, 0.36f, 0.9f ) ) );
+
             scene->attachNode(
                 [] {
                     auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-                    light->setAmbient( RGBAColorf( 0.2f, 0.2f, 0.1f, 1.0f ) );
+                    light->setColor( RGBAColorf::ONE );
+                    light->setEnergy( 10.0f );
                     light->local().rotate().fromAxisAngle( Vector3f::UNIT_X, -0.25f * Numericf::PI );
                     light->setCastShadows( true );
                     return light;

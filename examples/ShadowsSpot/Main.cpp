@@ -45,12 +45,10 @@ public:
                         } );
 
                     auto material = [] {
-                        auto material = crimild::alloc< SimpleLitMaterial >(
-                            SimpleLitMaterial::Props {
-                                .ambient = RGBAColorf( 0.0215f, 0.1745f, 0.0215f, 1.0f ),
-                                .diffuse = RGBAColorf( 0.07568f, 0.61424f, 0.07568f, 1.0f ),
-                                .specular = RGBAColorf( 0.633f, 0.727811f, 0.633f, 1.0f ),
-                                .shininess = 128.0f * 0.6f } );
+                        auto material = crimild::alloc< LitMaterial >();
+                        material->setAlbedo( RGBColorf( 0.0f, 1.0f, 0.0f ) );
+                        material->setMetallic( 0.0f );
+                        material->setRoughness( 1.0f );
                         return material;
                     }();
 
@@ -107,12 +105,10 @@ public:
                         }() );
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [] {
-                            return crimild::alloc< SimpleLitMaterial >(
-                                SimpleLitMaterial::Props {
-                                    .ambient = RGBAColorf( 0.0215f, 0.1745f, 0.0215f, 1.0f ),
-                                    .diffuse = RGBAColorf( 0.17568f, 0.61424f, 0.07568f, 1.0f ),
-                                    .specular = RGBAColorf( 0.633f, 0.727811f, 0.633f, 1.0f ),
-                                    .shininess = 128.0f * 0.6f } );
+                            auto material = crimild::alloc< LitMaterial >();
+                            material->setMetallic( 0.0f );
+                            material->setRoughness( 1.0f );
+                            return material;
                         }() );
                     return geometry;
                 }() );
@@ -124,6 +120,8 @@ public:
                 camera->attachComponent< FreeLookCameraComponent >();
                 return camera;
             }() );
+
+            scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.002f, 0.001f, 0.002f ) ) );
 
             scene->attachNode(
                 [ & ] {
@@ -161,7 +159,8 @@ public:
                         [] {
                             auto light = crimild::alloc< Light >( Light::Type::SPOT );
                             light->setCastShadows( true );
-                            light->setAmbient( RGBAColorf::ONE );
+                            light->setColor( RGBAColorf::ONE );
+                            light->setEnergy( 1000.0f );
                             light->setInnerCutoff( Numericf::DEG_TO_RAD * 25.0f );
                             light->setOuterCutoff( Numericf::DEG_TO_RAD * 40.0f );
                             return light;

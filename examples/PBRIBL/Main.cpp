@@ -51,7 +51,7 @@ public:
                         geometry->attachComponent< MaterialComponent >()->attachMaterial(
                             [ x, y ] {
                                 auto material = crimild::alloc< LitMaterial >();
-                                material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
+                                //material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
                                 material->setMetallic( 1.0f - float( y ) / 6.0f );
                                 material->setRoughness( float( x ) / 6.0f );
                                 return material;

@@ -72,8 +72,9 @@ public:
                     };
 
                     auto material = [] {
-                        auto material = crimild::alloc< SimpleLitMaterial >(
-                            SimpleLitMaterial::Props {} );
+                        auto material = crimild::alloc< LitMaterial >();
+                        material->setMetallic( 0.0f );
+                        material->setRoughness( 1.0f );
                         return material;
                     }();
 
@@ -119,8 +120,9 @@ public:
                         } );
 
                     auto material = [] {
-                        auto material = crimild::alloc< SimpleLitMaterial >(
-                            SimpleLitMaterial::Props {} );
+                        auto material = crimild::alloc< LitMaterial >();
+                        material->setMetallic( 0.0f );
+                        material->setRoughness( 1.0f );
                         return material;
                     }();
 
@@ -153,10 +155,9 @@ public:
                     }() );
                 group->attachNode(
                     [ & ] {
-                        auto light = crimild::alloc< Light >(
-                            Light::Type::POINT );
+                        auto light = crimild::alloc< Light >( Light::Type::POINT );
                         light->setColor( color );
-                        light->setAttenuation( Vector3f( 1.0f, 0.007f, 0.0002f ) );
+                        light->setEnergy( 100.0f );
                         light->setCastShadows( true );
                         return light;
                     }() );
@@ -192,11 +193,6 @@ public:
             scene->perform( StartComponents() );
 
             return scene;
-        }() );
-
-        setComposition( [ & ] {
-            using namespace crimild::compositions;
-            return present( debug( renderScene( getScene() ) ) );
         }() );
     }
 };

@@ -33,12 +33,11 @@ class Example : public Simulation {
 public:
     void onStarted( void ) noexcept override
     {
-        setComposition(
-            [ & ] {
-                using namespace crimild::compositions;
-                return present(
-                    shader(
-                        R"(
+        RenderSystem::getInstance()->setFrameGraph(
+            [] {
+                using namespace crimild::framegraph;
+                return shader(
+                    R"(
                         float circleMask( vec2 uv, vec2 p, float r, float blur )
                         {
                             float d = length( uv - p );
@@ -68,7 +67,7 @@ public:
 
                             outColor = vec4( color, 1.0 );
                         }
-                    )" ) );
+                    )" );
             }() );
     }
 };

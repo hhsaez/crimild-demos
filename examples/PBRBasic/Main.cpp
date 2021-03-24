@@ -26,6 +26,7 @@
  */
 
 #include <Crimild.hpp>
+#include <Crimild_ImGUI.hpp>
 
 using namespace crimild;
 
@@ -50,7 +51,7 @@ public:
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [ x, y ] {
                             auto material = crimild::alloc< LitMaterial >();
-                            material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
+                            material->setAlbedo( RGBColorf::ONE );
                             material->setMetallic( 1.0f - float( y ) / 6.0f );
                             material->setRoughness( float( x ) / 6.0f );
                             return material;
@@ -59,49 +60,94 @@ public:
                 }
             }
 
-            auto createLight = []( const auto &position ) {
-                auto light = crimild::alloc< Light >( Light::Type::POINT );
-                light->local().setTranslate( position );
-                light->setColor( RGBAColorf( 55, 55, 55 ) );
-                return light;
+            auto createLight = []( const auto &color, auto energy ) {
+                auto group = crimild::alloc< Group >();
+                auto light = [ & ] {
+                    auto light = crimild::alloc< Light >( Light::Type::POINT );
+                    light->setColor( color );
+                    light->setEnergy( energy );
+                    return light;
+                }();
+                group->attachNode( light );
+
+                auto lightPositionIndicator = [ & ] {
+                    auto geometry = crimild::alloc< Geometry >();
+                    geometry->attachPrimitive(
+                        crimild::alloc< SpherePrimitive >(
+                            SpherePrimitive::Params {
+                                .type = Primitive::Type::TRIANGLES,
+                                .layout = VertexP3N3TC2::getLayout(),
+                                .radius = 0.1f,
+                            } ) );
+                    geometry->attachComponent< MaterialComponent >()->attachMaterial(
+                        [ & ] {
+                            auto material = crimild::alloc< UnlitMaterial >();
+                            material->setColor( color );
+                            material->setCastShadows( false );
+                            return material;
+                        }() );
+                    return geometry;
+                }();
+                group->attachNode( lightPositionIndicator );
+
+                auto lightRadiusIndicator = [ & ] {
+                    auto geometry = crimild::alloc< Geometry >();
+                    geometry->attachPrimitive(
+                        crimild::alloc< SpherePrimitive >(
+                            SpherePrimitive::Params {
+                                .type = Primitive::Type::LINES,
+                                .layout = VertexP3N3TC2::getLayout(),
+                                .radius = light->getRadius(),
+                            } ) );
+                    geometry->attachComponent< MaterialComponent >()->attachMaterial(
+                        [ & ] {
+                            auto material = crimild::alloc< UnlitMaterial >();
+                            material->getGraphicsPipeline()->primitiveType = Primitive::Type::LINES;
+                            material->setColor( color );
+                            material->setCastShadows( false );
+                            return material;
+                        }() );
+                    return geometry;
+                }();
+                group->attachNode( lightRadiusIndicator );
+
+                group->attachComponent< LambdaComponent >(
+                    [ maxX = Random::generate( 5.0, 25.0 ),
+                      maxY = Random::generate( 5.0, 15.0 ),
+                      maxZ = Random::generate( 5.0, 15.0 ),
+                      direction = Numericf::sign( Random::generate( -1.0f, 1.0f ) ),
+                      speed = Random::generate( 0.125f, 0.5f ),
+                      lightPositionIndicator,
+                      lightRadiusIndicator ]( auto node, auto &clock ) {
+                        auto t = Numericf::sign( direction ) * speed * clock.getCurrentTime();
+                        auto x = Numericf::remap( -1.0f, 1.0f, -maxX, maxX, Numericf::cos( t ) * Numericf::sin( t ) );
+                        auto y = Numericf::remapSin( -maxY, maxY, t );
+                        auto z = Numericf::remapCos( -maxZ, maxZ, t );
+                        if ( !Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_SPACE ) ) {
+                            node->local().setTranslate( x, y, z );
+                        }
+
+                        auto settings = Simulation::getInstance()->getSettings();
+                        auto showLightPositions = settings->get< Bool >( "debug.show_light_positions" );
+                        auto showLightVolumes = settings->get< Bool >( "debug.show_light_volumes" );
+                        lightPositionIndicator->setEnabled( showLightPositions );
+                        lightRadiusIndicator->setEnabled( showLightVolumes );
+                    } );
+                return group;
             };
 
-            scene->attachNode( createLight( Vector3f( -15.0f, +15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( +15.0f, +15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( -15.0f, -15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( +15.0f, -15.0f, 10.0f ) ) );
+            for ( auto li = 0; li < 30; li++ ) {
+                scene->attachNode(
+                    createLight(
+                        RGBAColorf(
+                            Random::generate( 0.1f, 1.0f ),
+                            Random::generate( 0.1f, 1.0f ),
+                            Random::generate( 0.1f, 1.0f ),
+                            1.0f ),
+                        Random::generate( 10.0f, 50.0f ) ) );
+            }
 
-            scene->attachNode(
-                crimild::alloc< Skybox >(
-                    [] {
-                        auto texture = crimild::alloc< Texture >();
-                        texture->imageView = [] {
-                            auto imageView = crimild::alloc< ImageView >();
-                            imageView->image = [] {
-                                auto image = crimild::alloc< Image >();
-                                image->extent = {
-                                    .width = 1,
-                                    .height = 1,
-                                    .depth = 1,
-                                };
-                                image->format = Format::R8G8B8A8_UNORM;
-                                image->data = {
-                                    0x44, 0x44, 0xFF, 0xFF
-                                };
-                                return image;
-                            }();
-                            return imageView;
-                        }();
-                        texture->sampler = [ & ] {
-                            auto sampler = crimild::alloc< Sampler >();
-                            sampler->setMinFilter( Sampler::Filter::LINEAR );
-                            sampler->setMagFilter( Sampler::Filter::LINEAR );
-                            sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
-                            sampler->setCompareOp( CompareOp::NEVER );
-                            return sampler;
-                        }();
-                        return texture;
-                    }() ) );
+            scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.25f, 0.25f, 0.5f ) ) );
 
             scene->attachNode(
                 [ & ] {
@@ -115,6 +161,30 @@ public:
 
             return scene;
         }() );
+
+        imgui::ImGUISystem::getInstance()->setFrameCallback(
+            [ open = true,
+              showLightPositions = true,
+              showLightVolumes = false ]() mutable {
+                if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_ESCAPE ) ) {
+                    open = !open;
+                }
+
+                if ( !open ) {
+                    return;
+                }
+
+                {
+                    ImGui::Begin( "Settings" );
+                    ImGui::Checkbox( "Positions", &showLightPositions );
+                    ImGui::Checkbox( "Volumes", &showLightVolumes );
+                    ImGui::End();
+                }
+
+                auto settings = Simulation::getInstance()->getSettings();
+                settings->set( "debug.show_light_positions", showLightPositions );
+                settings->set( "debug.show_light_volumes", showLightVolumes );
+            } );
     }
 };
 

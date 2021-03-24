@@ -127,12 +127,6 @@ public:
 
                 return scene;
             }() );
-
-        setComposition(
-            [ scene = getScene() ] {
-                using namespace crimild::compositions;
-                return present( renderScene( scene ) );
-            }() );
     }
 };
 

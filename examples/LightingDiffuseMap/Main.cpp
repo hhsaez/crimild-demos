@@ -51,9 +51,8 @@ public:
                                         } ) );
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                     [ & ] {
-                                        auto material = crimild::alloc< SimpleLitMaterial >();
-                                        material->setAmbient( RGBAColorf( 0.05f, 0.05f, 0.1f, 1.0f ) );
-                                        material->setDiffuseMap(
+                                        auto material = crimild::alloc< LitMaterial >();
+                                        material->setAlbedoMap(
                                             [] {
                                                 auto texture = crimild::alloc< Texture >();
                                                 texture->imageView = [ & ] {
@@ -70,8 +69,8 @@ public:
                                                 texture->sampler = crimild::alloc< Sampler >();
                                                 return texture;
                                             }() );
-                                        material->setSpecular( RGBAColorf( 0.95f, 0.95f, 1.0f, 1.0f ) );
-                                        material->setShininess( 4.0f );
+                                        //material->setMetallic( 0.0f );
+                                        //material->setRoughness( 0.0f );
                                         return material;
                                     }() );
                                 return geometry;
@@ -103,7 +102,9 @@ public:
                             }() );
                         group->attachNode(
                             [] {
-                                auto light = crimild::alloc< Light >();
+                                auto light = crimild::alloc< Light >( Light::Type::POINT );
+                                light->setColor( RGBAColorf::ONE );
+                                light->setEnergy( 100.0f );
                                 return light;
                             }() );
                         group->attachComponent< LambdaComponent >(
@@ -126,17 +127,11 @@ public:
                         return camera;
                     }() );
 
-                scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.045f, 0.05f, 0.125f ) ) );
+                scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.0045f, 0.005f, 0.0125f ) ) );
 
                 scene->perform( StartComponents() );
 
                 return scene;
-            }() );
-
-        setComposition(
-            [ scene = getScene() ] {
-                using namespace crimild::compositions;
-                return present( renderScene( scene ) );
             }() );
     }
 };
