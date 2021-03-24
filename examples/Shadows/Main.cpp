@@ -45,8 +45,9 @@ public:
                         } );
 
                     auto material = [] {
-                        auto material = crimild::alloc< SimpleLitMaterial >(
-                            SimpleLitMaterial::Props {} );
+                        auto material = crimild::alloc< LitMaterial >();
+                        material->setMetallic( 0.0f );
+                        material->setRoughness( 1.0f );
                         return material;
                     }();
 
@@ -97,8 +98,10 @@ public:
                         }() );
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [] {
-                            return crimild::alloc< SimpleLitMaterial >(
-                                SimpleLitMaterial::Props {} );
+                            auto material = crimild::alloc< LitMaterial >();
+                            material->setMetallic( 0.0f );
+                            material->setRoughness( 1.0f );
+                            return material;
                         }() );
                     return geometry;
                 }() );
@@ -147,7 +150,6 @@ public:
                         [] {
                             auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
                             light->setCastShadows( true );
-                            //light->setAmbient( RGBAColorf::ONE );
                             return light;
                         }() );
 

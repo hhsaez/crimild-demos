@@ -45,8 +45,9 @@ public:
                         } );
 
                     auto material = [] {
-                        auto material = crimild::alloc< SimpleLitMaterial >(
-                            SimpleLitMaterial::Props {} );
+                        auto material = crimild::alloc< LitMaterial >();
+                        material->setMetallic( 0.0f );
+                        material->setRoughness( 1.0f );
                         return material;
                     }();
 
@@ -101,8 +102,10 @@ public:
                         }() );
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [] {
-                            return crimild::alloc< SimpleLitMaterial >(
-                                SimpleLitMaterial::Props {} );
+                            auto material = crimild::alloc< LitMaterial >();
+                            material->setMetallic( 0.0f );
+                            material->setRoughness( 1.0f );
+                            return material;
                         }() );
                     return geometry;
                 }() );
@@ -138,11 +141,6 @@ public:
             scene->perform( StartComponents() );
 
             return scene;
-        }() );
-
-        setComposition( [ & ] {
-            using namespace crimild::compositions;
-            return present( debug( renderScene( getScene() ) ) );
         }() );
     }
 };
