@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, Hernan Saez
+ * Copyright (c) 2002 - present, H. Hernan Saez
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
@@ -9,14 +9,14 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the <organization> nor the
+ *     * Neither the name of the copyright holder nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDER BE LIABLE FOR ANY
  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
  * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -26,27 +26,25 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_SDL.hpp>
 #include <Crimild_Import.hpp>
 
 using namespace crimild;
 using namespace crimild::messaging;
 using namespace crimild::import;
-using namespace crimild::sdl;
 
-class ViewControls : 
-    public NodeComponent,
-    public Messenger {
+class ViewControls
+    : public NodeComponent,
+      public Messenger {
 public:
     ViewControls( void )
     {
         auto self = this;
 
-        registerMessageHandler< MouseButtonDown >( [self]( MouseButtonDown const &msg ) {
+        registerMessageHandler< MouseButtonDown >( [ self ]( MouseButtonDown const &msg ) {
             self->_lastMousePos = Input::getInstance()->getNormalizedMousePosition();
-        });
+        } );
 
-        registerMessageHandler< MouseMotion >( [self]( MouseMotion const &msg ) {
+        registerMessageHandler< MouseMotion >( [ self ]( MouseMotion const &msg ) {
             if ( Input::getInstance()->isMouseButtonDown( CRIMILD_INPUT_MOUSE_BUTTON_LEFT ) ) {
                 auto currentMousePos = Input::getInstance()->getNormalizedMousePosition();
                 auto delta = currentMousePos - self->_lastMousePos;
@@ -54,25 +52,23 @@ public:
 
                 if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_LEFT_SHIFT ) ) {
                     self->translateView( Vector3f( 3.0f * delta[ 0 ], -3.0f * delta[ 1 ], 0.0f ) );
-                }
-                else {
+                } else {
                     self->rotateView( Vector3f( delta[ 1 ], 3.0f * delta[ 0 ], 0.0f ) );
                 }
             }
-        });
+        } );
 
-        registerMessageHandler< MouseButtonUp >( [self]( MouseButtonUp const &msg ) {
+        registerMessageHandler< MouseButtonUp >( [ self ]( MouseButtonUp const &msg ) {
 
-        });
+        } );
 
-        registerMessageHandler< MouseScroll >( [self]( MouseScroll const &msg ) {
+        registerMessageHandler< MouseScroll >( [ self ]( MouseScroll const &msg ) {
             self->getNode()->local().translate() += 0.1f * msg.dy * Vector3f( 0.0f, 0.0f, 1.0f );
-        });
+        } );
     }
 
     virtual ~ViewControls( void )
     {
-
     }
 
     virtual void update( const Clock &clock ) override
@@ -83,8 +79,7 @@ public:
         if ( Input::getInstance()->isKeyDown( 'W' ) ) {
             if ( shouldTranslate ) {
                 translateView( Vector3f( 0.0f, -translateSpeed, 0.0f ) );
-            }
-            else {
+            } else {
                 rotateView( Vector3f( -0.1f, 0.0f, 0.0f ) );
             }
         }
@@ -92,8 +87,7 @@ public:
         if ( Input::getInstance()->isKeyDown( 'S' ) ) {
             if ( shouldTranslate ) {
                 translateView( Vector3f( 0.0f, translateSpeed, 0.0f ) );
-            }
-            else {
+            } else {
                 rotateView( Vector3f( 0.1f, 0.0f, 0.0f ) );
             }
         }
@@ -101,8 +95,7 @@ public:
         if ( Input::getInstance()->isKeyDown( 'A' ) ) {
             if ( shouldTranslate ) {
                 translateView( Vector3f( translateSpeed, 0.0f, 0.0f ) );
-            }
-            else {
+            } else {
                 rotateView( Vector3f( 0.0f, -0.1f, 0.0f ) );
             }
         }
@@ -110,8 +103,7 @@ public:
         if ( Input::getInstance()->isKeyDown( 'D' ) ) {
             if ( shouldTranslate ) {
                 translateView( Vector3f( -translateSpeed, 0.0f, 0.0f ) );
-            }
-            else {
+            } else {
                 rotateView( Vector3f( 0.0f, 0.1f, 0.0f ) );
             }
         }
@@ -160,12 +152,10 @@ class LightControls : public NodeComponent {
 public:
     LightControls( void )
     {
-
     }
 
     virtual ~LightControls( void )
     {
-
     }
 
     virtual void update( const Clock &clock ) override
@@ -191,18 +181,15 @@ public:
     }
 };
 
-class SceneControls : 
-    public NodeComponent,
-    public Messenger {
+class SceneControls : public NodeComponent,
+                      public Messenger {
 public:
     SceneControls( void )
     {
-
     }
 
     virtual ~SceneControls( void )
     {
-
     }
 
     virtual void start( void ) override
@@ -211,10 +198,11 @@ public:
             if ( msg.key == 'K' ) {
                 MessageQueue::getInstance()->broadcastMessage( ToggleDebugInfo {} );
             }
-        });
+        } );
     }
 };
 
+/*
 int main( int argc, char **argv )
 {
     auto sim = crimild::alloc< SDLSimulation >( "Crimild Model Viewer", crimild::alloc< Settings >( argc, argv ) );
@@ -286,4 +274,119 @@ int main( int argc, char **argv )
     sim->setScene( scene );
 	return sim->run();
 }
+*/
 
+using namespace crimild;
+
+class Example : public Simulation {
+public:
+    virtual void onStarted( void ) noexcept override
+    {
+        setScene( [ & ] {
+            auto scene = crimild::alloc< Group >();
+            auto settings = Simulation::getInstance()->getSettings();
+
+            scene->attachNode(
+                [ & ] {
+                    auto camera = crimild::alloc< Camera >();
+                    camera->local().setTranslate( 0.0f, 10.0f, 20.0f );
+                    camera->local().lookAt( 5.0f * Vector3f::UNIT_Y );
+                    camera->attachComponent< FreeLookCameraComponent >();
+                    return camera;
+                }() );
+
+            scene->attachNode(
+                [ & ] {
+                    auto path = FilePath {
+                        .pathType = settings->hasKey( "file" ) ? FilePath::PathType::ABSOLUTE : FilePath::PathType::RELATIVE,
+                        .path = settings->get< std::string >( "file", "assets/models/ironman/Iron_Man.obj" ),
+                    };
+
+                    Clock c;
+                    c.tick();
+                    SharedPointer< Node > model;
+                    if ( path.getExtension() == "crimild" ) {
+                        /*
+                        FileStream is( modelPath, FileStream::OpenMode::READ );
+                        is.load();
+                        if ( is.getObjectCount() > 0 ) {
+                            model = is.getObjectAt< Node >( 0 );
+                        }
+                        */
+                        exit( -1 );
+                    } else if ( path.getExtension() == "obj" ) {
+                        OBJLoader loader( path.getAbsolutePath() );
+                        loader.setVerbose( true );
+                        model = loader.load();
+                    } else {
+                        //SceneImporter importer;
+                        //model = importer.import( FileSystem::getInstance().pathForResource( modelPath ) );
+                    }
+                    c.tick();
+                    std::cout << "Time: " << c.getDeltaTime() << std::endl;
+
+                    if ( model == nullptr ) {
+                        Log::error( CRIMILD_CURRENT_CLASS_NAME, "No model provided: ", path.getAbsolutePath() );
+                        exit( -1 );
+                    }
+
+                    if ( settings->hasKey( "scale" ) ) {
+                        auto scale = settings->get< Real32 >( "scale", 1.0f );
+                        model->local().setScale( scale );
+                    } else {
+                        model->perform( UpdateWorldState() );
+                        // make sure the object is properly scaled
+                        auto scale = 10.0f / model->getWorldBound()->getRadius();
+                        model->local().setScale( scale );
+
+                        Camera::getMainCamera()->local().lookAt( scale * model->getWorldBound()->getCenter() );
+                    }
+                    return model;
+                }() );
+
+            scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.025f, 0.036f, 0.09f ) ) );
+
+            scene->attachNode(
+                [] {
+                    auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+                    light->setColor( RGBAColorf::ONE );
+                    light->setEnergy( 10.0f );
+                    light->local().setTranslate( Vector3f::ONE );
+                    light->local().lookAt( Vector3f::ZERO );
+                    light->setCastShadows( true );
+                    return light;
+                }() );
+
+            if ( settings->get< Bool >( "show.plane", true ) ) {
+                scene->attachNode(
+                    [] {
+                        auto geometry = crimild::alloc< Geometry >();
+                        geometry->attachPrimitive(
+                            crimild::alloc< QuadPrimitive >(
+                                QuadPrimitive::Params {} ) );
+                        geometry->setLocal(
+                            [] {
+                                Transformation t;
+                                t.rotate().fromAxisAngle( Vector3f::UNIT_X, -Numericf::HALF_PI );
+                                t.setScale( 100.0f );
+                                return t;
+                            }() );
+                        geometry->attachComponent< MaterialComponent >()->attachMaterial(
+                            [] {
+                                auto material = crimild::alloc< LitMaterial >();
+                                material->setMetallic( 0.0f );
+                                material->setRoughness( 1.0f );
+                                return material;
+                            }() );
+                        return geometry;
+                    }() );
+            }
+
+            scene->perform( StartComponents() );
+
+            return scene;
+        }() );
+    }
+};
+
+CRIMILD_CREATE_SIMULATION( Example, "Model Viewer" );
