@@ -319,8 +319,8 @@ public:
                         loader.setVerbose( true );
                         model = loader.load();
                     } else {
-                        //SceneImporter importer;
-                        //model = importer.import( FileSystem::getInstance().pathForResource( modelPath ) );
+                        SceneImporter importer;
+                        model = importer.import( path.getAbsolutePath() );
                     }
                     c.tick();
                     std::cout << "Time: " << c.getDeltaTime() << std::endl;
@@ -344,7 +344,37 @@ public:
                     return model;
                 }() );
 
-            scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.025f, 0.036f, 0.09f ) ) );
+            scene->attachNode(
+                [ & ] {
+                    if ( !settings->hasKey( "skybox" ) ) {
+                        return crimild::alloc< Skybox >( RGBColorf( 0.025f, 0.036f, 0.09f ) );
+                    }
+                    return crimild::alloc< Skybox >(
+                        [ settings = getSettings() ] {
+                            auto texture = crimild::alloc< Texture >();
+                            texture->imageView = [ settings ] {
+                                auto imageView = crimild::alloc< ImageView >();
+                                imageView->image = ImageManager::getInstance()->loadImage(
+                                    {
+                                        .filePath = {
+                                            .path = settings->get< std::string >( "skybox" ),
+                                            .pathType = FilePath::PathType::ABSOLUTE,
+                                        },
+                                        .hdr = true,
+                                    } );
+                                return imageView;
+                            }();
+                            texture->sampler = [ & ] {
+                                auto sampler = crimild::alloc< Sampler >();
+                                sampler->setMinFilter( Sampler::Filter::LINEAR );
+                                sampler->setMagFilter( Sampler::Filter::LINEAR );
+                                sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                                sampler->setCompareOp( CompareOp::NEVER );
+                                return sampler;
+                            }();
+                            return texture;
+                        }() );
+                }() );
 
             scene->attachNode(
                 [] {

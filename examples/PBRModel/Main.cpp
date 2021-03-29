@@ -59,8 +59,11 @@ public:
 
             auto material = crimild::alloc< LitMaterial >();
             material->setAlbedoMap( loadTexture( "assets/models/cerberus/Cerberus_A.tga" ) );
+            material->setMetallic( 1.0f );
             material->setMetallicMap( loadTexture( "assets/models/cerberus/Cerberus_M.tga" ) );
+            material->setRoughness( 1.0f );
             material->setRoughnessMap( loadTexture( "assets/models/cerberus/Cerberus_R.tga" ) );
+            material->setAmbientOcclusion( 1.0f );
             material->setNormalMap( loadTexture( "assets/models/cerberus/Cerberus_N.tga" ) );
 
             scene->attachNode( [ & ] {
