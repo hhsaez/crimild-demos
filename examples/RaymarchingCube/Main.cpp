@@ -62,6 +62,11 @@ public:
                                 material->getGraphicsPipeline()->rasterizationState = RasterizationState {
                                     .cullMode = CullMode::NONE,
                                 };
+                                material->getGraphicsPipeline()->colorBlendState = ColorBlendState {
+                                    .enable = true,
+                                    .srcColorBlendFactor = BlendFactor::SRC_ALPHA,
+                                    .dstColorBlendFactor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+                                };
                                 material->getGraphicsPipeline()->setProgram(
                                     [] {
                                         auto program = crimild::alloc< UnlitShaderProgram >();
@@ -138,7 +143,7 @@ public:
                                                         vec3 getNormal( vec3 p )
                                                         {
                                                             vec2 e = vec2( 1e-2, 0 );
-                                                            vec3 n = getDist( p ) - vec3( 
+                                                            vec3 n = getDist( p ) - vec3(
                                                                 getDist( p - e.xyy ),
                                                                 getDist( p - e.yxy ),
                                                                 getDist( p - e.yyx )
@@ -146,7 +151,7 @@ public:
                                                             return normalize( n );
                                                         }
 
-                                                        void main() 
+                                                        void main()
                                                         {
                                                             vec2 uv = inTexCoord - 0.5;
                                                             // uv.y *= -1.0;
@@ -164,10 +169,12 @@ public:
                                                             if ( d < MAX_DISTANCE ) {
                                                                 vec3 p = ro + d * rd;
                                                                 vec3 n = getNormal( p );
-                                                                color = n;
+                                                                color *= n;
                                                             }
-                                                            
-                                                            outColor = vec4( color, 1 );
+
+float alpha = dot( color, color ) > 0.0 ? 1.0 : 0.0;
+
+                                                            outColor = vec4( color, alpha );
                                                         }
                                                     )" ),
                                             } );
@@ -191,12 +198,6 @@ public:
                 scene->perform( StartComponents() );
 
                 return scene;
-            }() );
-
-        setComposition(
-            [ scene = getScene() ] {
-                using namespace crimild::compositions;
-                return present( renderScene( scene ) );
             }() );
     }
 };

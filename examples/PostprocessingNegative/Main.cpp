@@ -47,13 +47,8 @@ public:
                     } );
 
                 auto material = [] {
-                    auto material = crimild::alloc< SimpleLitMaterial >(
-                        SimpleLitMaterial::Props {
-                            .ambient = RGBAColorf( 0.0215f, 0.1745f, 0.0215f, 1.0f ),
-                            .diffuse = RGBAColorf( 0.07568f, 0.61424f, 0.07568f, 1.0f ),
-                            .specular = RGBAColorf( 0.633f, 0.727811f, 0.633f, 1.0f ),
-                            .shininess = 128.0f * 0.6f } );
-                    material->setDiffuseMap(
+                    auto material = crimild::alloc< UnlitMaterial >();
+                    material->setTexture(
                         [] {
                             auto texture = crimild::alloc< Texture >();
                             texture->imageView = [] {
@@ -100,48 +95,6 @@ public:
                 }
 
                 scene->attachNode(
-                    [] {
-                        auto group = crimild::alloc< Group >();
-                        group->attachNode(
-                            [] {
-                                auto geometry = crimild::alloc< Geometry >();
-                                geometry->attachPrimitive(
-                                    crimild::alloc< SpherePrimitive >(
-                                        SpherePrimitive::Params {
-                                            .type = Primitive::Type::TRIANGLES,
-                                            .layout = VertexP3N3TC2::getLayout(),
-                                            .radius = 0.1f,
-                                        } ) );
-                                geometry->attachComponent< MaterialComponent >()->attachMaterial(
-                                    [] {
-                                        auto material = crimild::alloc< UnlitMaterial >();
-                                        material->setColor( RGBAColorf::ONE );
-                                        return material;
-                                    }() );
-                                return geometry;
-                            }() );
-                        group->attachNode(
-                            [] {
-                                auto light = crimild::alloc< Light >(
-                                    Light::Type::POINT );
-                                light->setAttenuation( Vector3f( 1.0f, 0.027f, 0.0028f ) );
-                                light->setAmbient( RGBAColorf::ONE );
-                                return light;
-                            }() );
-                        group->attachComponent< LambdaComponent >(
-                            []( auto node, auto &clock ) {
-                                auto speed = 0.25f;
-                                auto t = speed * clock.getCurrentTime();
-                                auto x = Numericf::remap( -1.0f, 1.0f, -15.0f, 15.0f, Numericf::cos( t ) * Numericf::sin( t ) );
-                                auto y = Numericf::remapSin( -3.0f, 3.0f, t );
-                                auto z = Numericf::remapCos( -15.0f, 15.0f, t );
-                                ;
-                                node->local().setTranslate( x, y, z );
-                            } );
-                        return group;
-                    }() );
-
-                scene->attachNode(
                     [ & ] {
                         auto camera = crimild::alloc< Camera >();
                         camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
@@ -153,7 +106,10 @@ public:
                 return scene;
             }() );
 
-        setComposition( present( invert( renderScene( getScene() ) ) ) );
+        RenderSystem::getInstance()->setFrameGraph(
+            framegraph::invert(
+                framegraph::useResource(
+                    RenderSystem::getInstance()->getFrameGraph() ) ) );
     }
 };
 

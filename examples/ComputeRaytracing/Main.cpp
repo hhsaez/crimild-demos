@@ -60,287 +60,6 @@ namespace crimild {
         }
     };
 
-    namespace compositions {
-
-        Composition computeImage( UInt32 width, UInt32 height, SharedPointer< Shader > const &shader ) noexcept
-        {
-            Composition cmp;
-
-            auto texture = cmp.create< Texture >();
-            texture->imageView = [ & ] {
-                auto imageView = crimild::alloc< ImageView >();
-                imageView->image = [ & ] {
-                    auto image = crimild::alloc< Image >();
-                    image->format = Format::R8G8B8A8_UNORM;
-                    image->extent = {
-                        .width = Real32( width ),
-                        .height = Real32( height ),
-                    };
-                    image->setMipLevels( 1 );
-                    image->setName( "Compute Image" );
-                    return image;
-                }();
-                return imageView;
-            }();
-            texture->sampler = crimild::alloc< Sampler >();
-
-            auto pipeline = [ & ] {
-                auto pipeline = cmp.create< ComputePipeline >();
-                pipeline->setName( "Compute Pipeline" );
-                pipeline->setProgram(
-                    [ & ] {
-                        auto program = crimild::alloc< ShaderProgram >(
-                            Array< SharedPointer< Shader > > {
-                                shader,
-                            } );
-                        program->descriptorSetLayouts = {
-                            [] {
-                                auto layout = crimild::alloc< DescriptorSetLayout >();
-                                layout->bindings = {
-                                    {
-                                        .descriptorType = DescriptorType::STORAGE_IMAGE,
-                                        .stage = Shader::Stage::COMPUTE,
-                                    },
-                                    {
-                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                        .stage = Shader::Stage::COMPUTE,
-                                    },
-                                    {
-                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                        .stage = Shader::Stage::COMPUTE,
-                                    },
-                                    {
-                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                                        .stage = Shader::Stage::COMPUTE,
-                                    },
-                                };
-                                return layout;
-                            }(),
-                        };
-                        return program;
-                    }() );
-                return pipeline;
-            }();
-
-            auto descriptors = [ & ] {
-                auto ds = cmp.create< DescriptorSet >();
-                ds->descriptors = {
-                    Descriptor {
-                        .descriptorType = DescriptorType::STORAGE_IMAGE,
-                        .obj = crimild::retain( texture ),
-                    },
-                    Descriptor {
-                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                        .obj = crimild::alloc< CallbackUniformBuffer< RenderSettings > >(
-                            [] {
-                                auto settings = Simulation::getInstance()->getSettings();
-                                auto renderSettings = settings->get< RenderSettings >( "render.settings", RenderSettings {} );
-                                renderSettings.sampleCount = Numeric< UInt32 >::min( renderSettings.sampleCount + 1, renderSettings.maxSamples );
-                                settings->set( "render.settings", renderSettings );
-                                return renderSettings;
-                            } ),
-                    },
-                    Descriptor {
-                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                        .obj = [] {
-                            struct Uniforms {
-                                alignas( 4 ) UInt32 sampleCount;
-                                alignas( 4 ) UInt32 maxSamples;
-                                alignas( 4 ) UInt32 seed;
-                                alignas( 4 ) Real32 tanHalfFOV;
-                                alignas( 4 ) Real32 aspectRatio;
-                                alignas( 4 ) Real32 aperture;
-                                alignas( 4 ) Real32 focusDist;
-                                alignas( 16 ) Matrix4f view;
-                            };
-
-                            return crimild::alloc< CallbackUniformBuffer< Uniforms > >(
-                                [] {
-                                    auto settings = Simulation::getInstance()->getSettings();
-
-                                    auto renderSettings = settings->get< RenderSettings >( "render.settings", RenderSettings {} );
-
-                                    auto resetSampling = [ settings ] {
-                                        settings->set( "rendering.samples", UInt32( 1 ) );
-                                    };
-
-                                    static auto view = Matrix4f::IDENTITY;
-                                    static auto focusDist = 10.0f;
-
-                                    auto camera = Camera::getMainCamera();
-                                    if ( camera != nullptr ) {
-                                        const auto cameraView = camera->getWorld().computeModelMatrix();
-                                        if ( cameraView != view ) {
-                                            view = cameraView;
-                                            resetSampling();
-                                        }
-                                    }
-
-                                    if ( !settings->get< Bool >( "ui.show", true ) ) {
-                                        if ( Input::getInstance()->isMouseButtonDown( CRIMILD_INPUT_MOUSE_BUTTON_LEFT ) ) {
-                                            resetSampling();
-                                        }
-                                    }
-
-                                    settings->set(
-                                        "rendering.samples",
-                                        Numeric< UInt32 >::min(
-                                            settings->get< UInt32 >( "rendering.samples", 1 ) + 1,
-                                            renderSettings.maxSamples ) );
-
-                                    return Uniforms {
-                                        .sampleCount = settings->get< UInt32 >( "rendering.samples", 1 ),
-                                        .maxSamples = renderSettings.maxSamples,
-                                        .seed = settings->get< UInt32 >( "rendering.samples", 1 ),
-                                        .tanHalfFOV = camera->getFrustum().computeTanHalfFOV(),
-                                        .aspectRatio = camera->computeAspect(),
-                                        .aperture = renderSettings.aperture,
-                                        .focusDist = renderSettings.focusDist,
-                                        .view = view,
-                                    };
-                                } );
-                        }(),
-                    },
-                    Descriptor {
-                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
-                        .obj = [] {
-                            struct SphereDesc {
-                                alignas( 16 ) Vector3f center;
-                                alignas( 4 ) Real32 radius;
-                                alignas( 4 ) UInt32 materialID;
-                            };
-
-                            struct MaterialDesc {
-                                alignas( 4 ) UInt32 type;
-                                alignas( 16 ) Vector3f albedo;
-                                alignas( 4 ) Real32 fuzz;
-                                alignas( 4 ) Real32 ir;
-                            };
-
-#define MAX_SPHERE_COUNT 500
-#define MAX_MATERIAL_COUNT 500
-
-                            struct SceneUniforms {
-                                alignas( 16 ) SphereDesc spheres[ MAX_SPHERE_COUNT ];
-                                alignas( 4 ) UInt32 sphereCount = 0;
-                                alignas( 16 ) MaterialDesc materials[ MAX_MATERIAL_COUNT ];
-                                alignas( 4 ) UInt32 materialCount = 0;
-                            };
-
-                            SceneUniforms uniforms;
-
-                            auto createSphere = [ & ]( const Vector3f &center, Real32 radius, UInt32 materialID ) {
-                                SphereDesc s;
-                                s.center = center;
-                                s.radius = radius;
-                                s.materialID = materialID;
-                                uniforms.spheres[ uniforms.sphereCount ] = s;
-                                return uniforms.sphereCount++;
-                            };
-
-                            auto createLambertianMaterial = [ & ]( Vector3f albedo ) {
-                                MaterialDesc m;
-                                m.type = 0;
-                                m.albedo = albedo;
-                                m.fuzz = 1.0;
-                                uniforms.materials[ uniforms.materialCount ] = m;
-                                return uniforms.materialCount++;
-                            };
-
-                            auto createMetalMaterial = [ & ]( Vector3f albedo, float fuzz ) {
-                                MaterialDesc m;
-                                m.type = 1;
-                                m.albedo = albedo;
-                                m.fuzz = fuzz < 1.0 ? fuzz : 1.0;
-                                uniforms.materials[ uniforms.materialCount ] = m;
-                                return uniforms.materialCount++;
-                            };
-
-                            auto createDielectricMaterial = [ & ]( float ir ) {
-                                MaterialDesc m;
-                                m.type = 2;
-                                m.ir = ir;
-                                uniforms.materials[ uniforms.materialCount ] = m;
-                                return uniforms.materialCount++;
-                            };
-
-                            int groundMaterial = createLambertianMaterial( Vector3f( 0.5, 0.5, 0.5 ) );
-                            createSphere( Vector3f( 0, -1000, 0 ), 1000, groundMaterial );
-
-                            int count = 11;
-
-                            for ( int a = -count; a < count; a++ ) {
-                                for ( int b = -count; b < count; b++ ) {
-                                    Real32 chooseMat = Random::generate< Real32 >();
-                                    Vector3f center(
-                                        a + 0.9 * Random::generate< Real32 >(),
-                                        0.2,
-                                        b + 0.9 * Random::generate< Real32 >() );
-
-                                    if ( ( center - Vector3f( 4, 0.2, 0 ) ).getMagnitude() > 0.9f ) {
-                                        if ( chooseMat < 0.8 ) {
-                                            // diffuse
-                                            Vector3f albedo(
-                                                Random::generate< Real32 >() * Random::generate< Real32 >(),
-                                                Random::generate< Real32 >() * Random::generate< Real32 >(),
-                                                Random::generate< Real32 >() * Random::generate< Real32 >() );
-                                            int sphereMaterial = createLambertianMaterial( albedo );
-                                            createSphere( center, 0.2, sphereMaterial );
-                                        } else if ( chooseMat < 0.95 ) {
-                                            // metal
-                                            Vector3f albedo(
-                                                Random::generate< Real32 >( 0.5, 1.0 ),
-                                                Random::generate< Real32 >( 0.5, 1.0 ),
-                                                Random::generate< Real32 >( 0.5, 1.0 ) );
-                                            float fuzz = Random::generate< Real32 >( 0, 0.5 );
-                                            int sphereMaterial = createMetalMaterial( albedo, fuzz );
-                                            createSphere( center, 0.2, sphereMaterial );
-                                        } else {
-                                            // glass
-                                            int sphereMaterial = createDielectricMaterial( 1.5 );
-                                            createSphere( center, 0.2, sphereMaterial );
-                                        }
-                                    }
-                                }
-                            }
-
-                            int material1 = createDielectricMaterial( 1.5 );
-                            createSphere( Vector3f( 0, 1, 0 ), 1.0, material1 );
-
-                            int material2 = createLambertianMaterial( Vector3f( 0.4, 0.2, 0.1 ) );
-                            createSphere( Vector3f( -4, 1, 0 ), 1.0, material2 );
-
-                            int material3 = createMetalMaterial( Vector3f( 0.7, 0.6, 0.5 ), 0.0 );
-                            createSphere( Vector3f( 4, 1, 0 ), 1.0, material3 );
-
-                            return crimild::alloc< UniformBuffer >( uniforms );
-                        }(),
-                    },
-                };
-                return ds;
-            }();
-
-            auto computePass = cmp.create< ComputePass >();
-            auto commands = cmp.create< CommandBuffer >();
-            commands->begin( CommandBuffer::Usage::SIMULTANEOUS_USE );
-            commands->bindComputePipeline( pipeline );
-            commands->bindDescriptorSet( descriptors );
-            commands->dispatch(
-                DispatchWorkgroup {
-                    .x = width / DispatchWorkgroup::DEFAULT_WORGROUP_SIZE,
-                    .y = height / DispatchWorkgroup::DEFAULT_WORGROUP_SIZE,
-                    .z = 1 } );
-            commands->end();
-            computePass->setCommandRecorder(
-                [ commands ]( Size ) {
-                    return commands;
-                } );
-
-            cmp.setOutput( nullptr );
-            cmp.setOutputTexture( texture );
-            return cmp;
-        }
-    }
 }
 
 class Example : public Simulation {
@@ -371,9 +90,12 @@ public:
                 return scene;
             }() );
 
-        auto withTonemapping = []( auto cmp ) {
-            auto enabled = false;
-            return enabled ? tonemapping( cmp, 0.35 ) : cmp;
+        auto withTonemapping = []( auto op ) -> SharedPointer< FrameGraphOperation > {
+            auto settings = Simulation::getInstance()->getSettings();
+            auto enabled = settings->hasKey( "video.exposure" );
+
+            using namespace crimild::framegraph;
+            return enabled ? tonemapping( useResource( op ) ) : op;
         };
 
         registerMessageHandler< messaging::KeyReleased >(
@@ -445,17 +167,210 @@ public:
                 }
             } );
 
-        setComposition(
+        auto descriptors = Array< Descriptor > {
+            Descriptor {
+                .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                .obj = crimild::alloc< CallbackUniformBuffer< RenderSettings > >(
+                    [] {
+                        auto settings = Simulation::getInstance()->getSettings();
+                        auto renderSettings = settings->get< RenderSettings >( "render.settings", RenderSettings {} );
+                        renderSettings.sampleCount = Numeric< UInt32 >::min( renderSettings.sampleCount + 1, renderSettings.maxSamples );
+                        settings->set( "render.settings", renderSettings );
+                        return renderSettings;
+                    } ),
+            },
+            Descriptor {
+                .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                .obj = [] {
+                    struct Uniforms {
+                        alignas( 4 ) UInt32 sampleCount;
+                        alignas( 4 ) UInt32 maxSamples;
+                        alignas( 4 ) UInt32 seed;
+                        alignas( 4 ) Real32 tanHalfFOV;
+                        alignas( 4 ) Real32 aspectRatio;
+                        alignas( 4 ) Real32 aperture;
+                        alignas( 4 ) Real32 focusDist;
+                        alignas( 16 ) Matrix4f view;
+                    };
+
+                    return crimild::alloc< CallbackUniformBuffer< Uniforms > >(
+                        [] {
+                            auto settings = Simulation::getInstance()->getSettings();
+
+                            auto renderSettings = settings->get< RenderSettings >( "render.settings", RenderSettings {} );
+
+                            auto resetSampling = [ settings ] {
+                                settings->set( "rendering.samples", UInt32( 1 ) );
+                            };
+
+                            static auto view = Matrix4f::IDENTITY;
+                            static auto focusDist = 10.0f;
+
+                            auto camera = Camera::getMainCamera();
+                            if ( camera != nullptr ) {
+                                const auto cameraView = camera->getWorld().computeModelMatrix();
+                                if ( cameraView != view ) {
+                                    view = cameraView;
+                                    resetSampling();
+                                }
+                            }
+
+                            if ( !settings->get< Bool >( "ui.show", true ) ) {
+                                if ( Input::getInstance()->isMouseButtonDown( CRIMILD_INPUT_MOUSE_BUTTON_LEFT ) ) {
+                                    resetSampling();
+                                }
+                            }
+
+                            settings->set(
+                                "rendering.samples",
+                                Numeric< UInt32 >::min(
+                                    settings->get< UInt32 >( "rendering.samples", 1 ) + 1,
+                                    renderSettings.maxSamples ) );
+
+                            return Uniforms {
+                                .sampleCount = settings->get< UInt32 >( "rendering.samples", 1 ),
+                                .maxSamples = renderSettings.maxSamples,
+                                .seed = settings->get< UInt32 >( "rendering.samples", 1 ),
+                                .tanHalfFOV = camera->getFrustum().computeTanHalfFOV(),
+                                .aspectRatio = camera->computeAspect(),
+                                .aperture = renderSettings.aperture,
+                                .focusDist = renderSettings.focusDist,
+                                .view = view,
+                            };
+                        } );
+                }(),
+            },
+            Descriptor {
+                .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                .obj = [] {
+                    struct SphereDesc {
+                        alignas( 16 ) Vector3f center;
+                        alignas( 4 ) Real32 radius;
+                        alignas( 4 ) UInt32 materialID;
+                    };
+
+                    struct MaterialDesc {
+                        alignas( 4 ) UInt32 type;
+                        alignas( 16 ) Vector3f albedo;
+                        alignas( 4 ) Real32 fuzz;
+                        alignas( 4 ) Real32 ir;
+                    };
+
+#define MAX_SPHERE_COUNT 500
+#define MAX_MATERIAL_COUNT 500
+
+                    struct SceneUniforms {
+                        alignas( 16 ) SphereDesc spheres[ MAX_SPHERE_COUNT ];
+                        alignas( 4 ) UInt32 sphereCount = 0;
+                        alignas( 16 ) MaterialDesc materials[ MAX_MATERIAL_COUNT ];
+                        alignas( 4 ) UInt32 materialCount = 0;
+                    };
+
+                    SceneUniforms uniforms;
+
+                    auto createSphere = [ & ]( const Vector3f &center, Real32 radius, UInt32 materialID ) {
+                        SphereDesc s;
+                        s.center = center;
+                        s.radius = radius;
+                        s.materialID = materialID;
+                        uniforms.spheres[ uniforms.sphereCount ] = s;
+                        return uniforms.sphereCount++;
+                    };
+
+                    auto createLambertianMaterial = [ & ]( Vector3f albedo ) {
+                        MaterialDesc m;
+                        m.type = 0;
+                        m.albedo = albedo;
+                        m.fuzz = 1.0;
+                        uniforms.materials[ uniforms.materialCount ] = m;
+                        return uniforms.materialCount++;
+                    };
+
+                    auto createMetalMaterial = [ & ]( Vector3f albedo, float fuzz ) {
+                        MaterialDesc m;
+                        m.type = 1;
+                        m.albedo = albedo;
+                        m.fuzz = fuzz < 1.0 ? fuzz : 1.0;
+                        uniforms.materials[ uniforms.materialCount ] = m;
+                        return uniforms.materialCount++;
+                    };
+
+                    auto createDielectricMaterial = [ & ]( float ir ) {
+                        MaterialDesc m;
+                        m.type = 2;
+                        m.ir = ir;
+                        uniforms.materials[ uniforms.materialCount ] = m;
+                        return uniforms.materialCount++;
+                    };
+
+                    int groundMaterial = createLambertianMaterial( Vector3f( 0.5, 0.5, 0.5 ) );
+                    createSphere( Vector3f( 0, -1000, 0 ), 1000, groundMaterial );
+
+                    int count = 11;
+
+                    for ( int a = -count; a < count; a++ ) {
+                        for ( int b = -count; b < count; b++ ) {
+                            Real32 chooseMat = Random::generate< Real32 >();
+                            Vector3f center(
+                                a + 0.9 * Random::generate< Real32 >(),
+                                0.2,
+                                b + 0.9 * Random::generate< Real32 >() );
+
+                            if ( ( center - Vector3f( 4, 0.2, 0 ) ).getMagnitude() > 0.9f ) {
+                                if ( chooseMat < 0.8 ) {
+                                    // diffuse
+                                    Vector3f albedo(
+                                        Random::generate< Real32 >() * Random::generate< Real32 >(),
+                                        Random::generate< Real32 >() * Random::generate< Real32 >(),
+                                        Random::generate< Real32 >() * Random::generate< Real32 >() );
+                                    int sphereMaterial = createLambertianMaterial( albedo );
+                                    createSphere( center, 0.2, sphereMaterial );
+                                } else if ( chooseMat < 0.95 ) {
+                                    // metal
+                                    Vector3f albedo(
+                                        Random::generate< Real32 >( 0.5, 1.0 ),
+                                        Random::generate< Real32 >( 0.5, 1.0 ),
+                                        Random::generate< Real32 >( 0.5, 1.0 ) );
+                                    float fuzz = Random::generate< Real32 >( 0, 0.5 );
+                                    int sphereMaterial = createMetalMaterial( albedo, fuzz );
+                                    createSphere( center, 0.2, sphereMaterial );
+                                } else {
+                                    // glass
+                                    int sphereMaterial = createDielectricMaterial( 1.5 );
+                                    createSphere( center, 0.2, sphereMaterial );
+                                }
+                            }
+                        }
+                    }
+
+                    int material1 = createDielectricMaterial( 1.5 );
+                    createSphere( Vector3f( 0, 1, 0 ), 1.0, material1 );
+
+                    int material2 = createLambertianMaterial( Vector3f( 0.4, 0.2, 0.1 ) );
+                    createSphere( Vector3f( -4, 1, 0 ), 1.0, material2 );
+
+                    int material3 = createMetalMaterial( Vector3f( 0.7, 0.6, 0.5 ), 0.0 );
+                    createSphere( Vector3f( 4, 1, 0 ), 1.0, material3 );
+
+                    return crimild::alloc< UniformBuffer >( uniforms );
+                }(),
+            },
+        };
+
+        RenderSystem::getInstance()->setFrameGraph(
             [ & ] {
-                using namespace crimild::compositions;
+                using namespace crimild::framegraph;
                 return present(
-                    withTonemapping(
-                        computeImage(
-                            width,
-                            height,
-                            crimild::alloc< Shader >(
-                                Shader::Stage::COMPUTE,
-                                R"(
+                    useResource(
+                        withTonemapping(
+                            computeImage(
+                                Extent2D {
+                                    .width = Real32( width ),
+                                    .height = Real32( height ),
+                                },
+                                crimild::alloc< Shader >(
+                                    Shader::Stage::COMPUTE,
+                                    R"(
                                 layout( local_size_x = 32, local_size_y = 32 ) in;
                                 layout( set = 0, binding = 0, rgba8 ) uniform image2D resultImage;
 
@@ -592,7 +507,7 @@ public:
                                     return vec3( 0 );
                                 }
 
-                                vec3 getRandomInUnitDisc() 
+                                vec3 getRandomInUnitDisc()
                                 {
                                     while ( true ) {
                                         vec3 p = vec3(
@@ -731,7 +646,7 @@ public:
                                         HitRecord candidate = hitSphere( uScene.spheres[ i ], ray, tMin, hit.t );
                                         if ( candidate.hasResult ) {
                                             hit = candidate;
-                                        }    
+                                        }
                                     }
                                     return hit;
                                 }
@@ -797,7 +712,7 @@ public:
                                                 ++depth;
                                             } else {
                                                 return vec3( 0 );
-                                            }                                            
+                                            }
                                         }
                                     }
 
@@ -844,7 +759,9 @@ public:
                                     }
 
                                     imageStore( resultImage, ivec2( gl_GlobalInvocationID.xy ), vec4( color, 1.0 ) );
-                                } )" ) ) ) );
+                                } )" ),
+                                Format::R8G8B8A8_UNORM,
+                                descriptors ) ) ) );
             }() );
     }
 };
