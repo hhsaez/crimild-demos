@@ -39,9 +39,9 @@ public:
             auto scene = crimild::alloc< Group >();
 
             auto material = [ & ] {
-                auto material = crimild::alloc< SimpleLitMaterial >(
+                auto material = crimild::alloc< UnlitMaterial >();
                     SimpleLitMaterial::Props {} );
-                return material;
+                    return material;
             }();
 
             auto primitive = crimild::alloc< BoxPrimitive >(
@@ -152,6 +152,7 @@ public:
             return scene;
         }() );
 
+        /*
         setComposition( [ & ] {
             using namespace crimild::compositions;
             return present(
@@ -160,6 +161,7 @@ public:
                         renderSceneHDR( getScene() ) ),
                     0.5 ) );
         }() );
+        */
     }
 };
 

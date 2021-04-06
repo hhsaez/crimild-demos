@@ -69,6 +69,7 @@ public:
                                 imageView->image = ImageManager::getInstance()->loadImage(
                                     {
                                         .filePath = {
+                                            .pathType = settings->hasKey( "skybox" ) ? FilePath::PathType::ABSOLUTE : FilePath::PathType::RELATIVE,
                                             .path = settings->get< std::string >( "skybox", "assets/textures/Newport_Loft_Ref.hdr" ),
                                         },
                                         .hdr = true,
