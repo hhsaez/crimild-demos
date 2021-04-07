@@ -52,7 +52,7 @@ public:
 
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [ & ] {
-                            auto material = crimild::alloc< SimpleLitMaterial >( SimpleLitMaterial::Props {} );
+                            auto material = crimild::alloc< LitMaterial >();
                             return material;
                         }() );
                     return geometry;
@@ -87,11 +87,6 @@ public:
             scene->perform( StartComponents() );
 
             return scene;
-        }() );
-
-        setComposition( [ & ] {
-            using namespace crimild::compositions;
-            return present( tonemapping( renderSceneHDR( getScene() ), 0.1 ) );
         }() );
     }
 };

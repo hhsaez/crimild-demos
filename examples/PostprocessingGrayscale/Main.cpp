@@ -28,8 +28,6 @@
 #include <Crimild.hpp>
 
 using namespace crimild;
-using namespace crimild::compositions;
-
 class Example : public Simulation {
 public:
     void onStarted( void ) noexcept override

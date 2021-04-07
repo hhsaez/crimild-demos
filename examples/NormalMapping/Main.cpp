@@ -64,9 +64,10 @@ public:
                                     return texture;
                                 };
 
-                                auto material = crimild::alloc< SimpleLitMaterial >();
-                                material->setDiffuseMap( loadTexture( "assets/textures/stone-color.tga" ) );
-                                material->setSpecularMap( loadTexture( "assets/textures/stone-specular.tga" ) );
+                                auto material = crimild::alloc< LitMaterial >();
+                                material->setMetallic( 0.0f );
+                                material->setAlbedoMap( loadTexture( "assets/textures/stone-color.tga" ) );
+                                material->setRoughnessMap( loadTexture( "assets/textures/stone-specular.tga" ) );
                                 material->setNormalMap( loadTexture( "assets/textures/stone-normal.tga" ) );
                                 return material;
                             }() );
@@ -128,12 +129,6 @@ public:
                 scene->perform( StartComponents() );
 
                 return scene;
-            }() );
-
-        setComposition(
-            [ scene = getScene() ] {
-                using namespace crimild::compositions;
-                return present( renderScene( scene ) );
             }() );
     }
 };

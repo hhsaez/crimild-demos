@@ -44,7 +44,9 @@ public:
                     .layout = VertexP3N3TC2::getLayout(),
                 } );
 
-            auto material = crimild::alloc< SimpleLitMaterial >();
+            auto material = crimild::alloc< LitMaterial >();
+            material->setMetallic( 0.0f );
+            material->setRoughness( 1.0f );
 
             for ( auto i = 0; i < 100; ++i ) {
                 scene->attachNode(
@@ -74,17 +76,8 @@ public:
 
             scene->attachNode(
                 [] {
-                    auto light = crimild::alloc< Light >( Light::Type::AMBIENT );
-                    light->setAmbient( RGBAColorf( 0.1f, 0.1f, 0.1f, 1.0f ) );
-                    return light;
-                }() );
-
-            scene->attachNode(
-                [] {
-                    auto light = crimild::alloc< Light >(
-                        Light::Type::DIRECTIONAL );
+                    auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
                     light->setColor( RGBAColorf( 0.01f, 0.1f, 0.75f ) );
-                    light->setAmbient( RGBAColorf( 0.01f, 0.01f, 0.1f ) );
                     return light;
                 }() );
 
@@ -111,11 +104,9 @@ public:
                         }() );
                     group->attachNode(
                         [] {
-                            auto light = crimild::alloc< Light >(
-                                Light::Type::POINT );
-                            light->setAttenuation( Vector3f( 1.0f, 0.09f, 0.032f ) );
-                            light->setAmbient( RGBAColorf::UNIT_Y );
-                            light->setColor( RGBAColorf::UNIT_Y );
+                            auto light = crimild::alloc< Light >( Light::Type::POINT );
+                            light->setColor( RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ) );
+                            light->setEnergy( 10.0f );
                             return light;
                         }() );
                     group->attachComponent< LambdaComponent >(
@@ -125,7 +116,6 @@ public:
                             auto x = Numericf::remap( -1.0f, 1.0f, -15.0f, 15.0f, Numericf::cos( t ) * Numericf::sin( t ) );
                             auto y = Numericf::remapSin( -3.0f, 3.0f, t );
                             auto z = Numericf::remapCos( -15.0f, 15.0f, t );
-                            ;
                             node->local().setTranslate( x, y, z );
                         } );
                     return group;
@@ -154,11 +144,9 @@ public:
                         }() );
                     group->attachNode(
                         [] {
-                            auto light = crimild::alloc< Light >(
-                                Light::Type::POINT );
-                            light->setAttenuation( Vector3f( 1.0f, 0.09f, 0.032f ) );
-                            light->setAmbient( RGBAColorf::UNIT_X );
+                            auto light = crimild::alloc< Light >( Light::Type::POINT );
                             light->setColor( RGBAColorf::UNIT_X );
+                            light->setEnergy( 10.0f );
                             return light;
                         }() );
                     group->attachComponent< LambdaComponent >(
@@ -168,7 +156,6 @@ public:
                             auto x = Numericf::remapSin( -3.0f, 3.0f, t );
                             auto y = Numericf::remap( -1.0f, 1.0f, -15.0f, 15.0f, Numericf::cos( t ) * Numericf::sin( t ) );
                             auto z = Numericf::remapCos( -15.0f, 15.0f, t );
-                            ;
                             node->local().setTranslate( x, y, z );
                         } );
                     return group;
@@ -180,13 +167,12 @@ public:
                     camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
                     camera->attachNode(
                         [ & ] {
-                            auto light = crimild::alloc< Light >(
-                                Light::Type::SPOT );
+                            auto light = crimild::alloc< Light >( Light::Type::SPOT );
                             light->setInnerCutoff( Numericf::DEG_TO_RAD * 15.0f );
                             light->setOuterCutoff( Numericf::DEG_TO_RAD * 20.0f );
                             light->local().setTranslate( 0.0f, 1.0f, 0.0f );
                             light->local().lookAt( -5.0f * Vector3f::UNIT_Z );
-                            light->setAttenuation( Vector3f( 1.0f, 0.009f, 0.0032f ) );
+                            light->setEnergy( 10.0f );
                             return light;
                         }() );
                     camera->attachComponent< FreeLookCameraComponent >();
@@ -197,12 +183,6 @@ public:
 
             return scene;
         }() );
-
-        setComposition(
-            [ scene = getScene() ] {
-                using namespace crimild::compositions;
-                return present( renderScene( scene ) );
-            }() );
     }
 };
 
