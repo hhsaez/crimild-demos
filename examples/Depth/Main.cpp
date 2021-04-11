@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, Hernan Saez
+ * Copyright (c) 2002 - present, H. Hernan Saez
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
@@ -9,14 +9,14 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the <organization> nor the
+ *     * Neither the name of the copyright holder nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDER BE LIABLE FOR ANY
  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
  * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -26,50 +26,164 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_SDL.hpp>
-
-#include "Rendering/RenderGraph/RenderGraph.hpp"
-#include "Rendering/RenderGraph/Passes/DepthPass.hpp"
-#include "Rendering/RenderGraph/Passes/LinearizeDepthPass.hpp"
 
 using namespace crimild;
-using namespace crimild::rendergraph;
-using namespace crimild::sdl;
 
-SharedPointer< RenderGraph > createRenderGraph( void )
-{
-	auto graph = crimild::alloc< RenderGraph >();
+class Example : public Simulation {
+public:
+    void onStarted( void ) noexcept override
+    {
+        auto rnd = Random::Generator( 1982 );
 
-	auto depthPass = graph->createPass< passes::DepthPass >();
-    auto linearizeDepthPass = graph->createPass< passes::LinearizeDepthPass >();
+        setScene(
+            [ & ] {
+                auto scene = crimild::alloc< Group >();
 
-	linearizeDepthPass->setInput( depthPass->getDepthOutput() );	
+                for ( auto i = 0; i < 30; ++i ) {
+                    scene->attachNode(
+                        [ & ] {
+                            auto geometry = crimild::alloc< Geometry >();
+                            geometry->attachPrimitive(
+                                crimild::alloc< BoxPrimitive >(
+                                    BoxPrimitive::Params {
+                                        .type = Primitive::Type::TRIANGLES,
+                                        .layout = VertexP3::getLayout(),
+                                    } ) );
 
-	graph->setOutput( linearizeDepthPass->getOutput() );
+                            geometry->local().setTranslate(
+                                rnd.generate( -10.0f, 10.0f ),
+                                rnd.generate( -10.0f, 10.0f ),
+                                rnd.generate( -10.0f, 10.0f ) );
 
-	return graph;
-}
+                            geometry->local().setScale( rnd.generate( 0.75f, 1.5f ) );
 
-int main( int argc, char **argv )
-{
-	auto sim = crimild::alloc< SDLSimulation >( "Depth Buffer", crimild::alloc< Settings >( argc, argv ) );
+                            geometry->local().rotate().fromAxisAngle(
+                                Vector3f(
+                                    rnd.generate( 0.01f, 1.0f ),
+                                    rnd.generate( 0.01f, 1.0f ),
+                                    rnd.generate( 0.01f, 1.0f ) )
+                                    .getNormalized(),
+                                rnd.generate( 0.0f, Numericf::TWO_PI ) );
 
-	auto scene = crimild::alloc< Group >();
+                            return geometry;
+                        }() );
+                }
 
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/sponza/sponza.obj" ) );
-	auto model = loader.load();
-	if ( model != nullptr ) {
-		scene->attachNode( model );
-	}
+                scene->attachNode(
+                    [ & ] {
+                        auto camera = crimild::alloc< Camera >();
+                        camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
+                        return camera;
+                    }() );
 
-	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 1.0f, 3000.0f );
-	camera->local().setTranslate( 0.0f, 200.0f, 400.0f );
-	camera->local().rotate().fromEulerAngles( 0.0f, -0.5f * Numericf::PI, 0.0f );
-    camera->setRenderGraph( createRenderGraph() );
-	scene->attachNode( camera );
+                scene->perform( StartComponents() );
 
-	sim->setScene( scene );
+                return scene;
+            }() );
 
-	return sim->run();
-}
+        setComposition(
+            [ scene = getScene() ] {
+                using namespace crimild::compositions;
+                return present(
+                    [ scene ] {
+                        Composition cmp;
 
+                        auto renderPass = cmp.create< RenderPass >();
+                        renderPass->attachments = {
+                            [ & ] {
+                                auto att = crimild::alloc< Attachment >();
+                                att->format = Format::R8G8B8A8_UNORM;
+                                att->imageView = crimild::alloc< ImageView >();
+                                att->imageView->image = crimild::alloc< Image >();
+                                return att;
+                            }(),
+                            [ & ] {
+                                auto att = crimild::alloc< Attachment >();
+                                att->format = Format::DEPTH_STENCIL_DEVICE_OPTIMAL;
+                                att->imageView = crimild::alloc< ImageView >();
+                                att->imageView->image = crimild::alloc< Image >();
+                                return att;
+                            }()
+                        };
+
+                        renderPass->setDescriptors(
+                            [ & ] {
+                                auto descriptorSet = crimild::alloc< DescriptorSet >();
+                                descriptorSet->descriptors = {
+                                    Descriptor {
+                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                        .obj = [ & ] {
+                                            FetchCameras fetch;
+                                            scene->perform( fetch );
+                                            auto camera = fetch.anyCamera();
+                                            return crimild::alloc< CameraViewProjectionUniform >( camera );
+                                        }(),
+                                    },
+                                };
+                                return descriptorSet;
+                            }() );
+
+                        renderPass->setGraphicsPipeline(
+                            [] {
+                                auto pipeline = crimild::alloc< GraphicsPipeline >();
+                                pipeline->setProgram(
+                                    [] {
+                                        auto program = crimild::alloc< ShaderProgram >(
+                                            Array< SharedPointer< Shader > > {
+                                                Shader::withBinary(
+                                                    Shader::Stage::VERTEX,
+                                                    { .path = "assets/shaders/depth.vert.spv" } ),
+                                                Shader::withBinary(
+                                                    Shader::Stage::FRAGMENT,
+                                                    { .path = "assets/shaders/depth.frag.spv" } ),
+                                            } );
+                                        program->vertexLayouts = { VertexLayout::P3 };
+                                        program->descriptorSetLayouts = {
+                                            [] {
+                                                auto layout = crimild::alloc< DescriptorSetLayout >();
+                                                layout->bindings = {
+                                                    {
+                                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                                        .stage = Shader::Stage::VERTEX,
+                                                    },
+                                                };
+                                                return layout;
+                                            }(),
+                                            [] {
+                                                auto layout = crimild::alloc< DescriptorSetLayout >();
+                                                layout->bindings = {
+                                                    {
+                                                        .descriptorType = DescriptorType::UNIFORM_BUFFER,
+                                                        .stage = Shader::Stage::VERTEX,
+                                                    },
+                                                };
+                                                return layout;
+                                            }(),
+                                        };
+                                        return program;
+                                    }() );
+                                return pipeline;
+                            }() );
+
+                        renderPass->commands = [ & ] {
+                            auto commandBuffer = crimild::alloc< CommandBuffer >();
+                            scene->perform(
+                                ApplyToGeometries(
+                                    [ & ]( Geometry *g ) {
+                                        commandBuffer->bindGraphicsPipeline( renderPass->getGraphicsPipeline() );
+                                        commandBuffer->bindDescriptorSet( renderPass->getDescriptors() );
+                                        commandBuffer->bindDescriptorSet( g->getDescriptors() );
+                                        commandBuffer->drawPrimitive( g->anyPrimitive() );
+                                    } ) );
+                            return commandBuffer;
+                        }();
+
+                        cmp.setOutput( crimild::get_ptr( renderPass->attachments[ 0 ] ) );
+
+                        return cmp;
+                    }() );
+            }() );
+    }
+};
+
+CRIMILD_CREATE_SIMULATION( Example, "Depth" );
