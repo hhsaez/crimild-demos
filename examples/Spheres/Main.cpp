@@ -71,8 +71,7 @@ public:
                                             .type = Primitive::Type::TRIANGLES,
                                             .layout = VertexP3C3::getLayout(),
                                         } ) );
-                                geometry->local().setTranslate( it.first );
-                                geometry->local().setScale( 0.5f * it.second );
+                                geometry->setLocal( translation( it.first ) * scale( 0.5f * it.second ) );
                                 geometry->attachComponent< MaterialComponent >( material );
                                 return geometry;
                             }() );
@@ -80,9 +79,8 @@ public:
 
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 250.0f );
+                    camera->setLocal( translation( 0.0f, 0.0f, 250.0f ) );
                     camera->attachComponent< FreeLookCameraComponent >();
-                    Camera::setMainCamera( camera );
                     return camera;
                 }() );
 

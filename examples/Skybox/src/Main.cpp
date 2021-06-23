@@ -47,7 +47,7 @@ public:
 
                 auto material = [] {
                     auto material = crimild::alloc< UnlitMaterial >();
-                    material->setColor( RGBAColorf( 1.0f, 0.0f, 1.0f, 1.0f ) );
+                    material->setColor( ColorRGBA { 1.0f, 0.0f, 1.0f, 1.0f } );
                     material->setTexture(
                         [] {
                             auto texture = crimild::alloc< Texture >();
@@ -74,8 +74,7 @@ public:
                             [ & ] {
                                 auto geometry = crimild::alloc< Geometry >();
                                 geometry->attachPrimitive( primitive );
-                                geometry->local().setTranslate( it.first + Vector3f::UNIT_Z * it.second );
-                                geometry->local().setScale( 0.25f * it.second );
+                                geometry->setLocal( translation( it.first + Vector3::Constants::UNIT_Z * it.second ) * scale( 0.25f * it.second ) );
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
                                 return geometry;
                             }() );
@@ -116,10 +115,8 @@ public:
 
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 10.0f, 100.0f );
-                    camera->local().lookAt( Vector3f::ZERO );
+                    camera->setLocal( translation( 0.0f, 10.0f, 100.0f ) );
                     camera->attachComponent< FreeLookCameraComponent >();
-                    Camera::setMainCamera( camera );
                     return camera;
                 }() );
 

@@ -46,16 +46,16 @@ public:
                                     VertexP3C3::getLayout(),
                                     Array< VertexP3C3 > {
                                         {
-                                            .position = Vector3f( -0.5f, -0.5f, 0.0f ),
-                                            .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
+                                            .position = Vector3f { -0.5f, -0.5f, 0.0f },
+                                            .color = ColorRGB { 1.0f, 0.0f, 0.0f },
                                         },
                                         {
-                                            .position = Vector3f( 0.5f, -0.5f, 0.0f ),
-                                            .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
+                                            .position = Vector3 { 0.5f, -0.5f, 0.0f },
+                                            .color = ColorRGB { 0.0f, 1.0f, 0.0f },
                                         },
                                         {
-                                            .position = Vector3f( 0.0f, 0.5f, 0.0f ),
-                                            .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
+                                            .position = Vector3 { 0.0f, 0.5f, 0.0f },
+                                            .color = ColorRGB { 0.0f, 0.0f, 1.0f },
                                         },
                                     } );
                             }(),
@@ -63,11 +63,7 @@ public:
                     primitive->setIndices(
                         crimild::alloc< IndexBuffer >(
                             Format::INDEX_32_UINT,
-                            Array< crimild::UInt32 > {
-                                0,
-                                1,
-                                2,
-                            } ) );
+                            Array< crimild::UInt32 > { 0, 1, 2 } ) );
                     return primitive;
                 };
 
@@ -107,28 +103,38 @@ public:
 
                 auto rnd = Random::Generator( 1982 );
 
-                for ( auto x = -10.0f; x <= 10.0f; x += 1.0f ) {
-                    for ( auto z = -10.0f; z <= 10.0f; z += 1.0f ) {
+                const auto N = 10.0f;
+
+                for ( auto x = -N; x <= N; x += 1.0f ) {
+                    for ( auto z = -N; z <= N; z += 1.0f ) {
+                        const auto T = translation( x, 0, z + ( 0.1f * x / N ) );
+                        const auto R = rotation(
+                            normalize(
+                                Vector3 {
+                                    Real( rnd.generate() ),
+                                    Real( rnd.generate() ),
+                                    Real( rnd.generate() ),
+                                } ),
+                            rnd.generate( 0, numbers::TWO_PI ) );
+                        const auto S = scale( rnd.generate( 0.5f, 1.5f ), rnd.generate( 0.5f, 1.5f ), 1 );
+
+                        // Scale/Rotate/Translate
+                        const auto pose = T * R * S;
+
                         scene->attachNode(
                             createTriangle(
                                 Transformation(
-                                    Vector3f( x, 0.0f, z + ( 0.1f * x / 10.0f ) ),
-                                    Quaternion4f::createFromAxisAngle(
-                                        Vector3f(
-                                            rnd.generate(),
-                                            rnd.generate(),
-                                            rnd.generate() )
-                                            .getNormalized(),
-                                        rnd.generate( 0.0f, Numericf::TWO_PI ) ),
-                                    rnd.generate( 0.5f, 1.5f ) ) ) );
+                                    pose ) ) );
                     }
                 }
 
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 5.0f, 10.0f, 10.0f );
-                    camera->local().lookAt( -Vector3f::UNIT_Y );
-                    Camera::setMainCamera( camera );
+                    camera->setLocal(
+                        lookAt(
+                            Point3 { 5, 10, 10 },
+                            Point3 { 0, -1, 0 },
+                            Vector3::Constants::UP ) );
                     return camera;
                 }() );
                 return scene;

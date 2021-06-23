@@ -71,7 +71,7 @@ public:
                     [ & ] {
                         auto spheres = crimild::alloc< Group >();
 
-                        auto sphere = [ & ]( const Vector3f &position, const Vector2f &divisions ) {
+                        auto sphere = [ & ]( const Vector3f &position, const Vector2i &divisions ) {
                             auto group = crimild::alloc< Group >();
                             group->attachNode(
                                 [ & ] {
@@ -102,15 +102,15 @@ public:
                                     geometry->attachComponent< MaterialComponent >( linesMaterial );
                                     return geometry;
                                 }() );
-                            group->local().setTranslate( position );
+                            group->setLocal( translation( position ) );
                             return group;
                         };
 
-                        spheres->attachNode( sphere( Vector3f( -6.0f, 0.0f, 0.0f ), Vector2f( 40.0f, 40.0f ) ) );
-                        spheres->attachNode( sphere( Vector3f( -3.0f, 0.0f, 0.0f ), Vector2f( 30.0f, 30.0f ) ) );
-                        spheres->attachNode( sphere( Vector3f( 0.0f, 0.0f, 0.0f ), Vector2f( 20.0f, 20.0f ) ) );
-                        spheres->attachNode( sphere( Vector3f( 3.0f, 0.0f, 0.0f ), Vector2f( 10.0f, 10.0f ) ) );
-                        spheres->attachNode( sphere( Vector3f( 6.0f, 0.0f, 0.0f ), Vector2f( 5.0f, 5.0f ) ) );
+                        spheres->attachNode( sphere( Vector3 { -6.0f, 0.0f, 0.0f }, Vector2i { 40, 40 } ) );
+                        spheres->attachNode( sphere( Vector3 { -3.0f, 0.0f, 0.0f }, Vector2i { 30, 30 } ) );
+                        spheres->attachNode( sphere( Vector3 { 0.0f, 0.0f, 0.0f }, Vector2i { 20, 20 } ) );
+                        spheres->attachNode( sphere( Vector3 { 3.0f, 0.0f, 0.0f }, Vector2i { 10, 10 } ) );
+                        spheres->attachNode( sphere( Vector3 { 6.0f, 0.0f, 0.0f }, Vector2i { 5, 5 } ) );
 
                         return spheres;
                     }() );
@@ -120,7 +120,7 @@ public:
                     [ & ] {
                         auto cones = crimild::alloc< Group >();
 
-                        auto cone = [ & ]( const Vector3f &position, const Vector2f &divisions ) {
+                        auto cone = [ & ]( const Vector3f &position, const Vector2i &divisions ) {
                             auto group = crimild::alloc< Group >();
                             group->attachNode(
                                 [ & ] {
@@ -151,17 +151,17 @@ public:
                                     geometry->attachComponent< MaterialComponent >( linesMaterial );
                                     return geometry;
                                 }() );
-                            group->local().setTranslate( position );
+                            group->setLocal( translation( position ) );
                             return group;
                         };
 
-                        cones->attachNode( cone( Vector3f( -6.0f, 0.0f, 0.0f ), Vector2f( 40.0f, 40.0f ) ) );
-                        cones->attachNode( cone( Vector3f( -3.0f, 0.0f, 0.0f ), Vector2f( 30.0f, 30.0f ) ) );
-                        cones->attachNode( cone( Vector3f( 0.0f, 0.0f, 0.0f ), Vector2f( 20.0f, 20.0f ) ) );
-                        cones->attachNode( cone( Vector3f( 3.0f, 0.0f, 0.0f ), Vector2f( 10.0f, 10.0f ) ) );
-                        cones->attachNode( cone( Vector3f( 6.0f, 0.0f, 0.0f ), Vector2f( 5.0f, 5.0f ) ) );
+                        cones->attachNode( cone( Vector3 { -6.0f, 0.0f, 0.0f }, Vector2i { 40, 40 } ) );
+                        cones->attachNode( cone( Vector3 { -3.0f, 0.0f, 0.0f }, Vector2i { 30, 30 } ) );
+                        cones->attachNode( cone( Vector3 { 0.0f, 0.0f, 0.0f }, Vector2i { 20, 20 } ) );
+                        cones->attachNode( cone( Vector3 { 3.0f, 0.0f, 0.0f }, Vector2i { 10, 10 } ) );
+                        cones->attachNode( cone( Vector3 { 6.0f, 0.0f, 0.0f }, Vector2i { 5, 5 } ) );
 
-                        cones->local().setTranslate( Vector3f( 0.0f, 3.0f, 0.0f ) );
+                        cones->setLocal( translation( 0.0f, 3.0f, 0.0f ) );
 
                         return cones;
                     }() );
@@ -171,7 +171,7 @@ public:
                     [ & ] {
                         auto kleinBottles = crimild::alloc< Group >();
 
-                        auto kleinBottle = [ & ]( const Vector3f &position, const Vector2f &divisions ) {
+                        auto kleinBottle = [ & ]( const Vector3f &position, const Vector2i &divisions ) {
                             auto group = crimild::alloc< Group >();
                             group->attachNode(
                                 [ & ] {
@@ -201,17 +201,17 @@ public:
                                     geometry->attachComponent< MaterialComponent >( linesMaterial );
                                     return geometry;
                                 }() );
-                            group->local().setTranslate( position );
+                            group->setLocal( translation( position ) );
                             return group;
                         };
 
-                        kleinBottles->attachNode( kleinBottle( Vector3f( -6.0f, 0.0f, 0.0f ), Vector2f( 40.0f, 40.0f ) ) );
-                        kleinBottles->attachNode( kleinBottle( Vector3f( -3.0f, 0.0f, 0.0f ), Vector2f( 30.0f, 30.0f ) ) );
-                        kleinBottles->attachNode( kleinBottle( Vector3f( 0.0f, 0.0f, 0.0f ), Vector2f( 20.0f, 20.0f ) ) );
-                        kleinBottles->attachNode( kleinBottle( Vector3f( 3.0f, 0.0f, 0.0f ), Vector2f( 10.0f, 10.0f ) ) );
-                        kleinBottles->attachNode( kleinBottle( Vector3f( 6.0f, 0.0f, 0.0f ), Vector2f( 5.0f, 5.0f ) ) );
+                        kleinBottles->attachNode( kleinBottle( Vector3 { -6.0f, 0.0f, 0.0f }, Vector2i { 40, 40 } ) );
+                        kleinBottles->attachNode( kleinBottle( Vector3 { -3.0f, 0.0f, 0.0f }, Vector2i { 30, 30 } ) );
+                        kleinBottles->attachNode( kleinBottle( Vector3 { 0.0f, 0.0f, 0.0f }, Vector2i { 20, 20 } ) );
+                        kleinBottles->attachNode( kleinBottle( Vector3 { 3.0f, 0.0f, 0.0f }, Vector2i { 10, 10 } ) );
+                        kleinBottles->attachNode( kleinBottle( Vector3 { 6.0f, 0.0f, 0.0f }, Vector2i { 5, 5 } ) );
 
-                        kleinBottles->local().setTranslate( Vector3f( 0.0f, -3.0f, 0.0f ) );
+                        kleinBottles->setLocal( translation( 0.0f, -3.0f, 0.0f ) );
 
                         return kleinBottles;
                     }() );
@@ -221,7 +221,7 @@ public:
                     [ & ] {
                         auto trefoilKnots = crimild::alloc< Group >();
 
-                        auto trefoilKnot = [ & ]( const Vector3f &position, const Vector2f &divisions ) {
+                        auto trefoilKnot = [ & ]( const Vector3f &position, const Vector2i &divisions ) {
                             auto group = crimild::alloc< Group >();
                             group->attachNode(
                                 [ & ] {
@@ -251,17 +251,17 @@ public:
                                     geometry->attachComponent< MaterialComponent >( linesMaterial );
                                     return geometry;
                                 }() );
-                            group->local().setTranslate( position );
+                            group->setLocal( translation( position ) );
                             return group;
                         };
 
-                        trefoilKnots->attachNode( trefoilKnot( Vector3f( -6.0f, 0.0f, 0.0f ), Vector2f( 40.0f, 40.0f ) ) );
-                        trefoilKnots->attachNode( trefoilKnot( Vector3f( -3.0f, 0.0f, 0.0f ), Vector2f( 30.0f, 30.0f ) ) );
-                        trefoilKnots->attachNode( trefoilKnot( Vector3f( 0.0f, 0.0f, 0.0f ), Vector2f( 20.0f, 20.0f ) ) );
-                        trefoilKnots->attachNode( trefoilKnot( Vector3f( 3.0f, 0.0f, 0.0f ), Vector2f( 10.0f, 10.0f ) ) );
-                        trefoilKnots->attachNode( trefoilKnot( Vector3f( 6.0f, 0.0f, 0.0f ), Vector2f( 5.0f, 5.0f ) ) );
+                        trefoilKnots->attachNode( trefoilKnot( Vector3 { -6.0f, 0.0f, 0.0f }, Vector2i { 40, 40 } ) );
+                        trefoilKnots->attachNode( trefoilKnot( Vector3 { -3.0f, 0.0f, 0.0f }, Vector2i { 30, 30 } ) );
+                        trefoilKnots->attachNode( trefoilKnot( Vector3 { 0.0f, 0.0f, 0.0f }, Vector2i { 20, 20 } ) );
+                        trefoilKnots->attachNode( trefoilKnot( Vector3 { 3.0f, 0.0f, 0.0f }, Vector2i { 10, 10 } ) );
+                        trefoilKnots->attachNode( trefoilKnot( Vector3 { 6.0f, 0.0f, 0.0f }, Vector2i { 5, 5 } ) );
 
-                        trefoilKnots->local().setTranslate( Vector3f( 0.0f, -6.0f, 0.0f ) );
+                        trefoilKnots->setLocal( translation( 0.0f, -6.0f, 0.0f ) );
 
                         return trefoilKnots;
                     }() );
@@ -271,7 +271,7 @@ public:
                     [ & ] {
                         auto mobiusStrips = crimild::alloc< Group >();
 
-                        auto mobiusStrip = [ & ]( const Vector3f &position, const Vector2f &divisions ) {
+                        auto mobiusStrip = [ & ]( const Vector3f &position, const Vector2i &divisions ) {
                             auto group = crimild::alloc< Group >();
                             group->attachNode(
                                 [ & ] {
@@ -301,17 +301,17 @@ public:
                                     geometry->attachComponent< MaterialComponent >( linesMaterial );
                                     return geometry;
                                 }() );
-                            group->local().setTranslate( position );
+                            group->setLocal( translation( position ) );
                             return group;
                         };
 
-                        mobiusStrips->attachNode( mobiusStrip( Vector3f( -6.0f, 0.0f, 0.0f ), Vector2f( 40.0f, 40.0f ) ) );
-                        mobiusStrips->attachNode( mobiusStrip( Vector3f( -3.0f, 0.0f, 0.0f ), Vector2f( 30.0f, 30.0f ) ) );
-                        mobiusStrips->attachNode( mobiusStrip( Vector3f( 0.0f, 0.0f, 0.0f ), Vector2f( 20.0f, 20.0f ) ) );
-                        mobiusStrips->attachNode( mobiusStrip( Vector3f( 3.0f, 0.0f, 0.0f ), Vector2f( 10.0f, 10.0f ) ) );
-                        mobiusStrips->attachNode( mobiusStrip( Vector3f( 6.0f, 0.0f, 0.0f ), Vector2f( 5.0f, 5.0f ) ) );
+                        mobiusStrips->attachNode( mobiusStrip( Vector3 { -6.0f, 0.0f, 0.0f }, Vector2i { 40, 40 } ) );
+                        mobiusStrips->attachNode( mobiusStrip( Vector3 { -3.0f, 0.0f, 0.0f }, Vector2i { 30, 30 } ) );
+                        mobiusStrips->attachNode( mobiusStrip( Vector3 { 0.0f, 0.0f, 0.0f }, Vector2i { 20, 20 } ) );
+                        mobiusStrips->attachNode( mobiusStrip( Vector3 { 3.0f, 0.0f, 0.0f }, Vector2i { 10, 10 } ) );
+                        mobiusStrips->attachNode( mobiusStrip( Vector3 { 6.0f, 0.0f, 0.0f }, Vector2i { 5, 5 } ) );
 
-                        mobiusStrips->local().setTranslate( Vector3f( 0.0f, -9.0f, 0.0f ) );
+                        mobiusStrips->setLocal( translation( 0.0f, -9.0f, 0.0f ) );
 
                         return mobiusStrips;
                     }() );
@@ -321,7 +321,7 @@ public:
                     [ & ] {
                         auto toruses = crimild::alloc< Group >();
 
-                        auto torus = [ & ]( const Vector3f &position, const Vector2f &divisions ) {
+                        auto torus = [ & ]( const Vector3f &position, const Vector2i &divisions ) {
                             auto group = crimild::alloc< Group >();
                             group->attachNode(
                                 [ & ] {
@@ -352,25 +352,24 @@ public:
                                     geometry->attachComponent< MaterialComponent >( linesMaterial );
                                     return geometry;
                                 }() );
-                            group->local().setTranslate( position );
+                            group->setLocal( translation( position ) );
                             return group;
                         };
 
-                        toruses->attachNode( torus( Vector3f( -6.0f, 0.0f, 0.0f ), Vector2f( 40.0f, 40.0f ) ) );
-                        toruses->attachNode( torus( Vector3f( -3.0f, 0.0f, 0.0f ), Vector2f( 30.0f, 30.0f ) ) );
-                        toruses->attachNode( torus( Vector3f( 0.0f, 0.0f, 0.0f ), Vector2f( 20.0f, 20.0f ) ) );
-                        toruses->attachNode( torus( Vector3f( 3.0f, 0.0f, 0.0f ), Vector2f( 10.0f, 10.0f ) ) );
-                        toruses->attachNode( torus( Vector3f( 6.0f, 0.0f, 0.0f ), Vector2f( 5.0f, 5.0f ) ) );
+                        toruses->attachNode( torus( Vector3 { -6.0f, 0.0f, 0.0f }, Vector2i { 40, 40 } ) );
+                        toruses->attachNode( torus( Vector3 { -3.0f, 0.0f, 0.0f }, Vector2i { 30, 30 } ) );
+                        toruses->attachNode( torus( Vector3 { 0.0f, 0.0f, 0.0f }, Vector2i { 20, 20 } ) );
+                        toruses->attachNode( torus( Vector3 { 3.0f, 0.0f, 0.0f }, Vector2i { 10, 10 } ) );
+                        toruses->attachNode( torus( Vector3 { 6.0f, 0.0f, 0.0f }, Vector2i { 5, 5 } ) );
 
-                        toruses->local().setTranslate( Vector3f( 0.0f, -12.0f, 0.0f ) );
+                        toruses->setLocal( translation( 0.0f, -12.0f, 0.0f ) );
 
                         return toruses;
                     }() );
 
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, -4.5f, 24.0f );
-                    Camera::setMainCamera( camera );
+                    camera->setLocal( translation( 0.0f, -4.5f, 24.0f ) );
                     return camera;
                 }() );
                 return scene;

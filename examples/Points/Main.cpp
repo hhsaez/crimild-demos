@@ -28,6 +28,8 @@
 #include <Crimild.hpp>
 
 using namespace crimild;
+using namespace crimild::behaviors;
+using namespace crimild::behaviors::actions;
 
 class Example : public Simulation {
 public:
@@ -53,12 +55,12 @@ public:
                                                 auto rnd = Random::Generator( 1982 );
 
                                                 for ( auto i = 0; i < vertices.size(); i++ ) {
-                                                    auto position = Vector3f(
-                                                        rnd.generate( -0.5f * size, 0.5f * size ),
-                                                        rnd.generate( -0.5f * size, 0.5f * size ),
-                                                        rnd.generate( -0.5f * size, 0.5f * size ) );
-                                                    auto color = Vector3f( 0.5f, 0.5f, 0.5f ) + position / size;
-                                                    color *= position.getMagnitude() / size;
+                                                    auto position = Vector3f {
+                                                        Real( rnd.generate( -0.5f * size, 0.5f * size ) ),
+                                                        Real( rnd.generate( -0.5f * size, 0.5f * size ) ),
+                                                        Real( rnd.generate( -0.5f * size, 0.5f * size ) ),
+                                                    };
+                                                    const auto color = ( ColorRGB { 0.5f, 0.5f, 0.5f } + rgb( position / size ) ) * length( position ) / size;
                                                     vertices[ i ] = {
                                                         .position = position,
                                                         .color = color,
@@ -95,16 +97,13 @@ public:
                                     }() );
                                 return material;
                             }() );
-                        geometry->attachComponent< RotationComponent >(
-                            Vector3f( 0.5f, 0.95f, 0.75f ),
-                            0.1f );
-                        return geometry;
+
+                        return withBehavior( geometry, rotate( Vector3 { 0.5f, 0.95f, 0.75f }, 0.1f ) );
                     }() );
 
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 250.0f );
-                    Camera::setMainCamera( camera );
+                    camera->setLocal( translation( 0.0f, 0.0f, 250.0f ) );
                     return camera;
                 }() );
                 return scene;

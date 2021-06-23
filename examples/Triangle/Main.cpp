@@ -49,16 +49,16 @@ public:
                                             VertexP3C3::getLayout(),
                                             Array< VertexP3C3 > {
                                                 {
-                                                    .position = Vector3f( -0.5f, -0.5f, 0.0f ),
-                                                    .color = RGBColorf( 1.0f, 0.0f, 0.0f ),
+                                                    .position = Vector3f { -0.5f, -0.5f, 0.0f },
+                                                    .color = ColorRGB { 1.0f, 0.0f, 0.0f },
                                                 },
                                                 {
-                                                    .position = Vector3f( 0.5f, -0.5f, 0.0f ),
-                                                    .color = RGBColorf( 0.0f, 1.0f, 0.0f ),
+                                                    .position = Vector3f { 0.5f, -0.5f, 0.0f },
+                                                    .color = ColorRGB { 0.0f, 1.0f, 0.0f },
                                                 },
                                                 {
-                                                    .position = Vector3f( 0.0f, 0.5f, 0.0f ),
-                                                    .color = RGBColorf( 0.0f, 0.0f, 1.0f ),
+                                                    .position = Vector3f { 0.0f, 0.5f, 0.0f },
+                                                    .color = ColorRGB { 0.0f, 0.0f, 1.0f },
                                                 },
                                             } );
                                     }(),
@@ -84,16 +84,48 @@ public:
                                             auto program = crimild::alloc< UnlitShaderProgram >();
                                             program->setShaders(
                                                 Array< SharedPointer< Shader > > {
-                                                    Shader::withSource(
+                                                    crimild::alloc< Shader >(
                                                         Shader::Stage::VERTEX,
-                                                        FilePath { .path = "assets/shaders/scene.vert" } ),
-                                                    Shader::withSource(
+                                                        R"(
+                                                            layout( location = 0 ) in vec3 inPosition;
+                                                            layout( location = 1 ) in vec3 inColor;
+
+                                                            layout( set = 0, binding = 0 ) uniform RenderPassUniforms
+                                                            {
+                                                                mat4 view;
+                                                                mat4 proj;
+                                                            };
+
+                                                            layout( set = 2, binding = 0 ) uniform GeometryUniforms
+                                                            {
+                                                                mat4 model;
+                                                            };
+
+                                                            layout( location = 0 ) out vec3 outColor;
+
+                                                            void main()
+                                                            {
+                                                                gl_Position = proj * view * model * vec4( inPosition, 1.0 );
+                                                                outColor = inColor;
+                                                            }
+                                                        )" ),
+                                                    crimild::alloc< Shader >(
                                                         Shader::Stage::FRAGMENT,
-                                                        FilePath { .path = "assets/shaders/scene.frag" } ),
+                                                        R"(
+                                                            layout( location = 0 ) in vec3 inColor;
+
+                                                            layout( location = 0 ) out vec4 outColor;
+
+                                                            void main()
+                                                            {
+                                                                outColor = vec4( inColor, 1.0 );
+                                                            }
+                                                        )" ),
                                                 } );
                                             program->vertexLayouts = { VertexLayout::P3_C3 };
                                             return program;
                                         }() );
+                                    pipeline->rasterizationState.cullMode = CullMode::NONE;
                                     return pipeline;
                                 }() );
                             return material;
@@ -103,8 +135,11 @@ public:
 
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-                    Camera::setMainCamera( camera );
+                    camera->setLocal(
+                        lookAt(
+                            Point3 { 0, 0, 3 },
+                            Point3 { 0, 0, 0 },
+                            Vector3::Constants::UP ) );
                     return camera;
                 }() );
                 return scene;

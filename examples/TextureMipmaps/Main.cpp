@@ -65,7 +65,7 @@ public:
                         crimild::alloc< QuadPrimitive >(
                             QuadPrimitive::Params {
                                 .layout = VertexP3N3TC2::getLayout(),
-                                .size = 0.5f * Vector2f::ONE,
+                                .size = 0.5f * Vector2::Constants::ONE,
                             } ) );
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [ & ] {
@@ -73,8 +73,7 @@ public:
                             material->setTexture( texture );
                             return material;
                         }() );
-                    geometry->local().setTranslate( position );
-                    geometry->local().setScale( scale );
+                    geometry->setLocal( translation( position ) * crimild::scale( scale ) );
                     return geometry;
                 };
 
@@ -91,18 +90,16 @@ public:
                                     texture ) );
                         } );
 
-                    group->local().setTranslate( position );
+                    group->setLocal( translation( position ) );
                     return group;
                 };
 
-                scene->attachNode( sampleBuilder( Vector3f( -7.0f, 7.0f, 0.0f ), true ) );
-                scene->attachNode( sampleBuilder( Vector3f( -7.0f, -19.0f, 0.0f ), false ) );
+                scene->attachNode( sampleBuilder( Vector3 { -7.0f, 7.0f, 0.0f }, true ) );
+                scene->attachNode( sampleBuilder( Vector3 { -7.0f, -19.0f, 0.0f }, false ) );
 
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 80.0f );
-                    camera->local().lookAt( Vector3f::ZERO );
-                    Camera::setMainCamera( camera );
+                    camera->setLocal( translation( 0.0f, 0.0f, 80.0f ) );
                     return camera;
                 }() );
                 return scene;

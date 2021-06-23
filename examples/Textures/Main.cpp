@@ -75,9 +75,7 @@ public:
                     }() );
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-                    camera->local().lookAt( Vector3f::ZERO );
-                    Camera::setMainCamera( camera );
+                    camera->setLocal( translation( 0.0f, 0.0f, 3.0f ) );
                     return camera;
                 }() );
                 return scene;

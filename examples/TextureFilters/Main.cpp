@@ -44,7 +44,7 @@ public:
                             QuadPrimitive::Params {
                                 .layout = VertexP3N3TC2::getLayout(),
                             } ) );
-                    geometry->local().setTranslate( position );
+                    geometry->setLocal( translation( position ) );
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [ & ] {
                             auto material = crimild::alloc< UnlitMaterial >();
@@ -69,15 +69,13 @@ public:
                     return geometry;
                 };
 
-                scene->attachNode( quad( Vector3f( -1.15f, +1.15f, 0.0 ), Sampler::Filter::NEAREST, Sampler::Filter::NEAREST ) );
-                scene->attachNode( quad( Vector3f( +1.15f, +1.15f, 0.0 ), Sampler::Filter::NEAREST, Sampler::Filter::LINEAR ) );
-                scene->attachNode( quad( Vector3f( -1.15f, -1.15f, 0.0 ), Sampler::Filter::NEAREST_MIPMAP_NEAREST, Sampler::Filter::LINEAR ) );
-                scene->attachNode( quad( Vector3f( +1.15f, -1.15f, 0.0 ), Sampler::Filter::LINEAR_MIPMAP_LINEAR, Sampler::Filter::LINEAR ) );
+                scene->attachNode( quad( Vector3 { -1.15f, +1.15f, 0.0 }, Sampler::Filter::NEAREST, Sampler::Filter::NEAREST ) );
+                scene->attachNode( quad( Vector3 { +1.15f, +1.15f, 0.0 }, Sampler::Filter::NEAREST, Sampler::Filter::LINEAR ) );
+                scene->attachNode( quad( Vector3 { -1.15f, -1.15f, 0.0 }, Sampler::Filter::NEAREST_MIPMAP_NEAREST, Sampler::Filter::LINEAR ) );
+                scene->attachNode( quad( Vector3 { +1.15f, -1.15f, 0.0 }, Sampler::Filter::LINEAR_MIPMAP_LINEAR, Sampler::Filter::LINEAR ) );
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 6.0f );
-                    camera->local().lookAt( Vector3f::ZERO );
-                    Camera::setMainCamera( camera );
+                    camera->setLocal( translation( 0.0f, 0.0f, 6.0f ) );
                     return camera;
                 }() );
                 return scene;

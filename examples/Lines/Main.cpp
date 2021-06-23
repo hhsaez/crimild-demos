@@ -53,14 +53,15 @@ public:
                                                 auto rnd = Random::Generator( 1982 );
 
                                                 for ( auto i = 0; i < vertices.size(); i++ ) {
-                                                    auto position = Vector3f(
-                                                                        rnd.generate( -1.0f, 1.0f ),
-                                                                        rnd.generate( -1.0f, 1.0f ),
-                                                                        rnd.generate( -1.0f, 1.0f ) )
-                                                                        .getNormalized()
-                                                                    * rnd.generate( 0.0f, size );
-                                                    auto color = Vector3f( 0.5f, 0.5f, 0.5f ) + position / size;
-                                                    color *= position.getMagnitude() / size;
+                                                    const auto position =
+                                                        normalize(
+                                                            Vector3f {
+                                                                Real( rnd.generate( -1.0f, 1.0f ) ),
+                                                                Real( rnd.generate( -1.0f, 1.0f ) ),
+                                                                Real( rnd.generate( -1.0f, 1.0f ) ),
+                                                            } )
+                                                        * rnd.generate( 0, size );
+                                                    const auto color = ( ColorRGB { 0.5f, 0.5f, 0.5f } + rgb( position / size ) ) * length( position ) / size;
                                                     vertices[ i ] = {
                                                         .position = position,
                                                         .color = color,
@@ -103,8 +104,7 @@ public:
 
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 300.0f );
-                    Camera::setMainCamera( camera );
+                    camera->setLocal( translation( 0.0f, 0.0f, 300.0f ) );
                     return camera;
                 }() );
                 return scene;

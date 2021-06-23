@@ -43,10 +43,10 @@ public:
                         crimild::alloc< QuadPrimitive >(
                             QuadPrimitive::Params {
                                 .layout = VertexP3N3TC2::getLayout(),
-                                .texCoordOffset = Vector2f( -1.0f, -1.0f ),
-                                .texCoordScale = Vector2f( 3.0f, 3.0f ),
+                                .texCoordOffset = Vector2 { -1.0f, -1.0f },
+                                .texCoordScale = Vector2 { 3.0f, 3.0f },
                             } ) );
-                    geometry->local().setTranslate( position );
+                    geometry->setLocal( translation( position ) );
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [ & ] {
                             auto material = crimild::alloc< UnlitMaterial >();
@@ -74,15 +74,13 @@ public:
                     return geometry;
                 };
 
-                scene->attachNode( quad( Vector3f( -1.15f, +1.15f, 0.0 ), Sampler::WrapMode::REPEAT ) );
-                scene->attachNode( quad( Vector3f( +1.15f, +1.15f, 0.0 ), Sampler::WrapMode::MIRRORED_REPEAT ) );
-                scene->attachNode( quad( Vector3f( -1.15f, -1.15f, 0.0 ), Sampler::WrapMode::CLAMP_TO_EDGE ) );
-                scene->attachNode( quad( Vector3f( +1.15f, -1.15f, 0.0 ), Sampler::WrapMode::CLAMP_TO_BORDER ) );
+                scene->attachNode( quad( Vector3 { -1.15f, +1.15f, 0.0 }, Sampler::WrapMode::REPEAT ) );
+                scene->attachNode( quad( Vector3 { +1.15f, +1.15f, 0.0 }, Sampler::WrapMode::MIRRORED_REPEAT ) );
+                scene->attachNode( quad( Vector3 { -1.15f, -1.15f, 0.0 }, Sampler::WrapMode::CLAMP_TO_EDGE ) );
+                scene->attachNode( quad( Vector3 { +1.15f, -1.15f, 0.0 }, Sampler::WrapMode::CLAMP_TO_BORDER ) );
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 6.0f );
-                    camera->local().lookAt( Vector3f::ZERO );
-                    Camera::setMainCamera( camera );
+                    camera->setLocal( translation( 0.0f, 0.0f, 6.0f ) );
                     return camera;
                 }() );
                 return scene;
