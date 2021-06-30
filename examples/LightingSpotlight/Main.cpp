@@ -50,25 +50,29 @@ public:
                                         .layout = VertexP3N3TC2::getLayout(),
                                     } ) );
 
-                            geometry->local().setTranslate(
+                            const auto T = translation(
                                 rnd.generate( -10.0f, 10.0f ),
                                 rnd.generate( -10.0f, 10.0f ),
                                 rnd.generate( -10.0f, 10.0f ) );
 
-                            geometry->local().setScale( rnd.generate( 0.75f, 1.5f ) );
+                            const auto S = scale( rnd.generate( 0.75f, 1.5f ) );
 
-                            geometry->local().rotate().fromAxisAngle(
-                                Vector3f(
-                                    rnd.generate( 0.01f, 1.0f ),
-                                    rnd.generate( 0.01f, 1.0f ),
-                                    rnd.generate( 0.01f, 1.0f ) )
-                                    .getNormalized(),
+                            const auto R = rotation(
+                                normalize(
+                                    Vector3 {
+                                        Real( rnd.generate( 0.01f, 1.0f ) ),
+                                        Real( rnd.generate( 0.01f, 1.0f ) ),
+                                        Real( rnd.generate( 0.01f, 1.0f ) ),
+                                    }
+                                ),
                                 rnd.generate( 0.0f, Numericf::TWO_PI ) );
+
+                            geometry->setLocal( T * R * S );
 
                             geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                 [ & ] {
                                     auto material = crimild::alloc< LitMaterial >();
-                                    material->setAlbedo( RGBColorf( 0.0f, 1.0f, 0.0f ) );
+                                    material->setAlbedo( ColorRGB { 0.0f, 1.0f, 0.0f } );
                                     material->setMetallic( 0.0f );
                                     material->setRoughness( 1.0f );
                                     return material;
@@ -77,22 +81,27 @@ public:
                         }() );
                 }
 
-                scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.01f, 0.0f, 0.01f ) ) );
+                scene->attachNode( crimild::alloc< Skybox >( ColorRGB { 0.01f, 0.0f, 0.01f } ) );
 
                 scene->attachNode(
                     [ & ] {
                         auto camera = crimild::alloc< Camera >();
-                        camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
+                        camera->setLocal( translation( 0.0f, 0.0f, 30.0f ) );
                         camera->attachComponent< FreeLookCameraComponent >();
                         camera->attachNode(
                             [] {
                                 auto light = crimild::alloc< Light >( Light::Type::SPOT );
-                                light->setColor( RGBAColorf::ONE );
+                                light->setColor( ColorRGBA::Constants::WHITE );
                                 light->setEnergy( 100.0f );
                                 light->setInnerCutoff( Numericf::DEG_TO_RAD * 15.0f );
                                 light->setOuterCutoff( Numericf::DEG_TO_RAD * 25.0f );
-                                light->local().setTranslate( 0.0f, 1.0f, 0.0f );
-                                light->local().lookAt( -5.0f * Vector3f::UNIT_Z );
+                                light->setLocal(
+                                    lookAt(
+                                    	Point3 { 0, 1, 0 },
+                                     	Point3 { 0, 0, -5 },
+                                      	Vector3::Constants::UP
+                                    )
+                                );
                                 return light;
                             }() );
                         return camera;

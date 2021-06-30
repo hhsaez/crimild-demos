@@ -50,17 +50,17 @@ public:
                                         .layout = VertexP3N3TC2::getLayout(),
                                     } ) );
 
-                            geometry->local().setTranslate(
-                                rnd.generate( -10.0f, 10.0f ),
-                                rnd.generate( -10.0f, 10.0f ),
-                                rnd.generate( -10.0f, 10.0f ) );
-
-                            geometry->local().setScale( rnd.generate( 0.75f, 1.5f ) );
+                            const auto T = translation(
+                                	rnd.generate( -10.0f, 10.0f ),
+                                	rnd.generate( -10.0f, 10.0f ),
+                                	rnd.generate( -10.0f, 10.0f ) );
+                            const auto S = scale( rnd.generate( 0.75f, 1.5f ) );
+                            geometry->setLocal( T * S );
 
                             geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                 [ & ] {
                                     auto material = crimild::alloc< LitMaterial >();
-                                    material->setAlbedo( RGBColorf( 0.0f, 1.0f, 0.0f ) );
+                                    material->setAlbedo( ColorRGB { 0.0f, 1.0f, 0.0f } );
                                     material->setMetallic( 0.0f );
                                     material->setRoughness( 1.0f );
                                     return material;
@@ -81,12 +81,13 @@ public:
                                             .type = Primitive::Type::TRIANGLES,
                                             .layout = VertexP3N3TC2::getLayout(),
                                         } ) );
-                                geometry->local().setTranslate( 35.0f * Vector3f::UNIT_Z );
-                                geometry->local().setScale( 3.0f );
+                                constexpr auto T = translation( 35.0f * Vector3::Constants::UNIT_Z );
+                                constexpr auto S = scale( 3.0f );
+                                geometry->setLocal( T * S );
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                     [] {
                                         auto material = crimild::alloc< UnlitMaterial >();
-                                        material->setColor( RGBAColorf::ONE );
+                                        material->setColor( ColorRGBA::Constants::WHITE );
                                         return material;
                                     }() );
                                 return geometry;
@@ -94,8 +95,8 @@ public:
                         group->attachNode(
                             [] {
                                 auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-                                light->setColor( RGBAColorf::ONE );
-                                light->setEnergy( 50.0f );
+                                light->setColor( ColorRGBA::Constants::WHITE );
+                                light->setEnergy( 1.0f );
                                 return light;
                             }() );
                         return group;
@@ -104,8 +105,7 @@ public:
                 scene->attachNode(
                     [ & ] {
                         auto camera = crimild::alloc< Camera >();
-                        camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
-                        Camera::setMainCamera( camera );
+                        camera->setLocal( translation( 0.0f, 0.0f, 30.0f ) );
                         camera->attachComponent< FreeLookCameraComponent >();
                         return camera;
                     }() );

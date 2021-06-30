@@ -37,7 +37,7 @@ public:
             [ & ] {
                 auto scene = crimild::alloc< Group >();
 
-                auto box = []( const Vector3f &position, const RGBAColorf &color ) {
+                auto box = []( const Vector3 &position, const ColorRGBA &color ) {
                     auto geometry = crimild::alloc< Geometry >();
                     geometry->setLayer( Node::Layer::SKYBOX );
                     geometry->attachPrimitive(
@@ -45,7 +45,7 @@ public:
                             BoxPrimitive::Params {
                                 .type = Primitive::Type::TRIANGLES,
                                 .layout = VertexP3N3TC2::getLayout(),
-                                .size = Vector3f( 1.0f, 1.0f, 1.0f ),
+                                .size = Vector3 { 1.0f, 1.0f, 1.0f },
                             } ) );
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [ & ] {
@@ -53,18 +53,22 @@ public:
                             material->setColor( color );
                             return material;
                         }() );
-                    geometry->local().setTranslate( position );
+                    geometry->setLocal( translation( position ) );
                     return geometry;
                 };
 
-                scene->attachNode( box( Vector3f( 0.0f, 0.0f, 3.0f ), RGBAColorf( 1.0f, 0.5f, 0.31f, 1.0f ) ) );
-                scene->attachNode( box( Vector3f( 1.0f, 0.0f, -3.0f ), RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ) ) );
+                scene->attachNode( box( Vector3 { 0.0f, 0.0f, 3.0f }, ColorRGBA { 1.0f, 0.5f, 0.31f, 1.0f } ) );
+                scene->attachNode( box( Vector3 { 1.0f, 0.0f, -3.0f }, ColorRGBA { 1.0f, 1.0f, 1.0f, 1.0f } ) );
 
                 scene->attachNode( [] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 2.0f, 3.0f, 10.0f );
-                    camera->local().lookAt( Vector3f::ZERO );
-                    Camera::setMainCamera( camera );
+                    camera->setLocal(
+                    	lookAt(
+                     		Point3 { 2.0f, 3.0f, 10.0f },
+                       		Point3 { 0, 0, 0 },
+                         	Vector3 { 0, 1, 0 }
+                        )
+                    );
                     return camera;
                 }() );
 

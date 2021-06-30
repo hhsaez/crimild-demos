@@ -71,8 +71,11 @@ public:
                                 material->setNormalMap( loadTexture( "assets/textures/stone-normal.tga" ) );
                                 return material;
                             }() );
-                        geometry->attachComponent< RotationComponent >( Vector3f::ONE.getNormalized(), 0.01 );
-                        return geometry;
+                        return behaviors::withBehavior(
+                        	geometry,
+                         	behaviors::actions::rotate(
+                                normalize( Vector3::Constants::ONE ),
+                                0.01f ) );
                     }() );
 
                 scene->attachNode(
@@ -91,16 +94,15 @@ public:
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                     [] {
                                         auto material = crimild::alloc< UnlitMaterial >();
-                                        material->setColor( RGBAColorf::ONE );
+                                        material->setColor( ColorRGBA::Constants::WHITE );
                                         return material;
                                     }() );
                                 return geometry;
                             }() );
                         group->attachNode(
                             [] {
-                                auto light = crimild::alloc< Light >(
-                                    Light::Type::POINT );
-                                light->setAttenuation( Vector3f( 1.0f, 0.7f, 0.8f ) );
+                                auto light = crimild::alloc< Light >( Light::Type::POINT );
+                                light->setEnergy( 1.0f );
                                 return light;
                             }() );
                         group->attachComponent< LambdaComponent >(
@@ -109,9 +111,8 @@ public:
                                 auto x = Numericf::remap( -1.0f, 1.0f, -0.95f, 0.95f, Numericf::cos( t ) * Numericf::sin( t ) );
                                 auto y = Numericf::remapSin( -0.95f, 0.95f, t );
                                 auto z = Numericf::remapCos( -0.95f, 0.95f, t );
-                                ;
                                 if ( !Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_SPACE ) ) {
-                                    node->local().setTranslate( x, y, z );
+                                    node->setLocal( translation( x, y, z ) );
                                     t += speed + clock.getDeltaTime();
                                 }
                             } );
@@ -121,8 +122,7 @@ public:
                 scene->attachNode(
                     [ & ] {
                         auto camera = crimild::alloc< Camera >();
-                        camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
-                        camera->local().lookAt( Vector3f::ZERO );
+                        camera->setLocal( translation( 0.0f, 0.0f, 3.0f ) );
                         return camera;
                     }() );
 

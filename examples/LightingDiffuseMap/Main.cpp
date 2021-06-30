@@ -69,14 +69,17 @@ public:
                                                 texture->sampler = crimild::alloc< Sampler >();
                                                 return texture;
                                             }() );
-                                        //material->setMetallic( 0.0f );
-                                        //material->setRoughness( 0.0f );
                                         return material;
                                     }() );
                                 return geometry;
                             }() );
-                        earth->attachComponent< RotationComponent >( Vector3f::UNIT_Y, 0.05f );
-                        return earth;
+                        return behaviors::withBehavior(
+                        	earth,
+                            behaviors::actions::rotate(
+                            	Vector3::Constants::UP,
+                                0.05f
+                            )
+                        );
                     }() );
 
                 scene->attachNode(
@@ -95,7 +98,7 @@ public:
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                     [] {
                                         auto material = crimild::alloc< UnlitMaterial >();
-                                        material->setColor( RGBAColorf::ONE );
+                                        material->setColor( ColorRGBA::Constants::WHITE );
                                         return material;
                                     }() );
                                 return geometry;
@@ -103,7 +106,7 @@ public:
                         group->attachNode(
                             [] {
                                 auto light = crimild::alloc< Light >( Light::Type::POINT );
-                                light->setColor( RGBAColorf::ONE );
+                                light->setColor( ColorRGBA::Constants::WHITE );
                                 light->setEnergy( 100.0f );
                                 return light;
                             }() );
@@ -114,7 +117,7 @@ public:
                                 auto x = Numericf::remapCos( -5.0f, 5.0f, t );
                                 auto y = 0.0f;
                                 auto z = Numericf::remapSin( -5.0f, 5.0f, t );
-                                node->local().setTranslate( x, y, z );
+                                node->setLocal( translation( x, y, z ) );
                             } );
                         return group;
                     }() );
@@ -122,12 +125,12 @@ public:
                 scene->attachNode(
                     [ & ] {
                         auto camera = crimild::alloc< Camera >();
-                        camera->local().setTranslate( 0.0f, 0.0f, 3.0f );
+                        camera->setLocal( translation( 0.0f, 0.0f, 3.0f ) );
                         Camera::setMainCamera( camera );
                         return camera;
                     }() );
 
-                scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.0045f, 0.005f, 0.0125f ) ) );
+                scene->attachNode( crimild::alloc< Skybox >( ColorRGB { 0.0045f, 0.005f, 0.0125f } ) );
 
                 scene->perform( StartComponents() );
 

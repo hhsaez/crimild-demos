@@ -54,20 +54,24 @@ public:
                         auto geometry = crimild::alloc< Geometry >();
                         geometry->attachPrimitive( box );
 
-                        geometry->local().setTranslate(
-                            rnd.generate( -30.0f, 30.0f ),
-                            rnd.generate( -20.0f, 20.0f ),
-                            rnd.generate( -30.0f, 30.0f ) );
+                        const auto T = translation(
+                            rnd.generate( -10.0f, 10.0f ),
+                            rnd.generate( -10.0f, 10.0f ),
+                            rnd.generate( -10.0f, 10.0f ) );
 
-                        geometry->local().setScale( rnd.generate( 0.75f, 2.5f ) );
+                        const auto S = scale( rnd.generate( 0.75f, 1.5f ) );
 
-                        geometry->local().rotate().fromAxisAngle(
-                            Vector3f(
-                                rnd.generate( 0.01f, 1.0f ),
-                                rnd.generate( 0.01f, 1.0f ),
-                                rnd.generate( 0.01f, 1.0f ) )
-                                .getNormalized(),
+                        const auto R = rotation(
+                            normalize(
+                                Vector3 {
+                                    Real( rnd.generate( 0.01f, 1.0f ) ),
+                                    Real( rnd.generate( 0.01f, 1.0f ) ),
+                                    Real( rnd.generate( 0.01f, 1.0f ) ),
+                                }
+                            ),
                             rnd.generate( 0.0f, Numericf::TWO_PI ) );
+
+                        geometry->setLocal( T * R * S );
 
                         geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
                         return geometry;
@@ -77,7 +81,7 @@ public:
             scene->attachNode(
                 [] {
                     auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-                    light->setColor( RGBAColorf( 0.01f, 0.1f, 0.75f ) );
+                    light->setColor( ColorRGBA { 0.01f, 0.1f, 0.75f, 1 } );
                     return light;
                 }() );
 
@@ -97,7 +101,7 @@ public:
                             geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                 [] {
                                     auto material = crimild::alloc< UnlitMaterial >();
-                                    material->setColor( RGBAColorf::UNIT_Y );
+                                    material->setColor( ColorRGBA::Constants::GREEN );
                                     return material;
                                 }() );
                             return geometry;
@@ -105,7 +109,7 @@ public:
                     group->attachNode(
                         [] {
                             auto light = crimild::alloc< Light >( Light::Type::POINT );
-                            light->setColor( RGBAColorf( 0.0f, 1.0f, 0.0f, 1.0f ) );
+                            light->setColor( ColorRGBA { 0.0f, 1.0f, 0.0f, 1.0f } );
                             light->setEnergy( 10.0f );
                             return light;
                         }() );
@@ -116,7 +120,7 @@ public:
                             auto x = Numericf::remap( -1.0f, 1.0f, -15.0f, 15.0f, Numericf::cos( t ) * Numericf::sin( t ) );
                             auto y = Numericf::remapSin( -3.0f, 3.0f, t );
                             auto z = Numericf::remapCos( -15.0f, 15.0f, t );
-                            node->local().setTranslate( x, y, z );
+                            node->setLocal( translation( x, y, z ) );
                         } );
                     return group;
                 }() );
@@ -137,7 +141,7 @@ public:
                             geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                 [] {
                                     auto material = crimild::alloc< UnlitMaterial >();
-                                    material->setColor( RGBAColorf::UNIT_X );
+                                    material->setColor( ColorRGBA::Constants::RED );
                                     return material;
                                 }() );
                             return geometry;
@@ -145,7 +149,7 @@ public:
                     group->attachNode(
                         [] {
                             auto light = crimild::alloc< Light >( Light::Type::POINT );
-                            light->setColor( RGBAColorf::UNIT_X );
+                            light->setColor( ColorRGBA::Constants::RED );
                             light->setEnergy( 10.0f );
                             return light;
                         }() );
@@ -156,7 +160,7 @@ public:
                             auto x = Numericf::remapSin( -3.0f, 3.0f, t );
                             auto y = Numericf::remap( -1.0f, 1.0f, -15.0f, 15.0f, Numericf::cos( t ) * Numericf::sin( t ) );
                             auto z = Numericf::remapCos( -15.0f, 15.0f, t );
-                            node->local().setTranslate( x, y, z );
+                            node->setLocal( translation( x, y, z ) );
                         } );
                     return group;
                 }() );
@@ -164,14 +168,19 @@ public:
             scene->attachNode(
                 [ & ] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
+                    camera->setLocal( translation( 0.0f, 0.0f, 30.0f ) );
                     camera->attachNode(
                         [ & ] {
                             auto light = crimild::alloc< Light >( Light::Type::SPOT );
                             light->setInnerCutoff( Numericf::DEG_TO_RAD * 15.0f );
                             light->setOuterCutoff( Numericf::DEG_TO_RAD * 20.0f );
-                            light->local().setTranslate( 0.0f, 1.0f, 0.0f );
-                            light->local().lookAt( -5.0f * Vector3f::UNIT_Z );
+                            light->setLocal(
+                                lookAt(
+                                    Point3 { 0, 1, 0 },
+                                    Point3 { 0, 0, -5 },
+                                    Vector3::Constants::UP
+                                )
+                            );
                             light->setEnergy( 10.0f );
                             return light;
                         }() );

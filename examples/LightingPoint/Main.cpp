@@ -50,25 +50,29 @@ public:
                                         .layout = VertexP3N3TC2::getLayout(),
                                     } ) );
 
-                            geometry->local().setTranslate(
+                            const auto T = translation(
                                 rnd.generate( -10.0f, 10.0f ),
                                 rnd.generate( -10.0f, 10.0f ),
                                 rnd.generate( -10.0f, 10.0f ) );
 
-                            geometry->local().setScale( rnd.generate( 0.75f, 1.5f ) );
+                            const auto S = scale( rnd.generate( 0.75f, 1.5f ) );
 
-                            geometry->local().rotate().fromAxisAngle(
-                                Vector3f(
-                                    rnd.generate( 0.01f, 1.0f ),
-                                    rnd.generate( 0.01f, 1.0f ),
-                                    rnd.generate( 0.01f, 1.0f ) )
-                                    .getNormalized(),
+                            const auto R = rotation(
+                                normalize(
+                                	Vector3 {
+                                    	Real( rnd.generate( 0.01f, 1.0f ) ),
+                                        Real( rnd.generate( 0.01f, 1.0f ) ),
+                                        Real( rnd.generate( 0.01f, 1.0f ) ),
+                                    }
+                                ),
                                 rnd.generate( 0.0f, Numericf::TWO_PI ) );
+
+                            geometry->setLocal( T * R * S );
 
                             geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                 [ & ] {
                                     auto material = crimild::alloc< LitMaterial >();
-                                    material->setAlbedo( RGBColorf( 0.0f, 1.0f, 0.0f ) );
+                                    material->setAlbedo( ColorRGB { 0.0f, 1.0f, 0.0f } );
                                     material->setMetallic( 0.0f );
                                     material->setRoughness( 1.0f );
                                     return material;
@@ -93,7 +97,7 @@ public:
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                     [] {
                                         auto material = crimild::alloc< UnlitMaterial >();
-                                        material->setColor( RGBAColorf::ONE );
+                                        material->setColor( ColorRGBA::Constants::WHITE );
                                         return material;
                                     }() );
                                 return geometry;
@@ -101,8 +105,8 @@ public:
                         group->attachNode(
                             [] {
                                 auto light = crimild::alloc< Light >( Light::Type::POINT );
-                                light->setColor( RGBAColorf::ONE );
-                                light->setEnergy( 50.0f );
+                                light->setColor( ColorRGBA::Constants::WHITE );
+                                light->setEnergy( 5.0f );
                                 return light;
                             }() );
                         group->attachComponent< LambdaComponent >(
@@ -112,8 +116,7 @@ public:
                                 auto x = Numericf::remap( -1.0f, 1.0f, -15.0f, 15.0f, Numericf::cos( t ) * Numericf::sin( t ) );
                                 auto y = Numericf::remapSin( -3.0f, 3.0f, t );
                                 auto z = Numericf::remapCos( -15.0f, 15.0f, t );
-                                ;
-                                node->local().setTranslate( x, y, z );
+                                node->setLocal( translation( x, y, z ) );
                             } );
                         return group;
                     }() );
@@ -121,7 +124,7 @@ public:
                 scene->attachNode(
                     [ & ] {
                         auto camera = crimild::alloc< Camera >();
-                        camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
+                        camera->setLocal( translation( 0.0f, 0.0f, 30.0f ) );
                         return camera;
                     }() );
 
