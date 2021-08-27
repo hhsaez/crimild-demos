@@ -32,6 +32,8 @@ using namespace crimild;
 using namespace crimild::messaging;
 using namespace crimild::import;
 
+#if 0
+
 class ViewControls
     : public NodeComponent,
       public Messenger {
@@ -51,9 +53,9 @@ public:
                 self->_lastMousePos = Input::getInstance()->getNormalizedMousePosition();
 
                 if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_LEFT_SHIFT ) ) {
-                    self->translateView( Vector3f( 3.0f * delta[ 0 ], -3.0f * delta[ 1 ], 0.0f ) );
+//                    self->translateView( Vector3f( 3.0f * delta[ 0 ], -3.0f * delta[ 1 ], 0.0f ) );
                 } else {
-                    self->rotateView( Vector3f( delta[ 1 ], 3.0f * delta[ 0 ], 0.0f ) );
+//                    self->rotateView( Vector3f( delta[ 1 ], 3.0f * delta[ 0 ], 0.0f ) );
                 }
             }
         } );
@@ -63,7 +65,7 @@ public:
         } );
 
         registerMessageHandler< MouseScroll >( [ self ]( MouseScroll const &msg ) {
-            self->getNode()->local().translate() += 0.1f * msg.dy * Vector3f( 0.0f, 0.0f, 1.0f );
+//            self->getNode()->local().translate() += 0.1f * msg.dy * Vector3f( 0.0f, 0.0f, 1.0f );
         } );
     }
 
@@ -78,42 +80,42 @@ public:
 
         if ( Input::getInstance()->isKeyDown( 'W' ) ) {
             if ( shouldTranslate ) {
-                translateView( Vector3f( 0.0f, -translateSpeed, 0.0f ) );
+//                translateView( Vector3f( 0.0f, -translateSpeed, 0.0f ) );
             } else {
-                rotateView( Vector3f( -0.1f, 0.0f, 0.0f ) );
+//                rotateView( Vector3f( -0.1f, 0.0f, 0.0f ) );
             }
         }
 
         if ( Input::getInstance()->isKeyDown( 'S' ) ) {
             if ( shouldTranslate ) {
-                translateView( Vector3f( 0.0f, translateSpeed, 0.0f ) );
+//                translateView( Vector3f( 0.0f, translateSpeed, 0.0f ) );
             } else {
-                rotateView( Vector3f( 0.1f, 0.0f, 0.0f ) );
+//                rotateView( Vector3f( 0.1f, 0.0f, 0.0f ) );
             }
         }
 
         if ( Input::getInstance()->isKeyDown( 'A' ) ) {
             if ( shouldTranslate ) {
-                translateView( Vector3f( translateSpeed, 0.0f, 0.0f ) );
+//                translateView( Vector3f( translateSpeed, 0.0f, 0.0f ) );
             } else {
-                rotateView( Vector3f( 0.0f, -0.1f, 0.0f ) );
+//                rotateView( Vector3f( 0.0f, -0.1f, 0.0f ) );
             }
         }
 
         if ( Input::getInstance()->isKeyDown( 'D' ) ) {
             if ( shouldTranslate ) {
-                translateView( Vector3f( -translateSpeed, 0.0f, 0.0f ) );
+//                translateView( Vector3f( -translateSpeed, 0.0f, 0.0f ) );
             } else {
-                rotateView( Vector3f( 0.0f, 0.1f, 0.0f ) );
+//                rotateView( Vector3f( 0.0f, 0.1f, 0.0f ) );
             }
         }
 
         if ( Input::getInstance()->isKeyDown( 'Q' ) ) {
-            rotateView( Vector3f( 0.0f, 0.0f, 0.1f ) );
+//            rotateView( Vector3f( 0.0f, 0.0f, 0.1f ) );
         }
 
         if ( Input::getInstance()->isKeyDown( 'E' ) ) {
-            rotateView( Vector3f( 0.0f, 0.0f, -0.1f ) );
+//            rotateView( Vector3f( 0.0f, 0.0f, -0.1f ) );
         }
     }
 
@@ -276,6 +278,8 @@ int main( int argc, char **argv )
 }
 */
 
+#endif
+
 using namespace crimild;
 
 class Example : public Simulation {
@@ -289,8 +293,9 @@ public:
             scene->attachNode(
                 [ & ] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 10.0f, 20.0f );
-                    camera->local().lookAt( 5.0f * Vector3f::UNIT_Y );
+                    camera->setLocal( translation( 0, 10, 20 ) );
+//                    camera->local().setTranslate( 0.0f, 10.0f, 20.0f );
+//                    camera->local().lookAt( 5.0f * Vector3f::UNIT_Y );
                     camera->attachComponent< FreeLookCameraComponent >();
                     return camera;
                 }() );
@@ -332,22 +337,26 @@ public:
 
                     if ( settings->hasKey( "scale" ) ) {
                         auto scale = settings->get< Real32 >( "scale", 1.0f );
-                        model->local().setScale( scale );
+                        model->setLocal( crimild::scale( scale ) );
                     } else {
                         model->perform( UpdateWorldState() );
                         // make sure the object is properly scaled
                         auto scale = 10.0f / model->getWorldBound()->getRadius();
-                        model->local().setScale( scale );
+                        model->setLocal( crimild::scale( scale ) );
 
-                        Camera::getMainCamera()->local().lookAt( scale * model->getWorldBound()->getCenter() );
+//                        Camera::getMainCamera()->local().lookAt( scale * model->getWorldBound()->getCenter() );
                     }
-                    return model;
+//                    return model;
+					auto pivot = crimild::alloc< Group >();
+     				pivot->attachNode( model );
+//         			return behaviors::withBehavior( pivot, behaviors::actions::rotate( Vector3 { 0, 1, 0 }, 0.1 ) );
+					return pivot;
                 }() );
 
             scene->attachNode(
                 [ & ] {
                     if ( !settings->hasKey( "skybox" ) ) {
-                        return crimild::alloc< Skybox >( RGBColorf( 0.025f, 0.036f, 0.09f ) );
+                        return crimild::alloc< Skybox >( ColorRGB { 0.025f, 0.036f, 0.09f } );
                     }
                     return crimild::alloc< Skybox >(
                         [ settings = getSettings() ] {
@@ -379,11 +388,16 @@ public:
             scene->attachNode(
                 [] {
                     auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-                    light->setColor( RGBAColorf::ONE );
+                    light->setColor( ColorRGBA::Constants::WHITE );
                     light->setEnergy( 10.0f );
-                    light->local().setTranslate( Vector3f::ONE );
-                    light->local().lookAt( Vector3f::ZERO );
-                    light->setCastShadows( true );
+                    light->setLocal(
+                    	lookAt(
+                     		Point3 { 1, 1, 1 },
+                       		Point3 { 0, 0, 0 },
+                         	Vector3::Constants::UP
+                        )
+                    );
+//                    light->setCastShadows( true );
                     return light;
                 }() );
 
@@ -397,8 +411,8 @@ public:
                         geometry->setLocal(
                             [] {
                                 Transformation t;
-                                t.rotate().fromAxisAngle( Vector3f::UNIT_X, -Numericf::HALF_PI );
-                                t.setScale( 100.0f );
+//                                t.rotate().fromAxisAngle( Vector3f::UNIT_X, -Numericf::HALF_PI );
+//                                t.setScale( 100.0f );
                                 return t;
                             }() );
                         geometry->attachComponent< MaterialComponent >()->attachMaterial(

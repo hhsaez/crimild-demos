@@ -73,7 +73,7 @@ public:
 
                     auto material = [] {
                         auto material = crimild::alloc< LitMaterial >();
-                        material->setAlbedo( RGBColorf( 0.0f, 1.0f, 0.0f ) );
+                        material->setAlbedo( ColorRGB { 0.0f, 1.0f, 0.0f } );
                         material->setMetallic( 0.0f );
                         material->setRoughness( 1.0f );
                         return material;
@@ -81,26 +81,39 @@ public:
 
                     auto group = crimild::alloc< Group >();
                     auto rnd = Random::Generator( 1982 );
-                    for ( auto i = 0; i < 60; ++i ) {
+                    for ( auto i = 0; i < 6; ++i ) {
                         group->attachNode(
                             [ & ] {
                                 auto geometry = crimild::alloc< Geometry >();
                                 geometry->attachPrimitive( primitives[ i % 6 ] );
 
-                                geometry->local().setTranslate(
-                                    rnd.generate( -15.0f, 15.0f ),
-                                    rnd.generate( -15.0f, 15.0f ),
-                                    rnd.generate( -15.0f, 15.0f ) );
+//                                const auto T = translation(
+//                                    rnd.generate( -15.0f, 15.0f ),
+//                                    rnd.generate( -15.0f, 15.0f ),
+//                                    rnd.generate( -15.0f, 15.0f ) );
+								const auto pos = Array< Vector3 > {
+        							{ -5, 0, 0 },
+               						{ 5, 0, 0 },
+                     				{ 0, -5, 0 },
+                         			{ 0, 5, 0 },
+                            		{ 0, 0, -5 },
+                              		{ 0, 0, 5 },
+                                };
+								const auto T = translation( pos[ i % 6 ] );
 
-                                geometry->local().setScale( rnd.generate( 0.75f, 1.5f ) );
+                                const auto S = scale( rnd.generate( 1.75f, 1.5f ) );
 
-                                geometry->local().rotate().fromAxisAngle(
-                                    Vector3f(
-                                        rnd.generate( 0.01f, 1.0f ),
-                                        rnd.generate( 0.01f, 1.0f ),
-                                        rnd.generate( 0.01f, 1.0f ) )
-                                        .getNormalized(),
+                                const auto R = rotation(
+                                	normalize(
+                                    	Vector3 {
+                                            Real( rnd.generate( 0.01f, 1.0f ) ),
+                                            Real( rnd.generate( 0.01f, 1.0f ) ),
+                                            Real( rnd.generate( 0.01f, 1.0f ) ),
+                                        }
+                                    ),
                                     rnd.generate( 0.0f, Numericf::TWO_PI ) );
+
+                                geometry->setLocal( T * R * S );
 
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
 
@@ -116,13 +129,13 @@ public:
                         BoxPrimitive::Params {
                             .type = Primitive::Type::TRIANGLES,
                             .layout = VertexP3N3TC2::getLayout(),
-                            .size = 20.0f * Vector3f::ONE,
+                            .size = 20.0f * Vector3::Constants::ONE,
                             .invertFaces = true,
                         } );
 
                     auto material = [] {
                         auto material = crimild::alloc< LitMaterial >();
-                        material->setAlbedo( RGBColorf::ONE );
+                        material->setAlbedo( ColorRGB::Constants::WHITE );
                         material->setMetallic( 0.0f );
                         material->setRoughness( 1.0f );
                         return material;
@@ -150,7 +163,7 @@ public:
                             geometry->attachComponent< MaterialComponent >()->attachMaterial(
                                 [] {
                                     auto material = crimild::alloc< UnlitMaterial >();
-                                    material->setColor( RGBAColorf::ONE );
+                                    material->setColor( ColorRGBA::Constants::WHITE );
                                     material->setCastShadows( false );
                                     return material;
                                 }() );
@@ -159,7 +172,7 @@ public:
                     group->attachNode(
                         [] {
                             auto light = crimild::alloc< Light >( Light::Type::POINT );
-                            light->setColor( RGBAColorf::ONE );
+                            light->setColor( ColorRGBA::Constants::WHITE );
                             light->setEnergy( 100.0f );
                             light->setCastShadows( true );
                             return light;
@@ -171,18 +184,47 @@ public:
                             auto x = Numericf::remap( -1.0f, 1.0f, -15.0f, 15.0f, Numericf::cos( t ) * Numericf::sin( t ) );
                             auto y = Numericf::remapSin( -3.0f, 3.0f, t );
                             auto z = Numericf::remapCos( -15.0f, 15.0f, t );
-                            ;
                             if ( !Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_SPACE ) ) {
-                                node->local().setTranslate( x, y, z );
+                               // node->setLocal( translation( x, y, z ) );
                             }
+
+                            auto dir = Vector3::Constants::ZERO;
+                            if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_I ) ) {
+                            	dir = Vector3::Constants::FORWARD;
+                            }
+                            if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_K ) ) {
+                            	dir = -Vector3::Constants::FORWARD;
+                            }
+                            if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_L ) ) {
+                            	dir = Vector3::Constants::RIGHT;
+                            }
+                            if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_J ) ) {
+                            	dir = -Vector3::Constants::RIGHT;
+                            }
+                            if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_Y ) ) {
+                            	dir = Vector3::Constants::UP;
+                            }
+                            if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_H) ) {
+                            	dir = -Vector3::Constants::UP;
+                            }
+
+                            const auto p = location( node->getLocal() );
+                            const auto dp = 2.0f * clock.getDeltaTime() * dir;
+                            std::cout << ( p + dp ) << "\n";
+                            node->setLocal( translation( vector3( p + dp ) ) );
                         } );
                     return group;
                 }() );
 
             scene->attachNode( [] {
                 auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 15.0f, 5.0f, 40.0f );
-                camera->local().lookAt( 1.0 * Vector3f::UNIT_Y );
+                camera->setLocal(
+                	lookAt(
+                 		Point3 { 15.0f, 5.0f, 40.0f },
+                    	Point3 { 0, 1, 0 },
+                     	Vector3::Constants::UP
+                    )
+                );
                 camera->attachComponent< FreeLookCameraComponent >();
                 return camera;
             }() );

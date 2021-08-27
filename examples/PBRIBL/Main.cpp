@@ -47,13 +47,12 @@ public:
                     for ( auto x = 0; x < 7; ++x ) {
                         auto geometry = crimild::alloc< Geometry >();
                         geometry->attachPrimitive( primitive );
-                        geometry->local().setTranslate( 2.5f * Vector3f( -3.0f + x, 3.0f - y, 0 ) );
+                        geometry->setLocal( translation( 2.5f * Vector3f { -3.0f + x, 3.0f - y, 0 } ) );
                         geometry->attachComponent< MaterialComponent >()->attachMaterial(
                             [ x, y ] {
-                                auto material = crimild::alloc< LitMaterial >();
-                                //material->setAlbedo( RGBColorf( 1.0f, 0.0f, 0.0f ) );
+                                auto material = crimild::alloc< materials::PrincipledBSDF >();
                                 material->setMetallic( 1.0f - float( y ) / 6.0f );
-                                material->setRoughness( float( x ) / 6.0f );
+                                material->setRoughness( Real( x ) / 6.0f );
                                 return material;
                             }() );
                         scene->attachNode( geometry );
@@ -89,21 +88,26 @@ public:
 
                 auto createLight = []( const auto &position ) {
                     auto light = crimild::alloc< Light >( Light::Type::POINT );
-                    light->local().setTranslate( position );
-                    light->setColor( RGBAColorf( 55, 55, 55 ) );
+                    light->setLocal( translation( position ) );
+                    light->setColor( ColorRGBA { 55, 55, 55 } );
                     return light;
                 };
 
-                scene->attachNode( createLight( Vector3f( -15.0f, +15.0f, 10.0f ) ) );
-                scene->attachNode( createLight( Vector3f( +15.0f, +15.0f, 10.0f ) ) );
-                scene->attachNode( createLight( Vector3f( -15.0f, -15.0f, 10.0f ) ) );
-                scene->attachNode( createLight( Vector3f( +15.0f, -15.0f, 10.0f ) ) );
+                scene->attachNode( createLight( Vector3 { -15.0f, +15.0f, 10.0f } ) );
+                scene->attachNode( createLight( Vector3 { +15.0f, +15.0f, 10.0f } ) );
+                scene->attachNode( createLight( Vector3 { -15.0f, -15.0f, 10.0f } ) );
+                scene->attachNode( createLight( Vector3 { +15.0f, -15.0f, 10.0f } ) );
+
+                scene->attachComponent< LambdaComponent >( []( auto, auto ) {
+                    if ( Input::getInstance()->isKeyDown( CRIMILD_INPUT_KEY_F8 ) ) {
+                        // std::cout << "take screenshot" << std::endl;
+                    }
+                } );
 
                 scene->attachNode(
                     [ & ] {
                         auto camera = crimild::alloc< Camera >();
-                        camera->local().setTranslate( 15.0f, 5.0f, 20.0f );
-                        camera->local().lookAt( Vector3f::ZERO );
+                        camera->setLocal( lookAt( Point3 { 15, 5, 20 }, Point3 { 0, 0, 0 }, Vector3 { 0, 1, 0 } ) );
                         camera->attachComponent< FreeLookCameraComponent >();
                         return camera;
                     }() );

@@ -48,31 +48,20 @@ public:
                         auto material = crimild::alloc< LitMaterial >();
                         material->setMetallic( 0.0f );
                         material->setRoughness( 1.0f );
+                        material->setAlbedo( ColorRGB { 250.0 / 255.0, 128.0 / 255.0, 114.0 / 255.0 } );
                         return material;
                     }();
 
                     auto group = crimild::alloc< Group >();
-                    auto rnd = Random::Generator( 1982 );
                     for ( auto i = 0; i < 30; ++i ) {
                         group->attachNode(
                             [ & ] {
                                 auto geometry = crimild::alloc< Geometry >();
                                 geometry->attachPrimitive( primitive );
 
-                                geometry->local().setTranslate(
-                                    rnd.generate( -30.0f, 30.0f ),
-                                    rnd.generate( -10.0f, 10.0f ),
-                                    rnd.generate( -30.0f, 30.0f ) );
-
-                                geometry->local().setScale( rnd.generate( 0.75f, 1.5f ) );
-
-                                geometry->local().rotate().fromAxisAngle(
-                                    Vector3f(
-                                        rnd.generate( 0.01f, 1.0f ),
-                                        rnd.generate( 0.01f, 1.0f ),
-                                        rnd.generate( 0.01f, 1.0f ) )
-                                        .getNormalized(),
-                                    rnd.generate( 0.0f, Numericf::TWO_PI ) );
+                                const auto T = translation( 30 - 2 * i, 0, 100 - 7 * i );
+                                const auto S = scale( 1, 20, 1 );
+                                geometry->setLocal( T * S );
 
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
 
@@ -90,11 +79,10 @@ public:
                             QuadPrimitive::Params {} ) );
                     geometry->setLocal(
                         [] {
-                            Transformation t;
-                            t.rotate().fromAxisAngle( Vector3f::UNIT_X, -Numericf::HALF_PI );
-                            t.setScale( 100.0f );
-                            t.setTranslate( 0.0f, -15.0f, 0.0f );
-                            return t;
+                            const auto R = rotationX( -Numericf::HALF_PI );
+                            const auto S = scale( 100.0f );
+                            const auto T = translation( 0.0f, -15.0f, 0.0f );
+                            return T * R * S;
                         }() );
                     geometry->attachComponent< MaterialComponent >()->attachMaterial(
                         [] {
@@ -108,8 +96,7 @@ public:
 
             scene->attachNode( [] {
                 auto camera = crimild::alloc< Camera >( 60, 4.0f / 3.0f, 1.0f, 500.0f );
-                camera->local().setTranslate( 15.0f, 20.0f, 50.0f );
-                camera->local().lookAt( 1.0 * Vector3f::UNIT_Y );
+                camera->setLocal( translation( 15.0f, 20.0f, 50.0f ) );
                 camera->attachComponent< FreeLookCameraComponent >();
                 return camera;
             }() );
@@ -123,7 +110,7 @@ public:
                             auto group = crimild::alloc< Group >();
 
                             auto material = crimild::alloc< UnlitMaterial >();
-                            material->setColor( RGBAColorf::ONE );
+                            material->setColor( ColorRGBA::Constants::WHITE );
 
                             auto primitive = crimild::alloc< ArrowPrimitive >(
                                 ArrowPrimitive::Params {
@@ -135,10 +122,11 @@ public:
                             for ( auto i = 0; i < 3; i++ ) {
                                 auto geometry = crimild::alloc< Geometry >();
                                 geometry->attachPrimitive( primitive );
-                                geometry->local().setTranslate(
-                                    rnd.generate( -2.0f, 2.0f ),
-                                    rnd.generate( -2.0f, 2.0f ),
-                                    rnd.generate( -1.0f, 1.0f ) );
+                                geometry->setLocal(
+                                    translation(
+                                        rnd.generate( -2.0f, 2.0f ),
+                                        rnd.generate( -2.0f, 2.0f ),
+                                        rnd.generate( -1.0f, 1.0f ) ) );
                                 geometry->attachComponent< MaterialComponent >()->attachMaterial( material );
                                 group->attachNode( geometry );
                             }
@@ -153,8 +141,11 @@ public:
                             return light;
                         }() );
 
-                    light->local().setTranslate( 20.0f, 20.0f, 20.0f );
-                    light->local().lookAt( Vector3f::ZERO );
+                    light->setLocal(
+                        lookAt(
+                            Point3 { 20, 20, 20 },
+                            Point3 { 0, 0, 0 },
+                            Vector3::Constants::UP ) );
 
                     auto pivot = crimild::alloc< Group >();
                     pivot->attachNode( light );

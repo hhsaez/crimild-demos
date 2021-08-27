@@ -78,9 +78,11 @@ public:
                 scene->attachNode(
                     [ width, height ] {
                         auto camera = crimild::alloc< Camera >( 60.0f, Real32( width ) / Real32( height ), 0.001f, 1024.0f );
-                        camera->local().setTranslate( 12, 2, 3 );
-                        camera->local().lookAt( Vector3f::ZERO );
-                        Camera::setMainCamera( camera );
+                        camera->setLocal(
+                            lookAt(
+                                Point3 { 12, 2, 3 },
+                                Point3 { 0, 0, 0 },
+                                Vector3::Constants::UP ) );
                         camera->attachComponent< FreeLookCameraComponent >();
                         return camera;
                     }() );
@@ -203,12 +205,12 @@ public:
                                 settings->set( "rendering.samples", UInt32( 1 ) );
                             };
 
-                            static auto view = Matrix4f::IDENTITY;
+                            static auto view = Matrix4::Constants::IDENTITY;
                             static auto focusDist = 10.0f;
 
                             auto camera = Camera::getMainCamera();
                             if ( camera != nullptr ) {
-                                const auto cameraView = camera->getWorld().computeModelMatrix();
+                                const auto &cameraView = camera->getViewMatrix();
                                 if ( cameraView != view ) {
                                     view = cameraView;
                                     resetSampling();
@@ -231,8 +233,8 @@ public:
                                 .sampleCount = settings->get< UInt32 >( "rendering.samples", 1 ),
                                 .maxSamples = renderSettings.maxSamples,
                                 .seed = settings->get< UInt32 >( "rendering.samples", 1 ),
-                                .tanHalfFOV = camera->getFrustum().computeTanHalfFOV(),
-                                .aspectRatio = camera->computeAspect(),
+                                .tanHalfFOV = radians( 90 ), //camera->getFrustum().computeTanHalfFOV(),
+                                .aspectRatio = 4.0 / 3.0,    //camera->computeAspect(),
                                 .aperture = renderSettings.aperture,
                                 .focusDist = renderSettings.focusDist,
                                 .view = view,
@@ -303,34 +305,37 @@ public:
                         return uniforms.materialCount++;
                     };
 
-                    int groundMaterial = createLambertianMaterial( Vector3f( 0.5, 0.5, 0.5 ) );
-                    createSphere( Vector3f( 0, -1000, 0 ), 1000, groundMaterial );
+                    int groundMaterial = createLambertianMaterial( Vector3 { 0.5, 0.5, 0.5 } );
+                    createSphere( Vector3f { 0, -1000, 0 }, 1000, groundMaterial );
 
                     int count = 11;
 
                     for ( int a = -count; a < count; a++ ) {
                         for ( int b = -count; b < count; b++ ) {
                             Real32 chooseMat = Random::generate< Real32 >();
-                            Vector3f center(
-                                a + 0.9 * Random::generate< Real32 >(),
-                                0.2,
-                                b + 0.9 * Random::generate< Real32 >() );
+                            Vector3f center {
+                                Real( a + 0.9 * Random::generate< Real32 >() ),
+                                Real( 0.2 ),
+                                Real( b + 0.9 * Random::generate< Real32 >() ),
+                            };
 
-                            if ( ( center - Vector3f( 4, 0.2, 0 ) ).getMagnitude() > 0.9f ) {
+                            if ( length( center - Vector3 { 4, 0.2, 0 } ) > 0.9f ) {
                                 if ( chooseMat < 0.8 ) {
                                     // diffuse
-                                    Vector3f albedo(
+                                    Vector3f albedo {
                                         Random::generate< Real32 >() * Random::generate< Real32 >(),
                                         Random::generate< Real32 >() * Random::generate< Real32 >(),
-                                        Random::generate< Real32 >() * Random::generate< Real32 >() );
+                                        Random::generate< Real32 >() * Random::generate< Real32 >(),
+                                    };
                                     int sphereMaterial = createLambertianMaterial( albedo );
                                     createSphere( center, 0.2, sphereMaterial );
                                 } else if ( chooseMat < 0.95 ) {
                                     // metal
-                                    Vector3f albedo(
+                                    Vector3f albedo {
                                         Random::generate< Real32 >( 0.5, 1.0 ),
                                         Random::generate< Real32 >( 0.5, 1.0 ),
-                                        Random::generate< Real32 >( 0.5, 1.0 ) );
+                                        Random::generate< Real32 >( 0.5, 1.0 ),
+                                    };
                                     float fuzz = Random::generate< Real32 >( 0, 0.5 );
                                     int sphereMaterial = createMetalMaterial( albedo, fuzz );
                                     createSphere( center, 0.2, sphereMaterial );
@@ -344,13 +349,13 @@ public:
                     }
 
                     int material1 = createDielectricMaterial( 1.5 );
-                    createSphere( Vector3f( 0, 1, 0 ), 1.0, material1 );
+                    createSphere( Vector3 { 0, 1, 0 }, 1.0, material1 );
 
-                    int material2 = createLambertianMaterial( Vector3f( 0.4, 0.2, 0.1 ) );
-                    createSphere( Vector3f( -4, 1, 0 ), 1.0, material2 );
+                    int material2 = createLambertianMaterial( Vector3 { 0.4, 0.2, 0.1 } );
+                    createSphere( Vector3 { -4, 1, 0 }, 1.0, material2 );
 
-                    int material3 = createMetalMaterial( Vector3f( 0.7, 0.6, 0.5 ), 0.0 );
-                    createSphere( Vector3f( 4, 1, 0 ), 1.0, material3 );
+                    int material3 = createMetalMaterial( Vector3 { 0.7, 0.6, 0.5 }, 0.0 );
+                    createSphere( Vector3 { 4, 1, 0 }, 1.0, material3 );
 
                     return crimild::alloc< UniformBuffer >( uniforms );
                 }(),

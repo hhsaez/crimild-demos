@@ -49,14 +49,14 @@ public:
                 return group;
             }() );
 
-            scene->attachNode( crimild::alloc< Skybox >( RGBColorf( 0.25f, 0.36f, 0.9f ) ) );
+            scene->attachNode( crimild::alloc< Skybox >( ColorRGB { 0.25f, 0.36f, 0.9f } ) );
 
             scene->attachNode(
                 [] {
                     auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-                    light->setColor( RGBAColorf::ONE );
+                    light->setColor( ColorRGBA::Constants::WHITE );
                     light->setEnergy( 10.0f );
-                    light->local().rotate().fromAxisAngle( Vector3f::UNIT_X, -0.25f * Numericf::PI );
+                    light->setLocal( rotationX( -0.25f * numbers::PI ) );
                     light->setCastShadows( true );
                     return light;
                 }() );
@@ -64,8 +64,9 @@ public:
             scene->attachNode(
                 [ & ] {
                     auto camera = crimild::alloc< Camera >( 60.0f, 4.0f / 3.0f, 0.1f, 5000.0f );
-                    camera->local().setTranslate( 350.0f, 350.0f, 0.0f );
-                    camera->local().rotate().fromAxisAngle( Vector3f::UNIT_Y, Numericf::HALF_PI );
+                    camera->setLocal( translation( 350.0f, 350.0f, 0.0f ) );
+//                    camera->local().setTranslate( 350.0f, 350.0f, 0.0f );
+//                    camera->local().rotate().fromAxisAngle( Vector3f::UNIT_Y, Numericf::HALF_PI );
                     camera->attachComponent< FreeLookCameraComponent >()->setSpeed( 30.0f );
                     return camera;
                 }() );

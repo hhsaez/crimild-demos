@@ -36,9 +36,7 @@ public:
         setScene( [ & ] {
             auto scene = crimild::alloc< Group >();
 
-            auto material = crimild::alloc< LitMaterial >();
-            material->setMetallic( 0.0f );
-            material->setRoughness( 0.0f );
+            auto material = crimild::alloc< materials::PrincipledBSDF >();
 
             auto spheres = crimild::alloc< Group >();
             for ( int line = 0; line < 5; line++ ) {
@@ -47,10 +45,11 @@ public:
                         spheres->attachNode( [ & ] {
                             auto geometry = crimild::alloc< Geometry >();
                             geometry->attachPrimitive( crimild::alloc< SpherePrimitive >( SpherePrimitive::Params {} ) );
-                            geometry->local().setTranslate(
-                                2 * ( x - 0.5f * line ),
-                                7.0f - 1.5f * line,
-                                2 * ( z - 0.5f * line ) );
+                            geometry->setLocal(
+                                translation(
+                                    2 * ( x - 0.5f * line ),
+                                    7.0f - 1.5f * line,
+                                    2 * ( z - 0.5f * line ) ) );
                             geometry->attachComponent< MaterialComponent >( material );
                             return geometry;
                         }() );
@@ -64,19 +63,21 @@ public:
                 auto scale = 10.0f;
                 geometry->attachPrimitive(
                     crimild::alloc< BoxPrimitive >( BoxPrimitive::Params {
-                        .size = scale * Vector3f::ONE, .invertFaces = true } ) );
+                        .size = scale * Vector3::Constants::ONE, .invertFaces = true } ) );
                 geometry->attachComponent< MaterialComponent >( material );
-                geometry->local().setTranslate( 0.0f, scale, 0.0f );
+                geometry->setLocal( translation( 0.0f, scale, 0.0f ) );
                 return geometry;
             }() );
 
-            scene->attachNode(
-                crimild::alloc< Skybox >( RGBColorf( 0.75f, 0.75f, 0.75f ) ) );
+            scene->attachNode( crimild::alloc< Skybox >( ColorRGB { 0.75f, 0.75f, 0.75f } ) );
 
             scene->attachNode( [] {
                 auto camera = crimild::alloc< Camera >();
-                camera->local().setTranslate( 0.0f, 10.0f, 10.0f );
-                camera->local().lookAt( Vector3f( -1.0f, 2.0f, 0.0f ) );
+                camera->setLocal(
+                    lookAt(
+                        Point3 { 0, 10, 10 },
+                        Point3 { -1.0f, 2.0f, 0.0f },
+                        Vector3 { 0, 1, 0 } ) );
                 camera->attachComponent< FreeLookCameraComponent >();
                 Camera::setMainCamera( camera );
                 return camera;
