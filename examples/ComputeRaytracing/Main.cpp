@@ -34,8 +34,8 @@ namespace crimild {
 
     struct RenderSettings {
         alignas( 4 ) UInt32 sampleCount = 0;
-        alignas( 4 ) UInt32 maxSamples = 30;
-        alignas( 4 ) UInt32 maxBounces = 4;
+        alignas( 4 ) UInt32 maxSamples = 500;
+        alignas( 4 ) UInt32 maxBounces = 10;
         alignas( 4 ) Real32 aperture = 0.1;
         alignas( 4 ) Real32 focusDist = 10.0;
 
@@ -110,7 +110,6 @@ public:
                 }
             } );
 
-#if 1
         imgui::ImGUISystem::getInstance()->setFrameCallback(
             [ & ] {
                 if ( !getSettings()->get< Bool >( "ui.show", true ) ) {
@@ -171,7 +170,6 @@ public:
                     ImGui::End();
                 }
             } );
-#endif
 
         auto descriptors = Array< Descriptor > {
             Descriptor {
@@ -259,16 +257,18 @@ public:
                 .descriptorType = DescriptorType::UNIFORM_BUFFER,
                 .obj = [] {
                     struct SphereDesc {
-                        alignas( 16 ) Vector3f center;
-                        alignas( 4 ) Real32 radius;
+                        alignas( 16 ) Matrix4 invWorld;
                         alignas( 4 ) UInt32 materialID;
                     };
 
                     struct MaterialDesc {
-                        alignas( 4 ) UInt32 type;
-                        alignas( 16 ) Vector3f albedo;
-                        alignas( 4 ) Real32 fuzz;
-                        alignas( 4 ) Real32 ir;
+                        alignas( 16 ) ColorRGB albedo = ColorRGB::Constants::WHITE;
+                        alignas( 4 ) Real32 metallic = 0;
+                        alignas( 4 ) Real32 roughness = 0;
+                        alignas( 4 ) Real32 ambientOcclusion = 1;
+                        alignas( 4 ) Real32 transmission = 0;
+                        alignas( 4 ) Real32 indexOfRefraction = 0;
+                        alignas( 16 ) ColorRGB emissive = ColorRGB::Constants::BLACK;
                     };
 
 #define MAX_SPHERE_COUNT 500
@@ -285,40 +285,37 @@ public:
 
                     auto createSphere = [ & ]( const Vector3f &center, Real32 radius, UInt32 materialID ) {
                         SphereDesc s;
-                        s.center = center;
-                        s.radius = radius;
+                        s.invWorld = inverse( translation( center ) * scale( radius ) ).mat;
                         s.materialID = materialID;
                         uniforms.spheres[ uniforms.sphereCount ] = s;
                         return uniforms.sphereCount++;
                     };
 
-                    auto createLambertianMaterial = [ & ]( Vector3f albedo ) {
+                    auto createLambertianMaterial = [ & ]( ColorRGB albedo ) {
                         MaterialDesc m;
-                        m.type = 0;
                         m.albedo = albedo;
-                        m.fuzz = 1.0;
                         uniforms.materials[ uniforms.materialCount ] = m;
                         return uniforms.materialCount++;
                     };
 
-                    auto createMetalMaterial = [ & ]( Vector3f albedo, float fuzz ) {
+                    auto createMetalMaterial = [ & ]( ColorRGB albedo, float fuzz ) {
                         MaterialDesc m;
-                        m.type = 1;
                         m.albedo = albedo;
-                        m.fuzz = fuzz < 1.0 ? fuzz : 1.0;
+                        m.metallic = 1.0f;
+                        m.roughness = fuzz;
                         uniforms.materials[ uniforms.materialCount ] = m;
                         return uniforms.materialCount++;
                     };
 
                     auto createDielectricMaterial = [ & ]( float ir ) {
                         MaterialDesc m;
-                        m.type = 2;
-                        m.ir = ir;
+                        m.transmission = 1.0f;
+                        m.indexOfRefraction = ir;
                         uniforms.materials[ uniforms.materialCount ] = m;
                         return uniforms.materialCount++;
                     };
 
-                    int groundMaterial = createLambertianMaterial( Vector3 { 0.5, 0.5, 0.5 } );
+                    int groundMaterial = createLambertianMaterial( ColorRGB { 0.5, 0.5, 0.5 } );
                     createSphere( Vector3f { 0, -1000, 0 }, 1000, groundMaterial );
 
                     int count = 11;
@@ -335,7 +332,7 @@ public:
                             if ( length( center - Vector3 { 4, 0.2, 0 } ) > 0.9f ) {
                                 if ( chooseMat < 0.8 ) {
                                     // diffuse
-                                    Vector3f albedo {
+                                    auto albedo = ColorRGB {
                                         Random::generate< Real32 >() * Random::generate< Real32 >(),
                                         Random::generate< Real32 >() * Random::generate< Real32 >(),
                                         Random::generate< Real32 >() * Random::generate< Real32 >(),
@@ -344,7 +341,7 @@ public:
                                     createSphere( center, 0.2, sphereMaterial );
                                 } else if ( chooseMat < 0.95 ) {
                                     // metal
-                                    Vector3f albedo {
+                                    auto albedo = ColorRGB {
                                         Random::generate< Real32 >( 0.5, 1.0 ),
                                         Random::generate< Real32 >( 0.5, 1.0 ),
                                         Random::generate< Real32 >( 0.5, 1.0 ),
@@ -364,10 +361,10 @@ public:
                     int material1 = createDielectricMaterial( 1.5 );
                     createSphere( Vector3 { 0, 1, 0 }, 1.0, material1 );
 
-                    int material2 = createLambertianMaterial( Vector3 { 0.4, 0.2, 0.1 } );
+                    int material2 = createLambertianMaterial( ColorRGB { 0.4, 0.2, 0.1 } );
                     createSphere( Vector3 { -4, 1, 0 }, 1.0, material2 );
 
-                    int material3 = createMetalMaterial( Vector3 { 0.7, 0.6, 0.5 }, 0.0 );
+                    int material3 = createMetalMaterial( ColorRGB { 0.7, 0.6, 0.5 }, 0.0 );
                     createSphere( Vector3 { 4, 1, 0 }, 1.0, material3 );
 
                     return crimild::alloc< UniformBuffer >( uniforms );

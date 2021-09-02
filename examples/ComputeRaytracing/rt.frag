@@ -28,21 +28,19 @@ const auto FRAG_SRC = R"(
 
 
     struct Sphere {
-        vec3 center;
-        float radius;
+        mat4 invWorld;
         uint materialID;
     };
 
     struct Material {
-        int type;
         vec3 albedo;
-        float fuzz;
-        float ir;
+        float metallic;
+        float roughness;
+        float ambientOcclusion;
+        float transmission;
+        float indexOfRefraction;
+        vec3 emissive;
     };
-
-#define MATERIAL_TYPE_LAMBERTIAN 0
-#define MATERIAL_TYPE_METAL 1
-#define MATERIAL_TYPE_DIELECTRIC 2
 
 #define MAX_SPHERE_COUNT 500
 #define MAX_MATERIAL_COUNT 500
@@ -201,23 +199,9 @@ const auto FRAG_SRC = R"(
     {
         Scattered scattered;
         scattered.hasResult = false;
-        if ( material.type == MATERIAL_TYPE_LAMBERTIAN ) {
-            vec3 scatterDirection = rec.normal + getRandomUnitVector();
-            if ( isZero( scatterDirection ) ) {
-                scatterDirection = rec.normal;
-            }
-            scattered.ray.origin = rec.point;
-            scattered.ray.direction = scatterDirection;
-            scattered.attenuation = material.albedo;
-            scattered.hasResult = true;
-        } else if ( material.type == MATERIAL_TYPE_METAL ) {
-            vec3 reflected = reflect( normalize( ray.direction ), rec.normal );
-            scattered.ray.origin = rec.point;
-            scattered.ray.direction = reflected + material.fuzz * getRandomInUnitSphere();
-            scattered.attenuation = material.albedo;
-            scattered.hasResult = dot( scattered.ray.direction, rec.normal ) > 0.0;
-        } else if ( material.type == MATERIAL_TYPE_DIELECTRIC ) {
-            float ratio = rec.frontFace ? ( 1.0 / material.ir ) : material.ir;
+
+        if ( material.transmission > 0 ) {
+            float ratio = rec.frontFace ? ( 1.0 / material.indexOfRefraction ) : material.indexOfRefraction;
             vec3 D = normalize( ray.direction );
             vec3 N = rec.normal;
             float cosTheta = min( dot( -D, N ), 1.0 );
@@ -232,38 +216,62 @@ const auto FRAG_SRC = R"(
             scattered.ray.direction = D;
             scattered.attenuation = vec3( 1.0 );
             scattered.hasResult = true;
+        } else if ( material.metallic > 0 ) {
+            vec3 reflected = reflect( normalize( ray.direction ), rec.normal );
+            scattered.ray.origin = rec.point;
+            scattered.ray.direction = reflected + material.roughness * getRandomInUnitSphere();
+            scattered.attenuation = material.albedo;
+            scattered.hasResult = dot( scattered.ray.direction, rec.normal ) > 0.0;
+        } else if ( !isZero( material.emissive ) ) {
+            scattered.hasResult = false;
+        } else {
+            vec3 scatterDirection = rec.normal + getRandomUnitVector();
+            if ( isZero( scatterDirection ) ) {
+                scatterDirection = rec.normal;
+            }
+            scattered.ray.origin = rec.point;
+            scattered.ray.direction = scatterDirection;
+            scattered.attenuation = material.albedo;
+            scattered.hasResult = true;
         }
+
         return scattered;
     }
 
-    HitRecord hitSphere( Sphere sphere, Ray ray, float tMin, float tMax ) {
+    HitRecord hitSphere( Sphere sphere, Ray worldRay, float tMin, float tMax ) {
         HitRecord rec;
-        vec3 OC = ray.origin - sphere.center;
-        float a = dot( ray.direction, ray.direction );
-        float halfB = dot( OC, ray.direction );
-        float c = dot( OC, OC ) - sphere.radius * sphere.radius;
+        Ray ray;
+        ray.origin = ( sphere.invWorld * vec4( worldRay.origin, 1.0 ) ).xyz;
+        ray.direction = ( sphere.invWorld * vec4( worldRay.direction, 0.0 ) ).xyz;
 
-        float discriminant = halfB * halfB - a * c;
-        if ( discriminant < 0 ) {
+        vec3 CO = ray.origin;
+        float a = dot( ray.direction, ray.direction );
+        float b = 2.0 * dot( ray.direction, CO );
+        float c = dot( CO, CO ) - 1.0;
+
+        float d = b * b - 4.0 * a * c;
+        if ( d < 0 ) {
             rec.hasResult = false;
             return rec;
         }
 
-        float sqrtd = sqrt( discriminant );
-        float root = ( -halfB - sqrtd ) / a;
-        if ( root < tMin || root > tMax ) {
-            root = ( -halfB + sqrtd ) / a;
-            if ( root < tMin || root > tMax ) {
+        float root = sqrt( d );
+        float t = ( -b - root ) / ( 2.0 * a );
+        if ( t < tMin || t > tMax ) {
+            t = ( -b + root ) / ( 2.0 * a );
+            if ( t < tMin || t > tMax ) {
                 rec.hasResult = false;
                 return rec;
             }
         }
 
         rec.hasResult = true;
-        rec.t = root;
+        rec.t = t;
         rec.materialID = sphere.materialID;
-        rec.point = rayAt( ray, root );
-        vec3 normal = ( rec.point - sphere.center ) / sphere.radius;
+        vec3 P = rayAt( ray, t );
+        mat4 world = inverse( sphere.invWorld );
+        rec.point = ( world * vec4( P, 1.0 ) ).xyz;
+        vec3 normal = normalize( transpose( mat3( sphere.invWorld ) ) * P );
         return setFaceNormal( ray, normal, rec );
     }
 
