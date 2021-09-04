@@ -77,6 +77,107 @@ public:
             [ width, height ] {
                 auto scene = crimild::alloc< Group >();
 
+                auto sphere = [ & ]( const auto &center, Real radius, auto material ) -> SharedPointer< Node > {
+                    auto geometry = crimild::alloc< Geometry >();
+                    geometry->attachPrimitive( crimild::alloc< Primitive >( Primitive::Type::SPHERE ) );
+                    geometry->setLocal( translation( vector3( center ) ) * scale( radius ) );
+                    geometry->attachComponent< MaterialComponent >( material );
+                    return geometry;
+                };
+
+                auto metallic = []( const auto &albedo, auto roughness ) -> SharedPointer< Material > {
+                    auto material = crimild::alloc< materials::PrincipledBSDF >();
+                    material->setAlbedo( albedo );
+                    material->setMetallic( 1 );
+                    material->setRoughness( roughness );
+                    return material;
+                };
+
+                auto lambertian = []( const auto &albedo ) -> SharedPointer< Material > {
+                    auto material = crimild::alloc< materials::PrincipledBSDF >();
+                    material->setAlbedo( albedo );
+                    return material;
+                };
+
+                auto emissive = []( const auto &color ) -> SharedPointer< Material > {
+                    auto material = crimild::alloc< materials::PrincipledBSDF >();
+                    material->setEmissive( color );
+                    return material;
+                };
+
+                auto dielectric = []( auto ior ) -> SharedPointer< Material > {
+                    auto material = crimild::alloc< materials::PrincipledBSDF >();
+                    material->setTransmission( 1 );
+                    material->setIndexOfRefraction( ior );
+                    return material;
+                };
+
+                Array< SharedPointer< Node > > spheres;
+
+                // Ground
+                spheres.add(
+                    sphere(
+                        Point3 { 0, -1000, 0 },
+                        1000,
+                        lambertian( ColorRGB { 0.5, 0.5, 0.5 } ) ) );
+
+                for ( auto a = -11; a < 11; a++ ) {
+                    for ( auto b = -11; b < 11; b++ ) {
+                        auto mat = Random::generate< Real >();
+                        const auto center = Point3 {
+                            a + 0.9f * Random::generate< Real >(),
+                            0.2,
+                            b + 0.9f * Random::generate< Real >(),
+                        };
+
+                        if ( length( center - Point3 { 4, 0.2, 0 } ) > 0.9f ) {
+                            if ( mat < 0.7f ) {
+                                // diffuse
+                                const auto albedo = ColorRGB {
+                                    Random::generate< Real >() * Random::generate< Real >(),
+                                    Random::generate< Real >() * Random::generate< Real >(),
+                                    Random::generate< Real >() * Random::generate< Real >(),
+                                };
+                                auto s = sphere( center, 0.2, lambertian( albedo ) );
+                                spheres.add( s );
+                                if ( mat < 0.3f ) {
+                                    s->attachComponent< LambdaComponent >(
+                                        [ center, start = Random::generate< Real >( 0, numbers::TWO_PI ) ]( auto node, auto c ) {
+                                            node->setLocal(
+                                                translation( vector3( center + Vector3 { 0, 0.2f * Numericf::remapSin( 0, 1, start + c.getCurrentTime() ), 0 } ) ) * scale( 0.2 ) );
+                                        } );
+                                }
+                            } else if ( mat < 0.8f ) {
+                                // emissive
+                                const auto albedo = ColorRGB {
+                                    1.0f + 4.0f * Random::generate< Real >(),
+                                    1.0f + 4.0f * Random::generate< Real >(),
+                                    1.0f + 4.0f * Random::generate< Real >(),
+                                };
+                                spheres.add( sphere( center, 0.2, emissive( albedo ) ) );
+                            } else if ( mat < 0.95f ) {
+                                // metal
+                                const auto albedo = ColorRGB {
+                                    Random::generate< Real >( 0.5f, 1.0f ),
+                                    Random::generate< Real >( 0.5f, 1.0f ),
+                                    Random::generate< Real >( 0.5f, 1.0f ),
+                                };
+                                const auto roughness = Random::generate( 0.0f, 0.5f );
+                                spheres.add( sphere( center, 0.2, metallic( albedo, roughness ) ) );
+                            } else {
+                                // glass
+                                spheres.add( sphere( center, 0.2, dielectric( 1.5f ) ) );
+                            }
+                        }
+                    }
+                }
+
+                spheres.add( sphere( Point3 { 0, 1, 0 }, 1.0, dielectric( 1.5f ) ) );
+                spheres.add( sphere( Point3 { -4, 1, 0 }, 1.0, lambertian( ColorRGB { 0.4, 0.2, 0.1 } ) ) );
+                spheres.add( sphere( Point3 { 4, 1, 0 }, 1.0f, metallic( ColorRGB { 0.7, 0.6, 0.5 }, 0.0 ) ) );
+
+                scene->attachNode( framegraph::utils::optimize( spheres ) );
+
                 scene->attachNode(
                     [ width, height ] {
                         auto camera = crimild::alloc< Camera >( 20.0f, Real32( width ) / Real32( height ), 0.001f, 1024.0f );
@@ -89,6 +190,7 @@ public:
                         return camera;
                     }() );
 
+                scene->perform( UpdateWorldState() );
                 scene->perform( StartComponents() );
 
                 return scene;
@@ -161,7 +263,8 @@ public:
 
                     {
                         if ( ImGui::Button( "Reset" ) ) {
-                            settings->set( "rendering.samples", UInt32( 1 ) );
+                            //settings->set( "rendering.samples", UInt32( 1 ) );
+                            renderSettings.sampleCount = 0;
                         }
                     }
 
@@ -204,8 +307,9 @@ public:
 
                             auto renderSettings = settings->get< RenderSettings >( "render.settings", RenderSettings {} );
 
-                            auto resetSampling = [ settings ] {
-                                settings->set( "rendering.samples", UInt32( 1 ) );
+                            auto resetSampling = [ & ] {
+                                //settings->set( "rendering.samples", UInt32( 1 ) );
+                                renderSettings.sampleCount = 0;
                             };
 
                             static auto proj = Matrix4::Constants::IDENTITY;
@@ -261,111 +365,43 @@ public:
                         alignas( 4 ) UInt32 materialID;
                     };
 
-                    struct MaterialDesc {
-                        alignas( 16 ) ColorRGB albedo = ColorRGB::Constants::WHITE;
-                        alignas( 4 ) Real32 metallic = 0;
-                        alignas( 4 ) Real32 roughness = 0;
-                        alignas( 4 ) Real32 ambientOcclusion = 1;
-                        alignas( 4 ) Real32 transmission = 0;
-                        alignas( 4 ) Real32 indexOfRefraction = 0;
-                        alignas( 16 ) ColorRGB emissive = ColorRGB::Constants::BLACK;
-                    };
-
 #define MAX_SPHERE_COUNT 500
 #define MAX_MATERIAL_COUNT 500
 
                     struct SceneUniforms {
                         alignas( 16 ) SphereDesc spheres[ MAX_SPHERE_COUNT ];
                         alignas( 4 ) UInt32 sphereCount = 0;
-                        alignas( 16 ) MaterialDesc materials[ MAX_MATERIAL_COUNT ];
+                        alignas( 16 ) materials::PrincipledBSDF::Props materials[ MAX_MATERIAL_COUNT ];
                         alignas( 4 ) UInt32 materialCount = 0;
                     };
 
                     SceneUniforms uniforms;
 
-                    auto createSphere = [ & ]( const Vector3f &center, Real32 radius, UInt32 materialID ) {
-                        SphereDesc s;
-                        s.invWorld = inverse( translation( center ) * scale( radius ) ).mat;
-                        s.materialID = materialID;
-                        uniforms.spheres[ uniforms.sphereCount ] = s;
-                        return uniforms.sphereCount++;
-                    };
+                    Map< Material *, UInt32 > materialIds;
 
-                    auto createLambertianMaterial = [ & ]( ColorRGB albedo ) {
-                        MaterialDesc m;
-                        m.albedo = albedo;
-                        uniforms.materials[ uniforms.materialCount ] = m;
-                        return uniforms.materialCount++;
-                    };
+                    auto scene = Simulation::getInstance()->getScene();
+                    if ( scene != nullptr ) {
+                        scene->perform(
+                            ApplyToGeometries(
+                                [ & ]( Geometry *geometry ) {
+                                    const auto material = static_cast< materials::PrincipledBSDF * >( geometry->getComponent< MaterialComponent >()->first() );
+                                    if ( !materialIds.contains( material ) ) {
+                                        const auto materialId = uniforms.materialCount++;
+                                        uniforms.materials[ materialId ] = material->getProps();
+                                        materialIds.insert( material, materialId );
+                                    }
 
-                    auto createMetalMaterial = [ & ]( ColorRGB albedo, float fuzz ) {
-                        MaterialDesc m;
-                        m.albedo = albedo;
-                        m.metallic = 1.0f;
-                        m.roughness = fuzz;
-                        uniforms.materials[ uniforms.materialCount ] = m;
-                        return uniforms.materialCount++;
-                    };
-
-                    auto createDielectricMaterial = [ & ]( float ir ) {
-                        MaterialDesc m;
-                        m.transmission = 1.0f;
-                        m.indexOfRefraction = ir;
-                        uniforms.materials[ uniforms.materialCount ] = m;
-                        return uniforms.materialCount++;
-                    };
-
-                    int groundMaterial = createLambertianMaterial( ColorRGB { 0.5, 0.5, 0.5 } );
-                    createSphere( Vector3f { 0, -1000, 0 }, 1000, groundMaterial );
-
-                    int count = 11;
-
-                    for ( int a = -count; a < count; a++ ) {
-                        for ( int b = -count; b < count; b++ ) {
-                            Real32 chooseMat = Random::generate< Real32 >();
-                            Vector3f center {
-                                Real( a + 0.9 * Random::generate< Real32 >() ),
-                                Real( 0.2 ),
-                                Real( b + 0.9 * Random::generate< Real32 >() ),
-                            };
-
-                            if ( length( center - Vector3 { 4, 0.2, 0 } ) > 0.9f ) {
-                                if ( chooseMat < 0.8 ) {
-                                    // diffuse
-                                    auto albedo = ColorRGB {
-                                        Random::generate< Real32 >() * Random::generate< Real32 >(),
-                                        Random::generate< Real32 >() * Random::generate< Real32 >(),
-                                        Random::generate< Real32 >() * Random::generate< Real32 >(),
-                                    };
-                                    int sphereMaterial = createLambertianMaterial( albedo );
-                                    createSphere( center, 0.2, sphereMaterial );
-                                } else if ( chooseMat < 0.95 ) {
-                                    // metal
-                                    auto albedo = ColorRGB {
-                                        Random::generate< Real32 >( 0.5, 1.0 ),
-                                        Random::generate< Real32 >( 0.5, 1.0 ),
-                                        Random::generate< Real32 >( 0.5, 1.0 ),
-                                    };
-                                    float fuzz = Random::generate< Real32 >( 0, 0.5 );
-                                    int sphereMaterial = createMetalMaterial( albedo, fuzz );
-                                    createSphere( center, 0.2, sphereMaterial );
-                                } else {
-                                    // glass
-                                    int sphereMaterial = createDielectricMaterial( 1.5 );
-                                    createSphere( center, 0.2, sphereMaterial );
-                                }
-                            }
-                        }
+                                    geometry->forEachPrimitive(
+                                        [ & ]( auto primitive ) {
+                                            if ( primitive->getType() == Primitive::Type::SPHERE ) {
+                                                uniforms.spheres[ uniforms.sphereCount++ ] = {
+                                                    .invWorld = geometry->getWorld().invMat,
+                                                    .materialID = materialIds[ material ],
+                                                };
+                                            }
+                                        } );
+                                } ) );
                     }
-
-                    int material1 = createDielectricMaterial( 1.5 );
-                    createSphere( Vector3 { 0, 1, 0 }, 1.0, material1 );
-
-                    int material2 = createLambertianMaterial( ColorRGB { 0.4, 0.2, 0.1 } );
-                    createSphere( Vector3 { -4, 1, 0 }, 1.0, material2 );
-
-                    int material3 = createMetalMaterial( ColorRGB { 0.7, 0.6, 0.5 }, 0.0 );
-                    createSphere( Vector3 { 4, 1, 0 }, 1.0, material3 );
 
                     return crimild::alloc< UniformBuffer >( uniforms );
                 }(),
@@ -386,7 +422,7 @@ public:
                                 crimild::alloc< Shader >(
                                     Shader::Stage::COMPUTE,
                                     FRAG_SRC ),
-                                Format::R8G8B8A8_UNORM,
+                                Format::R32G32B32A32_SFLOAT,
                                 descriptors ) ) ) );
             }() );
     }

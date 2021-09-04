@@ -178,6 +178,7 @@ const auto FRAG_SRC = R"(
 
     struct Scattered {
         bool hasResult;
+        bool isEmissive;
         Ray ray;
         vec3 attenuation;
     };
@@ -199,6 +200,7 @@ const auto FRAG_SRC = R"(
     {
         Scattered scattered;
         scattered.hasResult = false;
+        scattered.isEmissive = false;
 
         if ( material.transmission > 0 ) {
             float ratio = rec.frontFace ? ( 1.0 / material.indexOfRefraction ) : material.indexOfRefraction;
@@ -223,7 +225,9 @@ const auto FRAG_SRC = R"(
             scattered.attenuation = material.albedo;
             scattered.hasResult = dot( scattered.ray.direction, rec.normal ) > 0.0;
         } else if ( !isZero( material.emissive ) ) {
-            scattered.hasResult = false;
+            scattered.isEmissive = true;
+            scattered.hasResult = true;
+            scattered.attenuation = material.emissive;
         } else {
             vec3 scatterDirection = rec.normal + getRandomUnitVector();
             if ( isZero( scatterDirection ) ) {
@@ -365,6 +369,9 @@ const auto FRAG_SRC = R"(
             } else {
                 Scattered scattered = scatter( uScene.materials[ hit.materialID ], ray, hit );
                 if ( scattered.hasResult ) {
+                    if ( scattered.isEmissive ) {
+                        return scattered.attenuation;
+                    }
                     color *= scattered.attenuation;
                     ray = scattered.ray;
                     ++depth;
