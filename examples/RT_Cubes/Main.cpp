@@ -34,6 +34,7 @@ public:
     void onStarted( void ) noexcept override
     {
         const auto useRaster = Simulation::getInstance()->getSettings()->get< Bool >( "use_raster", false );
+        const auto useCompute = Simulation::getInstance()->getSettings()->get< Bool >( "use_compute", true );
 
         setScene(
             [ & ] {
@@ -59,9 +60,9 @@ public:
                     withRGB( 48, 49, 45 ),
                     withRGB( 142, 136, 123 ),
                     withRGB( 238, 227, 222 ),
-                    // emissive( 2, 0.75, 0.75 ),
-                    // emissive( 2, 2, 0.75 ),
-                    // emissive( 0.75, 2, 2 ),
+                    emissive( 2, 0.75, 0.75 ),
+                    emissive( 2, 2, 0.75 ),
+                    emissive( 0.75, 2, 2 ),
                     withRGB( 254, 86, 102 ),
                     withRGB( 253, 202, 85 ),
                     withRGB( 158, 206, 220 ),
@@ -121,6 +122,7 @@ public:
                             Point3 { 250, 250, 250 }, //70, 70, 70 },
                             Point3 { 0, 0, 0 },       //10, 50, 0 },
                             Vector3::Constants::UP ) );
+                    camera->attachComponent< FreeLookCameraComponent >();
                     return camera;
                 }() );
 
@@ -133,10 +135,10 @@ public:
             RenderSystem::getInstance()->setFrameGraph(
                 [ & ] {
                     using namespace crimild::framegraph;
-                    return present( tonemapping( useResource( softRT() ) ) );
+                    return present( tonemapping( useResource( useCompute ? computeRT() : softRT() ) ) );
                 }() );
         }
     }
 };
 
-CRIMILD_CREATE_SIMULATION( Example, "Software RT: Cubes" );
+CRIMILD_CREATE_SIMULATION( Example, "RT: Cubes" );

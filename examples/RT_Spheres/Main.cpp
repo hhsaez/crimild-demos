@@ -34,6 +34,7 @@ public:
     void onStarted( void ) noexcept override
     {
         const auto useRaster = Simulation::getInstance()->getSettings()->get< Bool >( "use_raster", false );
+        const auto useCompute = Simulation::getInstance()->getSettings()->get< Bool >( "use_compute", true );
 
         setScene(
             [ & ] {
@@ -149,6 +150,7 @@ public:
                             Vector3::Constants::UP ) );
                     camera->setFocusDistance( 10 );
                     camera->setAperture( 0.1f );
+                    camera->attachComponent< FreeLookCameraComponent >();
                     return camera;
                 }() );
 
@@ -181,10 +183,10 @@ public:
             RenderSystem::getInstance()->setFrameGraph(
                 [ & ] {
                     using namespace crimild::framegraph;
-                    return present( tonemapping( useResource( softRT() ) ) );
+                    return present( tonemapping( useResource( useCompute ? computeRT() : softRT() ) ) );
                 }() );
         }
     }
 };
 
-CRIMILD_CREATE_SIMULATION( Example, "Software RT" );
+CRIMILD_CREATE_SIMULATION( Example, "RT: Spheres" );
