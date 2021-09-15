@@ -34,7 +34,7 @@ public:
     void onStarted( void ) noexcept override
     {
         const auto useRaster = Simulation::getInstance()->getSettings()->get< Bool >( "use_raster", false );
-        const auto useCompute = Simulation::getInstance()->getSettings()->get< Bool >( "use_compute", true );
+        const auto useCompute = Simulation::getInstance()->getSettings()->get< Bool >( "use_compute", false );
 
         setScene(
             [ & ] {
