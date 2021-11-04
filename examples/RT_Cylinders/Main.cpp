@@ -142,7 +142,7 @@ public:
             }() );
 
         // Use soft RT by default
-        RenderSystem::getInstance()->useRTSoftRenderPath();
+        RenderSystem::getInstance()->useRTComputeRenderPath();
     }
 };
 

@@ -76,7 +76,7 @@ public:
 
                 scene->attachNode(
                     crimild::alloc< CSGNode >(
-                        CSGNode::Operator::DIFFERENCE,
+                        CSGNode::Operator::UNION,
                         box( Point3 { 0, 1, 0 }, Vector3 { 1, 1, 1 }, lambertian( ColorRGB { 0.9, 0.9, 0.1 } ) ),
                         sphere( Point3 { 1, 2, 1 }, 1.0, metallic( ColorRGB { 0.9, 0.2, 0.1 }, 0.1 ) ) ) );
 
@@ -128,6 +128,7 @@ public:
             }() );
 
         // Use soft RT by default
+        // RenderSystem::getInstance()->useRTComputeRenderPath();
         RenderSystem::getInstance()->useRTSoftRenderPath();
     }
 };

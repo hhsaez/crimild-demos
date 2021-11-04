@@ -163,29 +163,13 @@ public:
                 Simulation::getInstance()->getSettings()->set( "rt.background_color.g", 0.6f );
                 Simulation::getInstance()->getSettings()->set( "rt.background_color.b", 0.7f );
 
-                if ( auto settings = Simulation::getInstance()->getSettings() ) {
-                    if ( settings->hasKey( "rt.hd" ) ) {
-                        settings->set( "rt.width", 1200 );
-                        settings->set( "rt.height", 800 );
-                        settings->set( "rt.samples", 500 );
-                        settings->set( "rt.depth", 50 );
-                    }
-                }
-
                 scene->perform( UpdateWorldState() );
                 scene->perform( StartComponents() );
-                scene->perform( SceneDebugDump( "scene.out" ) );
 
                 return scene;
             }() );
 
-        if ( !useRaster ) {
-            RenderSystem::getInstance()->setFrameGraph(
-                [ & ] {
-                    using namespace crimild::framegraph;
-                    return present( tonemapping( useResource( useCompute ? computeRT() : softRT() ) ) );
-                }() );
-        }
+        RenderSystem::getInstance()->useRTSoftRenderPath();
     }
 };
 

@@ -110,3 +110,5 @@ compile_commands.json
 /include
 build-xcode
 imgui.ini
+build-release
+.cache
