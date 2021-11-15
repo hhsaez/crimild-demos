@@ -57,7 +57,7 @@ public:
                 return texture;
             };
 
-            auto material = crimild::alloc< LitMaterial >();
+            auto material = crimild::alloc< materials::PrincipledBSDF >();
             material->setAlbedoMap( loadTexture( "assets/models/cerberus/Cerberus_A.tga" ) );
             material->setMetallic( 1.0f );
             material->setMetallicMap( loadTexture( "assets/models/cerberus/Cerberus_M.tga" ) );
@@ -83,8 +83,7 @@ public:
                                 }
                             } ) );
                     group->attachNode( model );
-                    group->local().rotate().fromAxisAngle( Vector3f::UNIT_Y, 0.5f );
-                    group->local().setScale( 10.0f );
+                    group->setLocal( rotation( Vector3 { 0, 1, 0 }, 0.5 ) * scale( 10 ) );
                 }
                 return group;
             }() );
@@ -92,24 +91,8 @@ public:
             scene->attachNode(
                 crimild::alloc< Skybox >(
                     [] {
-                        auto imageWithRGBA = []( auto r, auto g, auto b, auto a ) {
-                            auto image = crimild::alloc< Image >();
-                            image->extent = {
-                                .width = 1,
-                                .height = 1,
-                                .depth = 1,
-                            };
-                            image->format = Format::R8G8B8A8_UNORM;
-                            image->data = {
-                                UInt8( r * 255 ),
-                                UInt8( g * 255 ),
-                                UInt8( b * 255 ),
-                                UInt8( a * 255 ),
-                            };
-                            return image;
-                        };
                         auto texture = crimild::alloc< Texture >();
-                        texture->imageView = [ imageWithRGBA ] {
+                        texture->imageView = [] {
                             auto imageView = crimild::alloc< ImageView >();
                             imageView->image = ImageManager::getInstance()->loadImage(
                                 {
@@ -133,20 +116,20 @@ public:
 
             auto createLight = []( const auto &position ) {
                 auto light = crimild::alloc< Light >( Light::Type::POINT );
-                light->local().setTranslate( position );
-                light->setColor( RGBAColorf( 55, 55, 55 ) );
+                light->setLocal( translation( position ) );
+                light->setColor( ColorRGBA { 55, 55, 55, 1 } );
                 return light;
             };
 
-            scene->attachNode( createLight( Vector3f( -15.0f, +15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( +15.0f, +15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( -15.0f, -15.0f, 10.0f ) ) );
-            scene->attachNode( createLight( Vector3f( +15.0f, -15.0f, 10.0f ) ) );
+            scene->attachNode( createLight( Vector3 { -15.0f, +15.0f, 10.0f } ) );
+            scene->attachNode( createLight( Vector3 { +15.0f, +15.0f, 10.0f } ) );
+            scene->attachNode( createLight( Vector3 { -15.0f, -15.0f, 10.0f } ) );
+            scene->attachNode( createLight( Vector3 { +15.0f, -15.0f, 10.0f } ) );
 
             scene->attachNode(
                 [ & ] {
                     auto camera = crimild::alloc< Camera >();
-                    camera->local().setTranslate( 0.0f, 0.0f, 30.0f );
+                    camera->setLocal( translation( 0.0f, 0.0f, 30.0f ) );
                     camera->attachComponent< FreeLookCameraComponent >();
                     return camera;
                 }() );

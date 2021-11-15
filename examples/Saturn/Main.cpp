@@ -26,11 +26,8 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_SDL.hpp>
 
 using namespace crimild;
-using namespace crimild::rendergraph;
-using namespace crimild::rendergraph::passes;
 
 #define OPTION_NO_INSTANCING 0
 #define OPTION_INSTANCING_LIT 1
@@ -39,156 +36,183 @@ using namespace crimild::rendergraph::passes;
 
 SharedPointer< Node > buildPlanet( void )
 {
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/planet.obj" ) );
-	auto model = loader.load();
-	if ( model == nullptr ) {
-		CRIMILD_LOG_ERROR( "Failed to load model" );
+    OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/planet.obj" ) );
+    auto model = loader.load();
+    if ( model == nullptr ) {
+        CRIMILD_LOG_ERROR( "Failed to load model" );
         return nullptr;
-	}
+    }
 
-    model->local().setScale( 5.0f );
-	model->local().setTranslate( 0.0f, -6.0f, 0.0f );
-		
-	return model;
+    model->setLocal( translation( 0, 0, 0 ) * scale( 5 ) );
+    return model;
 }
 
 SharedPointer< Node > buildAsteroids( void )
 {
-	auto modelFileName = "assets/models/rock.obj";
-	OBJLoader loader( FileSystem::getInstance().pathForResource( modelFileName ) );
-	auto asteroids = loader.load();
+    auto modelFileName = "assets/models/rock.obj";
+    OBJLoader loader( FileSystem::getInstance().pathForResource( modelFileName ) );
+    auto asteroids = loader.load();
 
-	auto particles = crimild::alloc< ParticleData >( 6000 );
-	auto ps = asteroids->attachComponent< ParticleSystemComponent >( particles );
+    auto particles = crimild::alloc< ParticleData >( 6000 );
+    auto ps = asteroids->attachComponent< ParticleSystemComponent >( particles );
     ps->setEmitRate( particles->getParticleCount() );
     ps->setBurst( true );
-	ps->addGenerator( crimild::alloc< OrbitPositionParticleGenerator >( 25.0f, 0.5f, 5.0f, Vector3f( 1.25f, 1.0f, 1.0f ) ) );
-	ps->addGenerator( crimild::alloc< UniformScaleParticleGenerator >( 0.025f, 0.15f ) );
-	ps->addGenerator( crimild::alloc< EulerAnglesParticleGenerator >() );
-	ps->addUpdater( crimild::alloc< CameraSortParticleUpdater >() );
-	ps->addRenderer( crimild::alloc< InstancedParticleRenderer >() );
+    ps->addGenerator( crimild::alloc< OrbitPositionParticleGenerator >( 25.0f, 0.5f, 5.0f, Vector3f { 1.25f, 1.0f, 1.0f } ) );
+    ps->addGenerator( crimild::alloc< UniformScaleParticleGenerator >( 0.025f, 0.15f ) );
+    ps->addGenerator( crimild::alloc< EulerAnglesParticleGenerator >() );
+    ps->addUpdater( crimild::alloc< CameraSortParticleUpdater >() );
+    // ps->addRenderer( crimild::alloc< InstancedParticleRenderer >() );
 
-	return asteroids;
+    return asteroids;
 }
 
 SharedPointer< Node > buildAsteroids( int options )
 {
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/rock.obj" ) );
-	auto model = loader.load();
-	if ( model == nullptr ) {
-		return nullptr;
-	}
+    OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/rock.obj" ) );
+    auto model = loader.load();
+    if ( model == nullptr ) {
+        return nullptr;
+    }
 
-	auto group = crimild::alloc< Group >();
+    auto group = crimild::alloc< Group >();
 
-	crimild::Size count = 1000;
-	if ( options == OPTION_INSTANCING_UNLIT ) {
-		count = 10000;
-	}
-	
-	auto radius = 50.0f;
-	auto offset = 10.0f;
+    crimild::Size count = 1000;
 
-	std::vector< Transformation > ts( count );
+    auto radius = 50.0f;
+    auto offset = 10.0f;
 
-	for ( crimild::Size i = 0; i < count; ++i ) {
-		Transformation t;
+    auto material = crimild::alloc< materials::PrincipledBSDF >();
 
-		// translation
-		auto theta = ( crimild::Real32 ) i / ( crimild::Real32 ) count * Numericf::TWO_PI;
-		auto x = Numericf::sin( theta ) * radius + Random::generate< crimild::Real32 >( -offset, offset );
-		auto y = 0.4f * Random::generate< crimild::Real32 >( -offset, offset );
-		auto z = Numericf::cos( theta ) * radius + Random::generate< crimild::Real32 >( -offset, offset );
-		t.setTranslate( x, y, z );
+    for ( crimild::Size i = 0; i < count; ++i ) {
+        // Transformation t;
 
-        auto scale = Random::generate< crimild::Real32 >( 0.05f, 0.5f );
-        t.setScale( scale );
+        // translation
+        auto theta = ( crimild::Real32 ) i / ( crimild::Real32 ) count * Numericf::TWO_PI;
+        auto x = Numericf::sin( theta ) * radius + Random::generate< crimild::Real32 >( -offset, offset );
+        auto y = 0.4f * Random::generate< crimild::Real32 >( -offset, offset );
+        auto z = Numericf::cos( theta ) * radius + Random::generate< crimild::Real32 >( -offset, offset );
+        // t.setTranslate( x, y, z );
+
+        auto s = Random::generate< crimild::Real32 >( 0.05f, 0.5f );
+        // t.setScale( s );
 
         auto angle = Random::generate< crimild::Real32 >( 0, Numericf::TWO_PI );
-        t.rotate().fromAxisAngle( Vector3f( 0.4f, 0.8f, 0.6f ).getNormalized(), angle );
+        // t.rotate().fromAxisAngle( Vector3f( 0.4f, 0.8f, 0.6f ).getNormalized(), angle );
 
-		ts[ i ] = t;
-	}
+        const auto T = translation( x, y, z ) * rotation( normalize( Vector3 { 0.4, 0.8, 0.6 } ), angle ) * scale( s );
 
-	if ( options == OPTION_NO_INSTANCING ) {
-		for ( const auto &t : ts ) {
-			ShallowCopy copy;
-			model->perform( copy );
-			auto asteroid = copy.getResult< Node >();
-			asteroid->setLocal( t );
-			group->attachNode( asteroid );
-		}
-	}
-	else {
-		auto modelBO = crimild::alloc< Matrix4fInstancedBufferObject >( count, nullptr );
-		for ( crimild::Size i = 0; i < count; i++ ) {
-			modelBO->set( i, ts[ i ].computeModelMatrix() );
-		}
-		group->attachNode( model );
-		
-		group->perform( ApplyToGeometries( [ modelBO, options ]( Geometry *g ) {
-			g->forEachPrimitive( [ modelBO ]( Primitive *p ) {
-				p->setInstancedBuffer( modelBO );
-			});
+        ShallowCopy copy;
+        model->perform( copy );
+        auto asteroid = copy.getResult< Node >();
+        // auto asteroid = crimild::alloc< Geometry >();
+        // asteroid->attachPrimitive( SpherePrimitive::UNIT_SPHERE );
+        // asteroid->attachComponent< MaterialComponent >( material );
+        asteroid->setLocal( T );
+        group->attachNode( asteroid );
+    }
 
-			SharedPointer< ShaderProgram > program;
-			if ( options == OPTION_INSTANCING_LIT ) {
-				program = crimild::alloc< ForwardShadingShaderProgram >( true );
-			}
-			else {
-				program = crimild::alloc< UnlitShaderProgram >( true );
-			}
-			
-			g->getComponent< MaterialComponent >()->forEachMaterial( [ program ]( Material *m ) {
-				m->setProgram( program );
-			});
-			g->setCullMode( Node::CullMode::NEVER );
-		}));
-	}
+    // if ( options == OPTION_NO_INSTANCING ) {
+    //     for ( const auto &t : ts ) {
+    //         ShallowCopy copy;
+    //         model->perform( copy );
+    //         auto asteroid = copy.getResult< Node >();
+    //         asteroid->setLocal( t );
+    //         group->attachNode( asteroid );
+    //     }
+    // } else {
+    //     auto modelBO = crimild::alloc< Matrix4fInstancedBufferObject >( count, nullptr );
+    //     for ( crimild::Size i = 0; i < count; i++ ) {
+    //         modelBO->set( i, ts[ i ].computeModelMatrix() );
+    //     }
+    //     group->attachNode( model );
 
-	return group;
+    //     group->perform( ApplyToGeometries( [ modelBO, options ]( Geometry *g ) {
+    //         g->forEachPrimitive( [ modelBO ]( Primitive *p ) {
+    //             p->setInstancedBuffer( modelBO );
+    //         } );
+
+    //         SharedPointer< ShaderProgram > program;
+    //         if ( options == OPTION_INSTANCING_LIT ) {
+    //             program = crimild::alloc< ForwardShadingShaderProgram >( true );
+    //         } else {
+    //             program = crimild::alloc< UnlitShaderProgram >( true );
+    //         }
+
+    //         g->getComponent< MaterialComponent >()->forEachMaterial( [ program ]( Material *m ) {
+    //             m->setProgram( program );
+    //         } );
+    //         g->setCullMode( Node::CullMode::NEVER );
+    //     } ) );
+    // }
+
+    return group;
 }
 
 SharedPointer< Group > buildScene( int options )
 {
     auto scene = crimild::alloc< Group >();
 
-	if ( options == OPTION_PARTICLES ) {
-		scene->attachNode( buildAsteroids() );
-	}
-	else {
-		scene->attachNode( buildAsteroids( options ) );
-	}
+    // if ( options == OPTION_PARTICLES ) {
+    // scene->attachNode( buildAsteroids() );
+    // } else {
+    scene->attachNode( buildAsteroids( options ) );
+    // }
 
-	scene->attachNode( buildPlanet() );
+    scene->attachNode( buildPlanet() );
 
-	scene->attachNode(
-		crimild::alloc< Skybox >(
-			containers::Array< SharedPointer< Image >> {
-				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/right.tga" ) ),
-				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/left.tga" ) ),
-				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/top.tga" ) ),
-				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/bottom.tga" ) ),
-				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/back.tga" ) ),
-				crimild::alloc< ImageTGA >( FileSystem::getInstance().pathForResource( "assets/textures/front.tga" ) ),
-			}
-		)
-	);
-	
-	scene->attachNode( [] {
-		auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
-		light->setColor( RGBAColorf( 1.0f, 1.0f, 0.8f, 1.0f ) );
-		light->local().rotate().fromEulerAngles( -0.25f, -Numericf::HALF_PI, 0.0f );
-		light->setCastShadows( true );
-		return light;
-	}());
+    scene->attachNode(
+        crimild::alloc< Skybox >(
+            [] {
+                auto texture = crimild::alloc< Texture >();
+                texture->imageView = [ & ] {
+                    auto imageView = crimild::alloc< ImageView >();
+                    imageView->image = ImageManager::getInstance()->loadCubemap(
+                        {
+                            .filePaths = {
+                                { .path = "assets/textures/right.tga" },
+                                { .path = "assets/textures/left.tga" },
+                                { .path = "assets/textures/bottom.tga" },
+                                { .path = "assets/textures/top.tga" },
+                                { .path = "assets/textures/back.tga" },
+                                { .path = "assets/textures/front.tga" },
+                            },
+                        } );
+                    return imageView;
+                }();
+                texture->sampler = [ & ] {
+                    auto sampler = crimild::alloc< Sampler >();
+                    sampler->setMinFilter( Sampler::Filter::LINEAR );
+                    sampler->setMagFilter( Sampler::Filter::LINEAR );
+                    sampler->setWrapMode( Sampler::WrapMode::CLAMP_TO_BORDER );
+                    sampler->setCompareOp( CompareOp::NEVER );
+                    return sampler;
+                }();
+                return texture;
+            }() ) );
 
-	scene->attachNode( [] {
-		auto camera = crimild::alloc< Camera >();
-		camera->local().setTranslate( Vector3f( 0.0f, 30.0f, 100.0f ) );
-		camera->local().lookAt( Vector3f::ZERO );
-		camera->attachComponent< FreeLookCameraComponent >();
+    scene->attachNode( [] {
+        auto light = crimild::alloc< Light >( Light::Type::DIRECTIONAL );
+        light->setColor( ColorRGBA { 1.0f, 1.0f, 0.8f, 1 } );
+        // light->setLocal( rotation( -0.25f, -Numericf::HALF_PI, 0.0f ) );
+        light->setLocal(
+            lookAt(
+                Point3 { 1, 1, 1 },
+                Point3 { 0, 0, 0 },
+                Vector3 { 0, 1, 0 } ) );
+        light->setCastShadows( true );
+        return light;
+    }() );
 
+    scene->attachNode( [] {
+        auto camera = crimild::alloc< Camera >();
+        camera->setLocal(
+            lookAt(
+                Point3 { 0, 30, 100 },
+                Point3 { 0, 0, 0 },
+                Vector3 { 0, 1, 0 } ) );
+        camera->attachComponent< FreeLookCameraComponent >();
+
+        /*
 		auto graph = crimild::alloc< RenderGraph >();
         auto depthPass = graph->createPass< DepthPass >();
 		auto scenePass = graph->createPass< passes::ForwardLightingPass >();
@@ -223,59 +247,74 @@ SharedPointer< Group > buildScene( int options )
 		}
 		
 		camera->setRenderGraph( graph );
-		
-		return camera;
-	}());
+		*/
 
-	return scene;
+        return camera;
+    }() );
+
+    // scene->attachNode( crimild::alloc< Skybox >( ColorRGB { 0.5, 0.5, 0.5 } ) );
+
+    scene->perform( StartComponents() );
+    scene->perform( UpdateWorldState() );
+
+    return scene;
 }
 
-int main( int argc, char **argv )
-{
-	crimild::init();
-	
-    auto settings = crimild::alloc< Settings >( argc, argv );
-	settings->set( "video.width", 1920 );
-	settings->set( "video.height", 1080 );
-	settings->set( "video.fullscreen", true );
-    settings->set( "video.show_frame_time", true );
-	
-    CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< sdl::SDLSimulation >( "Saturn", settings );
+// int main( int argc, char **argv )
+// {
+// 	crimild::init();
 
-    auto scene = buildScene( OPTION_PARTICLES );
-    sim->setScene( scene );
+//     auto settings = crimild::alloc< Settings >( argc, argv );
+// 	settings->set( "video.width", 1920 );
+// 	settings->set( "video.height", 1080 );
+// 	settings->set( "video.fullscreen", true );
+//     settings->set( "video.show_frame_time", true );
 
-	sim->registerMessageHandler< crimild::messaging::KeyReleased >( []( crimild::messaging::KeyReleased const &msg ) {
-		switch ( msg.key ) {
-			case CRIMILD_INPUT_KEY_U:
-				crimild::concurrency::sync_frame( [] {
-					Simulation::getInstance()->setScene( buildScene( OPTION_PARTICLES ) );
-				});
-				break;
+//     CRIMILD_SIMULATION_LIFETIME auto sim = crimild::alloc< sdl::SDLSimulation >( "Saturn", settings );
 
-			case CRIMILD_INPUT_KEY_I:
-				crimild::concurrency::sync_frame( [] {
-					Simulation::getInstance()->setScene( buildScene( OPTION_NO_INSTANCING ) );
-				});
-				break;
+//     auto scene = buildScene( OPTION_PARTICLES );
+//     sim->setScene( scene );
 
-			case CRIMILD_INPUT_KEY_O:
-				crimild::concurrency::sync_frame( [] {
-					Simulation::getInstance()->setScene( buildScene( OPTION_INSTANCING_LIT ) );
-				});
-				break;
+// 	sim->registerMessageHandler< crimild::messaging::KeyReleased >( []( crimild::messaging::KeyReleased const &msg ) {
+// 		switch ( msg.key ) {
+// 			case CRIMILD_INPUT_KEY_U:
+// 				crimild::concurrency::sync_frame( [] {
+// 					Simulation::getInstance()->setScene( buildScene( OPTION_PARTICLES ) );
+// 				});
+// 				break;
 
-			case CRIMILD_INPUT_KEY_P:
-				crimild::concurrency::sync_frame( [] {
-					Simulation::getInstance()->setScene( buildScene( OPTION_INSTANCING_UNLIT ) );
-				});
-				break;
+// 			case CRIMILD_INPUT_KEY_I:
+// 				crimild::concurrency::sync_frame( [] {
+// 					Simulation::getInstance()->setScene( buildScene( OPTION_NO_INSTANCING ) );
+// 				});
+// 				break;
 
-			default:
-				break;
-		}
-	});
-	
-	return sim->run();
-}
+// 			case CRIMILD_INPUT_KEY_O:
+// 				crimild::concurrency::sync_frame( [] {
+// 					Simulation::getInstance()->setScene( buildScene( OPTION_INSTANCING_LIT ) );
+// 				});
+// 				break;
 
+// 			case CRIMILD_INPUT_KEY_P:
+// 				crimild::concurrency::sync_frame( [] {
+// 					Simulation::getInstance()->setScene( buildScene( OPTION_INSTANCING_UNLIT ) );
+// 				});
+// 				break;
+
+// 			default:
+// 				break;
+// 		}
+// 	});
+
+// 	return sim->run();
+// }
+
+class Example : public Simulation {
+public:
+    virtual void onStarted( void ) noexcept override
+    {
+        setScene( buildScene( OPTION_PARTICLES ) );
+    }
+};
+
+CRIMILD_CREATE_SIMULATION( Example, "Saturn" );

@@ -38,11 +38,17 @@ public:
 
             scene->attachNode( [ & ] {
                 auto path = FilePath {
-                    .path = "assets/models/cube.obj"
+                    .path = "assets/models/bunny/bunny.obj"
                 };
                 auto group = crimild::alloc< Group >();
                 OBJLoader loader( path.getAbsolutePath() );
-                //loader.setVerbose( true );
+                loader.setMaterialOverride( "Bunny_Material.001", [] {
+                    auto material = crimild::alloc< materials::PrincipledBSDF >();
+                    material->setAlbedo( ColorRGB { 0.8, 0.2, 0 } );
+                    material->setMetallic( 0.1 );
+                    material->setRoughness( 0.5 );
+                    return material;
+                }() );
                 if ( auto model = loader.load() ) {
                     group->attachNode( model );
                 }

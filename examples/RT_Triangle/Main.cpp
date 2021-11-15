@@ -41,7 +41,7 @@ public:
                     [] {
                         auto geometry = crimild::alloc< Geometry >();
 
-#if 0
+#if 1
                         geometry->attachPrimitive(
                             [] {
                                 auto primitive = crimild::alloc< Primitive >( Primitive::Type::TRIANGLES );

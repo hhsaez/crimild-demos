@@ -294,8 +294,8 @@ public:
                 [ & ] {
                     auto camera = crimild::alloc< Camera >();
                     camera->setLocal( translation( 0, 10, 20 ) );
-//                    camera->local().setTranslate( 0.0f, 10.0f, 20.0f );
-//                    camera->local().lookAt( 5.0f * Vector3f::UNIT_Y );
+                    //                    camera->local().setTranslate( 0.0f, 10.0f, 20.0f );
+                    //                    camera->local().lookAt( 5.0f * Vector3f::UNIT_Y );
                     camera->attachComponent< FreeLookCameraComponent >();
                     return camera;
                 }() );
@@ -344,13 +344,13 @@ public:
                         auto scale = 10.0f / model->getWorldBound()->getRadius();
                         model->setLocal( crimild::scale( scale ) );
 
-//                        Camera::getMainCamera()->local().lookAt( scale * model->getWorldBound()->getCenter() );
+                        //                        Camera::getMainCamera()->local().lookAt( scale * model->getWorldBound()->getCenter() );
                     }
-//                    return model;
-					auto pivot = crimild::alloc< Group >();
-     				pivot->attachNode( model );
-//         			return behaviors::withBehavior( pivot, behaviors::actions::rotate( Vector3 { 0, 1, 0 }, 0.1 ) );
-					return pivot;
+                    //                    return model;
+                    auto pivot = crimild::alloc< Group >();
+                    pivot->attachNode( model );
+                    //         			return behaviors::withBehavior( pivot, behaviors::actions::rotate( Vector3 { 0, 1, 0 }, 0.1 ) );
+                    return pivot;
                 }() );
 
             scene->attachNode(
@@ -391,13 +391,11 @@ public:
                     light->setColor( ColorRGBA::Constants::WHITE );
                     light->setEnergy( 10.0f );
                     light->setLocal(
-                    	lookAt(
-                     		Point3 { 1, 1, 1 },
-                       		Point3 { 0, 0, 0 },
-                         	Vector3::Constants::UP
-                        )
-                    );
-//                    light->setCastShadows( true );
+                        lookAt(
+                            Point3 { 1, 1, 1 },
+                            Point3 { 0, 0, 0 },
+                            Vector3::Constants::UP ) );
+                    //                    light->setCastShadows( true );
                     return light;
                 }() );
 
@@ -411,13 +409,13 @@ public:
                         geometry->setLocal(
                             [] {
                                 Transformation t;
-//                                t.rotate().fromAxisAngle( Vector3f::UNIT_X, -Numericf::HALF_PI );
-//                                t.setScale( 100.0f );
+                                //                                t.rotate().fromAxisAngle( Vector3f::UNIT_X, -Numericf::HALF_PI );
+                                //                                t.setScale( 100.0f );
                                 return t;
                             }() );
                         geometry->attachComponent< MaterialComponent >()->attachMaterial(
                             [] {
-                                auto material = crimild::alloc< LitMaterial >();
+                                auto material = crimild::alloc< materials::PrincipledBSDF >();
                                 material->setMetallic( 0.0f );
                                 material->setRoughness( 1.0f );
                                 return material;
