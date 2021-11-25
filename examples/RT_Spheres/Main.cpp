@@ -33,9 +33,6 @@ class Example : public Simulation {
 public:
     void onStarted( void ) noexcept override
     {
-        const auto useRaster = Simulation::getInstance()->getSettings()->get< Bool >( "use_raster", false );
-        const auto useCompute = Simulation::getInstance()->getSettings()->get< Bool >( "use_compute", false );
-
         setScene(
             [ & ] {
                 auto scene = crimild::alloc< Group >();
@@ -84,22 +81,24 @@ public:
                         1000,
                         lambertian( ColorRGB { 0.5, 0.5, 0.5 } ) ) );
 
+                auto rnd = Random::Generator( 1982 );
+
                 for ( auto a = -11; a < 11; a++ ) {
                     for ( auto b = -11; b < 11; b++ ) {
-                        auto mat = Random::generate< Real >();
+                        auto mat = Real( rnd.generate( 0.0f, 1.0f ) );
                         const auto center = Point3 {
-                            a + 0.9f * Random::generate< Real >(),
+                            a + 0.9f * Real( rnd.generate( 0.0f, 1.0f ) ),
                             0.2,
-                            b + 0.9f * Random::generate< Real >(),
+                            b + 0.9f * Real( rnd.generate( 0.0f, 1.0f ) ),
                         };
 
                         if ( length( center - Point3 { 4, 0.2, 0 } ) > 0.9f ) {
                             if ( mat < 0.7f ) {
                                 // diffuse
                                 const auto albedo = ColorRGB {
-                                    Random::generate< Real >() * Random::generate< Real >(),
-                                    Random::generate< Real >() * Random::generate< Real >(),
-                                    Random::generate< Real >() * Random::generate< Real >(),
+                                    Real( rnd.generate( 0.0f, 1.0f ) ) * Real( rnd.generate( 0.0f, 1.0f ) ),
+                                    Real( rnd.generate( 0.0f, 1.0f ) ) * Real( rnd.generate( 0.0f, 1.0f ) ),
+                                    Real( rnd.generate( 0.0f, 1.0f ) ) * Real( rnd.generate( 0.0f, 1.0f ) ),
                                 };
                                 auto s = sphere( center, 0.2, lambertian( albedo ) );
                                 spheres.add( s );
@@ -113,9 +112,9 @@ public:
                             } else if ( mat < 0.8f ) {
                                 // emissive
                                 const auto albedo = ColorRGB {
-                                    1.0f + 4.0f * Random::generate< Real >(),
-                                    1.0f + 4.0f * Random::generate< Real >(),
-                                    1.0f + 4.0f * Random::generate< Real >(),
+                                    1.0f + 4.0f * Real( rnd.generate( 0.0f, 1.0f ) ),
+                                    1.0f + 4.0f * Real( rnd.generate( 0.0f, 1.0f ) ),
+                                    1.0f + 4.0f * Real( rnd.generate( 0.0f, 1.0f ) ),
                                 };
                                 spheres.add( sphere( center, 0.2, emissive( albedo ) ) );
                             } else if ( mat < 0.95f ) {
@@ -154,10 +153,7 @@ public:
                     return camera;
                 }() );
 
-                if ( useRaster ) {
-                    // TODO: make the RT take the background color from the skybox
-                    scene->attachNode( crimild::alloc< Skybox >( ColorRGB { 0.5f, 0.6f, 0.7f } ) );
-                }
+                scene->attachNode( crimild::alloc< Skybox >( ColorRGB { 0.5f, 0.6f, 0.7f } ) );
 
                 Simulation::getInstance()->getSettings()->set( "rt.background_color.r", 0.5f );
                 Simulation::getInstance()->getSettings()->set( "rt.background_color.g", 0.6f );

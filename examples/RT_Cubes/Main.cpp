@@ -33,9 +33,6 @@ class Example : public Simulation {
 public:
     void onStarted( void ) noexcept override
     {
-        const auto useRaster = Simulation::getInstance()->getSettings()->get< Bool >( "use_raster", false );
-        const auto useCompute = Simulation::getInstance()->getSettings()->get< Bool >( "use_compute", true );
-
         setScene(
             [ & ] {
                 auto scene = crimild::alloc< Group >();
@@ -80,6 +77,8 @@ public:
                     return geometry;
                 };
 
+                auto rnd = Random::Generator( 1982 );
+
                 const auto boxesPerSide = 10.0f;
                 Array< SharedPointer< Node > > boxes( ( 2 * boxesPerSide + 1 ) * ( 2 * boxesPerSide + 1 ) * ( 2 * boxesPerSide + 1 ) );
                 Size boxId = 0;
@@ -87,27 +86,24 @@ public:
                     for ( auto y = -boxesPerSide; y <= boxesPerSide; ++y ) {
                         for ( auto z = -boxesPerSide; z <= boxesPerSide; ++z ) {
                             auto size = Vector3 {
-                                Random::generate< Real >( 0.25, 3.0 ),
-                                Random::generate< Real >( 0.25, 3.0 ),
-                                Random::generate< Real >( 0.25, 3.0 ),
+                                Real( rnd.generate( 0.25, 3.0 ) ),
+                                Real( rnd.generate( 0.25, 3.0 ) ),
+                                Real( rnd.generate( 0.25, 3.0 ) ),
                             };
                             auto offset = Vector3 {
-                                Random::generate< Real >( 0.5 * x, 5.0 * x ),
-                                Random::generate< Real >( 0.5 * y, 5.0 * y ),
-                                Random::generate< Real >( 0.5 * z, 5.0 * z ),
+                                Real( rnd.generate( 0.5 * x, 5.0 * x ) ),
+                                Real( rnd.generate( 0.5 * y, 5.0 * y ) ),
+                                Real( rnd.generate( 0.5 * z, 5.0 * z ) ),
                             };
                             boxes[ boxId++ ] = box(
                                 Point3 { x, y, z } + offset,
                                 size,
-                                materials[ Random::generate< Int >( 0, materials.size() ) ] );
+                                materials[ Int32( rnd.generate( 0, materials.size() ) ) ] );
                         }
                     }
                 }
 
-                if ( useRaster ) {
-                    // TODO: make the RT take the background color from the skybox
-                    scene->attachNode( crimild::alloc< Skybox >( ColorRGB { 0.5f, 0.6f, 0.7f } ) );
-                }
+                scene->attachNode( crimild::alloc< Skybox >( ColorRGB { 0.5f, 0.6f, 0.7f } ) );
 
                 Simulation::getInstance()->getSettings()->set( "rt.background_color.r", 0.5f );
                 Simulation::getInstance()->getSettings()->set( "rt.background_color.g", 0.6f );
@@ -131,12 +127,8 @@ public:
                 return scene;
             }() );
 
-        if ( !useRaster ) {
-            RenderSystem::getInstance()->setFrameGraph(
-                [ & ] {
-                    using namespace crimild::framegraph;
-                    return present( tonemapping( useResource( useCompute ? computeRT() : softRT() ) ) );
-                }() );
+        if ( Simulation::getInstance()->getSettings()->get< std::string >( "video.render_path", "default" ) == "default" ) {
+            RenderSystem::getInstance()->useRTSoftRenderPath();
         }
     }
 };
