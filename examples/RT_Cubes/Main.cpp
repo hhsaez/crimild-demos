@@ -69,9 +69,9 @@ public:
                     withRGB( 253, 152, 53 )
                 };
 
-                auto box = []( const auto &center, const auto &size, auto material ) -> SharedPointer< Node > {
+                auto box = [ primitive = crimild::alloc< Primitive >( Primitive::Type::BOX ) ]( const auto &center, const auto &size, auto material ) -> SharedPointer< Node > {
                     auto geometry = crimild::alloc< Geometry >();
-                    geometry->attachPrimitive( crimild::alloc< Primitive >( Primitive::Type::BOX ) );
+                    geometry->attachPrimitive( primitive );
                     geometry->setLocal( translation( vector3( center ) ) * scale( size.x, size.y, size.z ) );
                     geometry->attachComponent< MaterialComponent >( material );
                     return geometry;
