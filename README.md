@@ -36,9 +36,15 @@ make clean all test -j4
 cmake . -G Xcode
 ```
 
-### Visual Studio
+### Windows
+
+Requirements
+* CMake
+* Visual Studio 2019 or above
+
 ```
-cmake . -G "Visual Studio 2014"
+cmake . -G "Visual Studio 16 2019" -A x64 -S . -Bbuild
+cmake --build build --config Release --target Triangle
 ```
 
 ### Web (Wasm/WebGL)
