@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, Hernan Saez
+ * Copyright (c) 2002 - present, H. Hernan Saez
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *     * Redistributions of source code must retain the above copyright
@@ -9,14 +9,14 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the <organization> nor the
+ *     * Neither the name of the copyright holder nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+ * DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDER BE LIABLE FOR ANY
  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
  * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
  * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
@@ -26,44 +26,125 @@
  */
 
 #include <Crimild.hpp>
-#include <Crimild_SDL.hpp>
 
 using namespace crimild;
 
-int main( int argc, char **argv )
-{
-    auto sim = crimild::alloc< sdl::SDLSimulation >( "Triangle", crimild::alloc< Settings >( argc, argv ) );
+class Example : public Simulation {
+public:
+    virtual void onStarted( void ) noexcept override
+    {
+        setScene(
+            [ & ] {
+                auto scene = crimild::alloc< Group >();
 
-    auto scene = crimild::alloc< Group >();
+                scene->attachNode( [ & ] {
+                    auto geometry = crimild::alloc< Geometry >();
+                    geometry->attachPrimitive(
+                        [ & ] {
+                            auto primitive = crimild::alloc< Primitive >( Primitive::Type::TRIANGLES );
+                            primitive->setVertexData(
+                                {
+                                    [ & ] {
+                                        return crimild::alloc< VertexBuffer >(
+                                            VertexP3C3::getLayout(),
+                                            Array< VertexP3C3 > {
+                                                {
+                                                    .position = Vector3f { -0.5f, -0.5f, 0.0f },
+                                                    .color = ColorRGB { 1.0f, 0.0f, 0.0f },
+                                                },
+                                                {
+                                                    .position = Vector3f { 0.5f, -0.5f, 0.0f },
+                                                    .color = ColorRGB { 0.0f, 1.0f, 0.0f },
+                                                },
+                                                {
+                                                    .position = Vector3f { 0.0f, 0.5f, 0.0f },
+                                                    .color = ColorRGB { 0.0f, 0.0f, 1.0f },
+                                                },
+                                            } );
+                                    }(),
+                                } );
+                            primitive->setIndices(
+                                crimild::alloc< IndexBuffer >(
+                                    Format::INDEX_32_UINT,
+                                    Array< crimild::UInt32 > {
+                                        0,
+                                        1,
+                                        2,
+                                    } ) );
+                            return primitive;
+                        }() );
+                    geometry->attachComponent< MaterialComponent >(
+                        [] {
+                            auto material = crimild::alloc< UnlitMaterial >();
+                            material->setGraphicsPipeline(
+                                [] {
+                                    auto pipeline = crimild::alloc< GraphicsPipeline >();
+                                    pipeline->setProgram(
+                                        [] {
+                                            auto program = crimild::alloc< UnlitShaderProgram >();
+                                            program->setShaders(
+                                                Array< SharedPointer< Shader > > {
+                                                    crimild::alloc< Shader >(
+                                                        Shader::Stage::VERTEX,
+                                                        R"(
+                                                            layout( location = 0 ) in vec3 inPosition;
+                                                            layout( location = 1 ) in vec3 inColor;
 
-    float vertices[] = {
-        -1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
-        0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f
-    };
+                                                            layout( set = 0, binding = 0 ) uniform RenderPassUniforms
+                                                            {
+                                                                mat4 view;
+                                                                mat4 proj;
+                                                            };
 
-    unsigned short indices[] = {
-        0, 1, 2
-    };
+                                                            layout( set = 2, binding = 0 ) uniform GeometryUniforms
+                                                            {
+                                                                mat4 model;
+                                                            };
 
-    auto primitive = crimild::alloc< Primitive >();
-    primitive->setVertexBuffer( crimild::alloc< VertexBufferObject >( VertexFormat::VF_P3_C4, 3, vertices ) );
-    primitive->setIndexBuffer( crimild::alloc< IndexBufferObject >( 3, indices ) );
+                                                            layout( location = 0 ) out vec3 outColor;
 
-    auto geometry = crimild::alloc< Geometry >();
-    geometry->attachPrimitive( primitive );
-    auto material = crimild::alloc< Material >();
-    material->setProgram( AssetManager::getInstance()->get< ShaderProgram >( Renderer::SHADER_PROGRAM_UNLIT_VERTEX_COLOR ) );
-    material->getCullFaceState()->setEnabled( false );
-    geometry->getComponent< MaterialComponent >()->attachMaterial( material );
-    geometry->attachComponent< RotationComponent >( Vector3f( 0.0f, 1.0f, 0.0f ), 0.25f * Numericf::HALF_PI );
-    scene->attachNode( geometry );
+                                                            void main()
+                                                            {
+                                                                gl_Position = proj * view * model * vec4( inPosition, 1.0 );
+                                                                outColor = inColor;
+                                                            }
+                                                        )" ),
+                                                    crimild::alloc< Shader >(
+                                                        Shader::Stage::FRAGMENT,
+                                                        R"(
+                                                            layout( location = 0 ) in vec3 inColor;
 
-    auto camera = crimild::alloc< Camera >();
-    camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 3.0f ) );
-    scene->attachNode( camera );
-    
-    sim->setScene( scene );
-	return sim->run();
-}
+                                                            layout( location = 0 ) out vec4 outColor;
 
+                                                            void main()
+                                                            {
+                                                                outColor = vec4( inColor, 1.0 );
+                                                            }
+                                                        )" ),
+                                                } );
+                                            program->vertexLayouts = { VertexLayout::P3_C3 };
+                                            return program;
+                                        }() );
+                                    pipeline->rasterizationState.cullMode = CullMode::NONE;
+                                    return pipeline;
+                                }() );
+                            return material;
+                        }() );
+                    return geometry;
+                }() );
+
+                scene->attachNode( [] {
+                    auto camera = crimild::alloc< Camera >();
+                    camera->setLocal(
+                        lookAt(
+                            Point3 { 0, 0, 3 },
+                            Point3 { 0, 0, 0 },
+                            Vector3::Constants::UP ) );
+                    return camera;
+                }() );
+                return scene;
+            }() );
+    }
+};
+
+CRIMILD_CREATE_SIMULATION( Example, "Triangle" );

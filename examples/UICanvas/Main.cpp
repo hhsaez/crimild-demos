@@ -32,44 +32,22 @@
 #include "UI/UIFrame.hpp"
 #include "UI/UICanvas.hpp"
 #include "UI/UIBackground.hpp"
+#include "UI/UIButton.hpp"
+#include "UI/UILabel.hpp"
 #include "UI/UIFrameConstraint.hpp"
 #include "UI/UIFrameConstraintMaker.hpp"
+#include "Boundings/Box2DBoundingVolume.hpp"
 
 using namespace crimild;
 using namespace crimild::rendergraph;
 using namespace crimild::rendergraph::passes;
 using namespace crimild::ui;
 
-SharedPointer< RenderGraph > createRenderGraph( crimild::Bool enableDebug )
-{
-	auto renderGraph = crimild::alloc< RenderGraph >();
-
-	auto types = containers::Array< RenderQueue::RenderableType > {
-		RenderQueue::RenderableType::OPAQUE,
-		RenderQueue::RenderableType::OPAQUE_CUSTOM,
-		RenderQueue::RenderableType::TRANSLUCENT,
-		RenderQueue::RenderableType::TRANSLUCENT_CUSTOM,
-	};
-	auto forwardPass = renderGraph->createPass< ForwardLightingPass >( types );
-	auto screenPass = renderGraph->createPass< ScreenPass >();
-	auto compositionPass = renderGraph->createPass< BlendPass >( AlphaState::ENABLED );
-
-	auto frameBuffer = renderGraph->createAttachment( "Frame", RenderGraphAttachment::Hint::FORMAT_RGBA );
-
-	compositionPass->addInput( forwardPass->getColorOutput() );
-	compositionPass->addInput( screenPass->getOutput() );
-	compositionPass->setOutput( frameBuffer );
-
-	renderGraph->setOutput( frameBuffer );
-
-	return renderGraph;
-}
-
 SharedPointer< Node > buildUI( void )
 {
 	auto canvas = crimild::alloc< Group >();
-	canvas->attachComponent< UICanvas >( 640, 480 );
-	canvas->attachComponent< UIBackground >( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ) );
+	canvas->attachComponent< UICanvas >( 800, 600 );
+    canvas->attachComponent< UIBackground >( RGBAColorf( 1.0f, 1.0f, 1.0f, 1.0f ) );
 
 	auto view1 = crimild::alloc< Group >();
 	view1->attachComponent< UIFrame >()->pin()->top( canvas )->left( canvas )->size( 200, 400 )->margin( 10.0f );
@@ -101,15 +79,24 @@ SharedPointer< Node > buildUI( void )
 	view6->attachComponent< UIBackground >( RGBAColorf( 1.0f, 0.5f, 0.0f, 1.0f ) );
 	canvas->attachNode( view6 );
 
-	auto view7 = crimild::alloc< Group >();
-	view7->attachComponent< UIFrame >()->pin()->size( 300, 50 )->centerX( view6 )->right()->bottom();
-	view7->attachComponent< UIBackground >( RGBAColorf( 1.0f, 1.0f, 0.0f, 1.0f ) );
-	canvas->attachNode( view7 );
+    auto lblHello = crimild::alloc< Group >();
+    lblHello->attachComponent< UIFrame >()->pin()->size( 100, 40 )->left()->bottom()->margin( 10, 10, 10, 10 );
+    lblHello->attachComponent< UILabel >( "Hello World!", RGBAColorf( 1.0f, 0.0f, 1.0f, 1.0f ) );
+    canvas->attachNode( lblHello );
 
-	canvas->perform( ApplyToGeometries( []( Geometry *geo ) {
-		geo->getComponent< RenderStateComponent >()->setRenderOnScreen( true );
-	}));
-	
+	auto btnTest = crimild::alloc< Group >();
+	btnTest->attachComponent< UIFrame >()->pin()->size( 300, 50 )->centerX( view6 )->right()->bottom();
+	btnTest->attachComponent< UIBackground >( RGBAColorf( 1.0f, 1.0f, 0.0f, 1.0f ) );
+    btnTest->attachComponent< UIButton >( []( Node *node ) {
+        static int count = 0;
+        std::stringstream ss;
+        ss << "Click count: " << ++count;
+        node->getComponent< UILabel >()->setText( ss.str() );
+        return true;
+    });
+    btnTest->attachComponent< UILabel >( "Click Here!", RGBAColorf( 1.0f, 0.0f, 1.0f, 1.0f ) );
+    canvas->attachNode( btnTest );
+
 	return canvas;
 }
 
@@ -117,36 +104,40 @@ int main( int argc, char **argv )
 {
     auto settings = crimild::alloc< Settings >( argc, argv );
     settings->set( "video.show_frame_time", true );
+    settings->set( "fonts.default", "assets/fonts/Verdana.txt" );
     auto sim = crimild::alloc< sdl::SDLSimulation >( "UICanvas", settings );
 
     auto scene = crimild::alloc< Group >();
 
 	scene->attachNode( buildUI() );
 
-	auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
-	camera->local().setTranslate( -2.0f, 2.0f, 2.0f );
+	auto camera = crimild::alloc< Camera >();
+	camera->local().setTranslate( -400.0f, 400.0f, 400.0f );
 	camera->local().lookAt( Vector3f::ZERO );
-    auto renderGraph = createRenderGraph( false );
-    camera->setRenderPass( crimild::alloc< RenderGraphRenderPass >( renderGraph ) );
 	scene->attachNode( camera );
     
     sim->setScene( scene );
 
-	sim->registerMessageHandler< crimild::messaging::KeyReleased >( [ scene ]( crimild::messaging::KeyReleased const &msg ) {
+	sim->registerMessageHandler< crimild::messaging::KeyReleased >( [ scene, camera ]( crimild::messaging::KeyReleased const &msg ) {
 		switch ( msg.key ) {
 			case CRIMILD_INPUT_KEY_Q:
-				scene->perform( ApplyToGeometries( []( Geometry *geo ) {
-					geo->getComponent< RenderStateComponent >()->setRenderOnScreen( true );
-				}));
+                scene->perform( Apply( []( Node *node ) {
+                    if ( auto canvas = node->getComponent< UICanvas >() ) {
+                        canvas->setRenderSpace( UICanvas::RenderSpace::CAMERA );
+                    }
+                }));
 				break;
 
 			case CRIMILD_INPUT_KEY_W:
-				scene->perform( ApplyToGeometries( []( Geometry *geo ) {
-					geo->getComponent< RenderStateComponent >()->setRenderOnScreen( false );
-				}));
+                scene->perform( Apply( []( Node *node ) {
+                    if ( auto canvas = node->getComponent< UICanvas >() ) {
+                        canvas->setRenderSpace( UICanvas::RenderSpace::WORLD );
+                    }
+                }));
 				break;
 		}
 	});
+
 	return sim->run();
 }
 

@@ -15,7 +15,7 @@ local camera = {
 	type = 'crimild::Camera',
 	enableCulling = false,
 	transformation = {
-		translate = { 0.0, 10.0, 10.0 },
+		translate = { 0.0, 10.0, 20.0 },
 	},
 	components = {
 		{
@@ -25,7 +25,18 @@ local camera = {
 }
 
 local environment = {
-	sceneFileName = 'assets/models/room.obj',
+    type = 'crimild::Group',
+    nodes = {
+        {
+            sceneFileName = 'assets/models/room.obj',
+        },
+        {
+            type = 'crimild::Light',
+            lightType = 'point',
+            color = { 1.0, 1.0, 1.0, 1.0 },
+            transformation = { translate = { 0.0, 1.0, 0.0 } },
+        },
+    },
 }
 
 scene = {

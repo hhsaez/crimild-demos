@@ -31,31 +31,12 @@
 
 using namespace crimild;
 using namespace crimild::sdl;
-
-SharedPointer< Node > room( void )
-{
-	OBJLoader loader( FileSystem::getInstance().pathForResource( "assets/models/room.obj" ) );
-	auto model = loader.load();
-	return model;
-}
-
-SharedPointer< Group > loadModel( std::string filename )
-{
-	SharedPointer< Group > model;
-	auto modelPath = FileSystem::getInstance().pathForResource( filename );
-	FileStream is( modelPath, FileStream::OpenMode::READ );
-	is.load();
-	if ( is.getObjectCount() > 0 ) {
-		model = is.getObjectAt< Group >( 0 );
-	}
-	
-	return model;
-}
+using namespace crimild::rendergraph;
 
 int main( int argc, char **argv )
 {
 	crimild::init();
-	
+
     auto sim = crimild::alloc< SDLSimulation >( "Particle Showcase", crimild::alloc< Settings >( argc, argv ) );
 
 	sim->loadScene( FileSystem::getInstance().pathForResource( "assets/scenes/main.lua" ) );

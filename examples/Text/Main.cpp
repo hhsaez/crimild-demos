@@ -29,6 +29,7 @@
 #include <Crimild_SDL.hpp>
 
 using namespace crimild;
+using namespace crimild::rendergraph;
 using namespace crimild::sdl;
 
 SharedPointer< Node > generateText( SharedPointer< Font > const &font, std::string str, const Vector3f position, const RGBAColorf &color )
@@ -44,12 +45,14 @@ SharedPointer< Node > generateText( SharedPointer< Font > const &font, std::stri
 
 int main( int argc, char **argv )
 {
+    crimild::init();
+
     auto sim = crimild::alloc< SDLSimulation >( "Rendering text", crimild::alloc< Settings >( argc, argv ) );
 
     auto scene = crimild::alloc< Group >();
-    
-    auto font = crimild::alloc< Font >( FileSystem::getInstance().pathForResource( "Arial.txt" ) );
-    
+
+    auto font = crimild::alloc< Font >( FileSystem::getInstance().pathForResource( "Verdana.txt" ) );
+
     std::string lorem = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.\nInteger egestas sit amet arcu at laoreet.";
     
     auto texts = crimild::alloc< Group >();
@@ -72,6 +75,7 @@ int main( int argc, char **argv )
 
     auto camera = crimild::alloc< Camera >( 45.0f, 4.0f / 3.0f, 0.1f, 1024.0f );
 	camera->local().setTranslate( Vector3f( 0.0f, 0.0f, 10.0f ) );
+
 	scene->attachNode( camera );
 
     sim->setScene( scene );
