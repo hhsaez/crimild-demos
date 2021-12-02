@@ -1,3 +1,5 @@
+# IMPORTANT: THIS REPOSITORY IS NO LONGER MAINTAINED. PLEASE CHECK [CRIMILD'S MAIN REPOSITORY](https://github.com/hhsaez/crimild) FOR EXAMPLES
+
 # Crimild Demos and Examples
 
 A repository for crimild-based demos and code examples
